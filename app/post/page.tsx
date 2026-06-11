@@ -1,11 +1,23 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Search, Music, CheckCircle, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Search,
+  Music,
+  CheckCircle,
+  Loader2,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { searchMusic, extractYoutubeId, type ItunesTrack } from "@/lib/itunes";
 
 type Step = 1 | 2 | 3 | 4 | 5;
+
+const STEP_LABELS = ["記憶", "年代", "楽曲", "画像生成", "完成"];
 
 interface PostData {
   memoryText: string;
@@ -16,9 +28,9 @@ interface PostData {
   images: string[];
 }
 
-const STEP_LABELS = ["記憶", "年代", "楽曲", "画像生成", "完成"];
-
 export default function PostPage() {
+  const router = useRouter();
+
   const [step, setStep] = useState<Step>(1);
   const [data, setData] = useState<PostData>({
     memoryText: "",
@@ -28,11 +40,11 @@ export default function PostPage() {
     youtubeUrl: "",
     images: [],
   });
-
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ItunesTrack[]>([]);
   const [searching, setSearching] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -44,26 +56,78 @@ export default function PostPage() {
 
   const handleGenerateImages = async () => {
     setGenerating(true);
-    // Mock: wait 2s then show placeholder images
-    await new Promise((r) => setTimeout(r, 2000));
-    setData((d) => ({
-      ...d,
-      images: [
-        `https://picsum.photos/seed/gen1${Date.now()}/400/600`,
-        `https://picsum.photos/seed/gen2${Date.now()}/400/600`,
-        `https://picsum.photos/seed/gen3${Date.now()}/400/600`,
-        `https://picsum.photos/seed/gen4${Date.now()}/400/600`,
-      ],
-    }));
-    setGenerating(false);
-    setStep(5);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 仮のカプセルIDを生成（画像のストレージパスに使用）
+      const capsuleId = crypto.randomUUID();
+
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memoryText: data.memoryText,
+          memoryYear: data.memoryYear,
+          lifeStage: data.lifeStage,
+          capsuleId,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Generation failed");
+      const { images } = await res.json();
+
+      setData((d) => ({ ...d, images, _capsuleId: capsuleId } as PostData & { _capsuleId: string }));
+      setStep(5);
+    } catch (e) {
+      console.error(e);
+      alert("画像生成に失敗しました。もう一度お試しください。");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    setPublishing(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const videoId = extractYoutubeId(data.youtubeUrl);
+      const d = data as PostData & { _capsuleId?: string };
+
+      const { error } = await supabase.from("capsules").insert({
+        id: d._capsuleId ?? undefined,
+        user_id: user.id,
+        memory_text: data.memoryText,
+        memory_year: data.memoryYear ? parseInt(data.memoryYear) : null,
+        life_stage: data.lifeStage,
+        youtube_video_id: videoId,
+        song_title: data.track?.trackName ?? null,
+        artist_name: data.track?.artistName ?? null,
+        image_1: data.images[0] ?? null,
+        image_2: data.images[1] ?? null,
+        image_3: data.images[2] ?? null,
+        image_4: data.images[3] ?? null,
+        status: "published",
+      });
+
+      if (error) throw error;
+      router.push("/");
+    } catch (e) {
+      console.error(e);
+      alert("投稿に失敗しました。");
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const videoId = extractYoutubeId(data.youtubeUrl);
 
   return (
     <div className="pb-24 min-h-screen">
-      {/* Header */}
       <div className="sticky top-0 z-40 bg-[#0e0b0e]/90 backdrop-blur border-b border-[#2d1e30]">
         <div className="flex items-center gap-3 px-4 pt-12 pb-3">
           <Link href="/" className="text-[#b899a8]">
@@ -73,8 +137,6 @@ export default function PostPage() {
             タイムカプセルを作る
           </span>
         </div>
-
-        {/* Step indicator */}
         <div className="flex px-4 pb-3 gap-1.5">
           {STEP_LABELS.map((label, i) => {
             const n = (i + 1) as Step;
@@ -89,11 +151,7 @@ export default function PostPage() {
                 />
                 <span
                   className={`text-[9px] tracking-wide ${
-                    active
-                      ? "text-[#c48a9f]"
-                      : done
-                      ? "text-[#b899a8]"
-                      : "text-[#2d1e30]"
+                    active ? "text-[#c48a9f]" : done ? "text-[#b899a8]" : "text-[#2d1e30]"
                   }`}
                 >
                   {label}
@@ -105,32 +163,26 @@ export default function PostPage() {
       </div>
 
       <div className="px-4 pt-6">
-        {/* Step 1: Memory text */}
+        {/* Step 1 */}
         {step === 1 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-[#ede0e8] text-base font-medium mb-1">
-                あの日の記憶を書いてください
-              </h2>
+              <h2 className="text-[#ede0e8] text-base font-medium mb-1">あの日の記憶を書いてください</h2>
               <p className="text-[#7a6475] text-xs">100文字以内</p>
             </div>
             <textarea
               value={data.memoryText}
-              onChange={(e) =>
-                setData((d) => ({ ...d, memoryText: e.target.value.slice(0, 100) }))
-              }
+              onChange={(e) => setData((d) => ({ ...d, memoryText: e.target.value.slice(0, 100) }))}
               placeholder="あの頃の記憶を、ありのままに。"
               rows={5}
               className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl p-4 text-[#ede0e8] text-sm placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f] resize-none leading-relaxed"
             />
             <div className="flex justify-between items-center">
-              <span className="text-[#7a6475] text-xs">
-                {data.memoryText.length} / 100
-              </span>
+              <span className="text-[#7a6475] text-xs">{data.memoryText.length} / 100</span>
               <button
                 onClick={() => setStep(2)}
                 disabled={data.memoryText.trim().length === 0}
-                className="bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30 transition-opacity"
+                className="bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30"
               >
                 次へ
               </button>
@@ -138,65 +190,43 @@ export default function PostPage() {
           </div>
         )}
 
-        {/* Step 2: Year + life stage */}
+        {/* Step 2 */}
         {step === 2 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-[#ede0e8] text-base font-medium mb-1">
-                それはいつの記憶ですか？
-              </h2>
+              <h2 className="text-[#ede0e8] text-base font-medium mb-1">それはいつの記憶ですか？</h2>
               <p className="text-[#7a6475] text-xs">年と、そのときの自分</p>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-[#b899a8] text-xs block mb-1.5">
-                  年
-                </label>
+                <label className="text-[#b899a8] text-xs block mb-1.5">年</label>
                 <input
                   type="number"
                   value={data.memoryYear}
-                  onChange={(e) =>
-                    setData((d) => ({ ...d, memoryYear: e.target.value }))
-                  }
+                  onChange={(e) => setData((d) => ({ ...d, memoryYear: e.target.value }))}
                   placeholder="例：2008"
-                  min={1950}
-                  max={2025}
+                  min={1950} max={2025}
                   className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-sm placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]"
                 />
               </div>
               <div>
-                <label className="text-[#b899a8] text-xs block mb-1.5">
-                  そのときの自分
-                </label>
+                <label className="text-[#b899a8] text-xs block mb-1.5">そのときの自分</label>
                 <input
                   type="text"
                   value={data.lifeStage}
-                  onChange={(e) =>
-                    setData((d) => ({ ...d, lifeStage: e.target.value }))
-                  }
+                  onChange={(e) => setData((d) => ({ ...d, lifeStage: e.target.value }))}
                   placeholder="例：高校3年生の夏"
                   className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-sm placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]"
                 />
               </div>
             </div>
-
-            {/* Popular presets */}
             <div>
               <p className="text-[#7a6475] text-[10px] mb-2">よく使われる</p>
               <div className="flex flex-wrap gap-2">
-                {[
-                  "小学生の夏",
-                  "中学の部活",
-                  "高校3年生の受験",
-                  "大学の卒業式",
-                  "就職1年目",
-                  "第一子誕生",
-                ].map((preset) => (
+                {["小学生の夏", "中学の部活", "高校3年生の受験", "大学の卒業式", "就職1年目", "第一子誕生"].map((preset) => (
                   <button
                     key={preset}
-                    onClick={() =>
-                      setData((d) => ({ ...d, lifeStage: preset }))
-                    }
+                    onClick={() => setData((d) => ({ ...d, lifeStage: preset }))}
                     className="text-[10px] text-[#b899a8] border border-[#2d1e30] rounded-full px-3 py-1 hover:border-[#c48a9f] hover:text-[#c48a9f] transition-colors"
                   >
                     {preset}
@@ -204,18 +234,12 @@ export default function PostPage() {
                 ))}
               </div>
             </div>
-
             <div className="flex justify-between pt-2">
-              <button
-                onClick={() => setStep(1)}
-                className="text-[#7a6475] text-sm px-4 py-2"
-              >
-                戻る
-              </button>
+              <button onClick={() => setStep(1)} className="text-[#7a6475] text-sm px-4 py-2">戻る</button>
               <button
                 onClick={() => setStep(3)}
                 disabled={!data.memoryYear || !data.lifeStage}
-                className="bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30 transition-opacity"
+                className="bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30"
               >
                 次へ
               </button>
@@ -223,19 +247,13 @@ export default function PostPage() {
           </div>
         )}
 
-        {/* Step 3: Music search */}
+        {/* Step 3 */}
         {step === 3 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-[#ede0e8] text-base font-medium mb-1">
-                あの頃の曲を選んでください
-              </h2>
-              <p className="text-[#7a6475] text-xs">
-                曲名またはアーティスト名で検索
-              </p>
+              <h2 className="text-[#ede0e8] text-base font-medium mb-1">あの頃の曲を選んでください</h2>
+              <p className="text-[#7a6475] text-xs">曲名またはアーティスト名で検索</p>
             </div>
-
-            {/* Search input */}
             <div className="relative">
               <input
                 type="text"
@@ -245,107 +263,65 @@ export default function PostPage() {
                 placeholder="曲名 / アーティスト"
                 className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl pl-4 pr-12 py-3 text-[#ede0e8] text-sm placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]"
               />
-              <button
-                onClick={handleSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#c48a9f]"
-              >
-                {searching ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <Search size={18} />
-                )}
+              <button onClick={handleSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#c48a9f]">
+                {searching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
               </button>
             </div>
 
-            {/* Selected track */}
             {data.track && (
               <div className="flex items-center gap-3 p-3 rounded-xl bg-[#1a1520] border border-[#c48a9f]/40">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={data.track.artworkUrl100}
-                  alt=""
-                  className="w-10 h-10 rounded-lg object-cover"
-                />
+                <img src={data.track.artworkUrl100} alt="" className="w-10 h-10 rounded-lg object-cover" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[#ede0e8] text-sm font-medium truncate">
-                    {data.track.trackName}
-                  </p>
-                  <p className="text-[#7a6475] text-xs truncate">
-                    {data.track.artistName}
-                  </p>
+                  <p className="text-[#ede0e8] text-sm font-medium truncate">{data.track.trackName}</p>
+                  <p className="text-[#7a6475] text-xs truncate">{data.track.artistName}</p>
                 </div>
                 <CheckCircle size={16} className="text-[#c48a9f] shrink-0" />
               </div>
             )}
 
-            {/* Search results */}
             {searchResults.length > 0 && !data.track && (
               <div className="space-y-1.5 max-h-64 overflow-y-auto">
                 {searchResults.map((track) => (
                   <button
                     key={track.trackId}
-                    onClick={() => {
-                      setData((d) => ({ ...d, track }));
-                      setSearchResults([]);
-                    }}
+                    onClick={() => { setData((d) => ({ ...d, track })); setSearchResults([]); }}
                     className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[#1a1520] border border-[#2d1e30] hover:border-[#c48a9f]/40 transition-colors text-left"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={track.artworkUrl100}
-                      alt=""
-                      className="w-10 h-10 rounded-lg object-cover"
-                    />
+                    <img src={track.artworkUrl100} alt="" className="w-10 h-10 rounded-lg object-cover" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[#ede0e8] text-xs font-medium truncate">
-                        {track.trackName}
-                      </p>
-                      <p className="text-[#7a6475] text-[10px] truncate">
-                        {track.artistName}
-                      </p>
+                      <p className="text-[#ede0e8] text-xs font-medium truncate">{track.trackName}</p>
+                      <p className="text-[#7a6475] text-[10px] truncate">{track.artistName}</p>
                     </div>
                   </button>
                 ))}
               </div>
             )}
 
-            {/* YouTube URL input */}
             {data.track && (
               <div className="space-y-2">
-                <label className="text-[#b899a8] text-xs block">
-                  YouTube URL を貼る（任意）
-                </label>
+                <label className="text-[#b899a8] text-xs block">YouTube URL を貼る（任意）</label>
                 <input
                   type="text"
                   value={data.youtubeUrl}
-                  onChange={(e) =>
-                    setData((d) => ({ ...d, youtubeUrl: e.target.value }))
-                  }
+                  onChange={(e) => setData((d) => ({ ...d, youtubeUrl: e.target.value }))}
                   placeholder="https://www.youtube.com/watch?v=..."
                   className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-xs placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]"
                 />
                 {data.youtubeUrl && !videoId && (
-                  <p className="text-red-400/70 text-[10px]">
-                    有効なYouTube URLを入力してください
-                  </p>
+                  <p className="text-red-400/70 text-[10px]">有効なYouTube URLを入力してください</p>
                 )}
-                {videoId && (
-                  <p className="text-[#c48a9f] text-[10px]">✓ 動画が設定されました</p>
-                )}
+                {videoId && <p className="text-[#c48a9f] text-[10px]">✓ 動画が設定されました</p>}
               </div>
             )}
 
             <div className="flex justify-between pt-2">
-              <button
-                onClick={() => setStep(2)}
-                className="text-[#7a6475] text-sm px-4 py-2"
-              >
-                戻る
-              </button>
+              <button onClick={() => setStep(2)} className="text-[#7a6475] text-sm px-4 py-2">戻る</button>
               <button
                 onClick={() => setStep(4)}
                 disabled={!data.track}
-                className="bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30 transition-opacity"
+                className="bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30"
               >
                 次へ
               </button>
@@ -353,124 +329,79 @@ export default function PostPage() {
           </div>
         )}
 
-        {/* Step 4: Image generation */}
+        {/* Step 4 */}
         {step === 4 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-[#ede0e8] text-base font-medium mb-1">
-                記憶をAIが描きます
-              </h2>
-              <p className="text-[#7a6475] text-xs">
-                4枚のシーンを生成します（約30秒）
-              </p>
+              <h2 className="text-[#ede0e8] text-base font-medium mb-1">記憶をAIが描きます</h2>
+              <p className="text-[#7a6475] text-xs">4枚のシーンを生成します（約30〜60秒）</p>
             </div>
-
-            {/* Memory preview */}
             <div className="p-4 rounded-xl bg-[#1a1520] border border-[#2d1e30] space-y-2">
               <div className="flex items-center gap-2">
                 <Music size={12} className="text-[#c48a9f]" />
-                <span className="text-[#c48a9f] text-xs">
-                  {data.track?.trackName} / {data.track?.artistName}
-                </span>
+                <span className="text-[#c48a9f] text-xs">{data.track?.trackName} / {data.track?.artistName}</span>
               </div>
-              <p className="text-[#b899a8] text-xs leading-relaxed">
-                {data.memoryText}
-              </p>
-              <p className="text-[#7a6475] text-[10px]">
-                {data.memoryYear}年・{data.lifeStage}
-              </p>
+              <p className="text-[#b899a8] text-xs leading-relaxed">{data.memoryText}</p>
+              <p className="text-[#7a6475] text-[10px]">{data.memoryYear}年・{data.lifeStage}</p>
             </div>
 
             {generating ? (
-              <div className="grid grid-cols-2 gap-2">
-                {[...Array(4)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="aspect-[3/4] rounded-xl bg-[#1a1520] border border-[#2d1e30] flex items-center justify-center"
-                  >
-                    <Loader2
-                      size={20}
-                      className="text-[#c48a9f] animate-spin"
-                    />
-                  </div>
-                ))}
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="aspect-[3/4] rounded-xl bg-[#1a1520] border border-[#2d1e30] flex items-center justify-center">
+                      <Loader2 size={20} className="text-[#c48a9f] animate-spin" />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-center text-[#7a6475] text-xs">AIが記憶を描いています…</p>
               </div>
             ) : (
-              <button
-                onClick={handleGenerateImages}
-                className="w-full bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold py-3.5 rounded-full"
-              >
+              <button onClick={handleGenerateImages} className="w-full bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold py-3.5 rounded-full">
                 画像を生成する
               </button>
             )}
 
             {!generating && (
-              <button
-                onClick={() => setStep(3)}
-                className="w-full text-[#7a6475] text-sm py-2"
-              >
-                戻る
-              </button>
+              <button onClick={() => setStep(3)} className="w-full text-[#7a6475] text-sm py-2">戻る</button>
             )}
           </div>
         )}
 
-        {/* Step 5: Preview & publish */}
+        {/* Step 5 */}
         {step === 5 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-[#ede0e8] text-base font-medium mb-1">
-                プレビュー
-              </h2>
-              <p className="text-[#7a6475] text-xs">
-                タイムカプセルを確認してください
-              </p>
+              <h2 className="text-[#ede0e8] text-base font-medium mb-1">プレビュー</h2>
+              <p className="text-[#7a6475] text-xs">タイムカプセルを確認してください</p>
             </div>
 
-            {/* Images grid */}
             {data.images.length > 0 && (
               <div className="grid grid-cols-2 gap-1.5">
                 {data.images.map((img, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={i}
-                    src={img}
-                    alt=""
-                    className="aspect-[3/4] w-full object-cover rounded-xl sepia-[.4] brightness-75"
-                  />
+                  <img key={i} src={img} alt="" className="aspect-[3/4] w-full object-cover rounded-xl sepia-[.4] brightness-75" />
                 ))}
               </div>
             )}
 
-            {/* Song + memory */}
             <div className="p-4 rounded-xl bg-[#1a1520] border border-[#2d1e30] space-y-3">
               <div className="flex items-center gap-2">
                 <Music size={12} className="text-[#c48a9f]" />
-                <span className="text-[#c48a9f] text-xs">
-                  {data.track?.trackName} / {data.track?.artistName}
-                </span>
+                <span className="text-[#c48a9f] text-xs">{data.track?.trackName} / {data.track?.artistName}</span>
               </div>
-              <p className="text-[#ede0e8] text-sm leading-relaxed">
-                {data.memoryText}
-              </p>
-              <p className="text-[#7a6475] text-xs">
-                {data.memoryYear}年・{data.lifeStage}
-              </p>
+              <p className="text-[#ede0e8] text-sm leading-relaxed">{data.memoryText}</p>
+              <p className="text-[#7a6475] text-xs">{data.memoryYear}年・{data.lifeStage}</p>
             </div>
 
-            <Link
-              href="/"
-              className="block w-full bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold py-3.5 rounded-full text-center"
-            >
-              タイムカプセルを残す
-            </Link>
-
             <button
-              onClick={() => setStep(4)}
-              className="w-full text-[#7a6475] text-sm py-2"
+              onClick={handlePublish}
+              disabled={publishing}
+              className="w-full bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold py-3.5 rounded-full disabled:opacity-50"
             >
-              戻る
+              {publishing ? "投稿中…" : "タイムカプセルを残す"}
             </button>
+            <button onClick={() => setStep(4)} className="w-full text-[#7a6475] text-sm py-2">戻る</button>
           </div>
         )}
       </div>
