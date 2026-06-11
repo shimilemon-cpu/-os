@@ -16,12 +16,12 @@ export default function HomePage() {
   return (
     <div className="pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#13110e]/90 backdrop-blur border-b border-[#3a2e20]">
+      <header className="sticky top-0 z-40 bg-[#0e0b0e]/90 backdrop-blur border-b border-[#2d1e30]">
         <div className="px-4 pt-12 pb-0">
-          <h1 className="text-[#d4a85c] text-xl font-bold tracking-[0.2em]">
+          <h1 className="text-[#c48a9f] text-xl font-bold tracking-[0.2em]">
             CAPSULE
           </h1>
-          <p className="text-[#6b5c48] text-[10px] mt-0.5 tracking-wider">
+          <p className="text-[#7a6475] text-[10px] mt-0.5 tracking-wider">
             3分半で、あの日に帰ろう。
           </p>
         </div>
@@ -34,8 +34,8 @@ export default function HomePage() {
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2.5 text-xs tracking-wide transition-colors border-b-2 ${
                 activeTab === tab
-                  ? "text-[#d4a85c] border-[#d4a85c]"
-                  : "text-[#6b5c48] border-transparent"
+                  ? "text-[#c48a9f] border-[#c48a9f]"
+                  : "text-[#7a6475] border-transparent"
               }`}
             >
               {tab}

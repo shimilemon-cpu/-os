@@ -14,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja" className="h-full">
-      <body className="min-h-full bg-[#13110e]">
+      <body className="min-h-full bg-[#0e0b0e]">
         {/* Mobile-first max-width container */}
         <div className="relative mx-auto max-w-sm min-h-screen">
           {children}

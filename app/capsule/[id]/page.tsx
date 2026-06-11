@@ -17,7 +17,7 @@ export default function CapsulePage({
   if (!capsule) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <p className="text-[#6b5c48]">カプセルが見つかりません</p>
+        <p className="text-[#7a6475]">カプセルが見つかりません</p>
       </div>
     );
   }
@@ -25,15 +25,15 @@ export default function CapsulePage({
   return (
     <div className="pb-24">
       {/* Back header */}
-      <div className="sticky top-0 z-40 flex items-center gap-3 px-4 py-4 bg-[#13110e]/90 backdrop-blur border-b border-[#3a2e20]">
-        <Link href="/" className="text-[#a89880] hover:text-[#f0e8d0] transition-colors">
+      <div className="sticky top-0 z-40 flex items-center gap-3 px-4 py-4 bg-[#0e0b0e]/90 backdrop-blur border-b border-[#2d1e30]">
+        <Link href="/" className="text-[#b899a8] hover:text-[#ede0e8] transition-colors">
           <ArrowLeft size={20} />
         </Link>
         <div className="min-w-0">
-          <p className="text-[#f0e8d0] text-sm font-medium truncate">
+          <p className="text-[#ede0e8] text-sm font-medium truncate">
             {capsule.song.title}
           </p>
-          <p className="text-[#6b5c48] text-xs truncate">{capsule.song.artist}</p>
+          <p className="text-[#7a6475] text-xs truncate">{capsule.song.artist}</p>
         </div>
       </div>
 
@@ -51,31 +51,31 @@ export default function CapsulePage({
       <div className="px-4 pt-5 space-y-5">
         {/* Memory text */}
         <div className="space-y-1">
-          <p className="text-[#f0e8d0] text-sm leading-relaxed">
+          <p className="text-[#ede0e8] text-sm leading-relaxed">
             {capsule.memoryText}
           </p>
-          <p className="text-[#d4a85c] text-xs">
+          <p className="text-[#c48a9f] text-xs">
             {capsule.memoryYear}年・{capsule.lifeStage}
           </p>
         </div>
 
         {/* User + views */}
         <div className="flex items-center justify-between text-xs">
-          <span className="text-[#6b5c48]">
+          <span className="text-[#7a6475]">
             {capsule.user.age}歳・{capsule.user.gender}
           </span>
-          <div className="flex items-center gap-1 text-[#6b5c48]">
+          <div className="flex items-center gap-1 text-[#7a6475]">
             <Eye size={11} />
             <span>{capsule.views.toLocaleString()}回開かれた</span>
           </div>
         </div>
 
         {/* Divider */}
-        <div className="border-t border-[#3a2e20]" />
+        <div className="border-t border-[#2d1e30]" />
 
         {/* AI Images */}
         <div>
-          <p className="text-[#6b5c48] text-[10px] tracking-widest uppercase mb-3">
+          <p className="text-[#7a6475] text-[10px] tracking-widest uppercase mb-3">
             AI が描いた記憶のシーン
           </p>
 
@@ -120,7 +120,7 @@ export default function CapsulePage({
                 onClick={() => setActiveImage(i)}
                 className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
                   activeImage === i
-                    ? "border-[#d4a85c]"
+                    ? "border-[#c48a9f]"
                     : "border-transparent"
                 }`}
               >
@@ -136,13 +136,13 @@ export default function CapsulePage({
         </div>
 
         {/* Song info */}
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-[#1f1a14] border border-[#3a2e20]">
-          <Music size={16} className="text-[#d4a85c] shrink-0" />
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-[#1a1520] border border-[#2d1e30]">
+          <Music size={16} className="text-[#c48a9f] shrink-0" />
           <div>
-            <p className="text-[#f0e8d0] text-sm font-medium">
+            <p className="text-[#ede0e8] text-sm font-medium">
               {capsule.song.title}
             </p>
-            <p className="text-[#6b5c48] text-xs">{capsule.song.artist}</p>
+            <p className="text-[#7a6475] text-xs">{capsule.song.artist}</p>
           </div>
         </div>
       </div>
