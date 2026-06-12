@@ -8,6 +8,7 @@ export interface CapsuleDoc {
   memoryYear: number | null;
   lifeStage: string | null;
   youtubeVideoId: string | null;
+  youtubeStart: number | null;
   songTitle: string | null;
   artistName: string | null;
   previewUrl: string | null;

@@ -19,13 +19,27 @@ interface PostData {
   lifeStage: string;
   track: ItunesTrack | null;
   youtubeUrl: string;
+  youtubeStart: string;
   images: string[];
+}
+
+// "1:30" や "90" を秒数に変換
+function parseStartSeconds(input: string): number | null {
+  const s = input.trim();
+  if (!s) return null;
+  if (s.includes(":")) {
+    const [m, sec] = s.split(":");
+    const total = parseInt(m || "0") * 60 + parseInt(sec || "0");
+    return isNaN(total) ? null : total;
+  }
+  const n = parseInt(s);
+  return isNaN(n) ? null : n;
 }
 
 export default function PostPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
-  const [data, setData] = useState<PostData>({ memoryText: "", memoryYear: "", lifeStage: "", track: null, youtubeUrl: "", images: [] });
+  const [data, setData] = useState<PostData>({ memoryText: "", memoryYear: "", lifeStage: "", track: null, youtubeUrl: "", youtubeStart: "", images: [] });
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ItunesTrack[]>([]);
   const [searching, setSearching] = useState(false);
@@ -73,6 +87,7 @@ export default function PostPage() {
         memoryYear: data.memoryYear ? parseInt(data.memoryYear) : null,
         lifeStage: data.lifeStage,
         youtubeVideoId: videoId,
+        youtubeStart: parseStartSeconds(data.youtubeStart),
         songTitle: data.track?.trackName ?? null,
         artistName: data.track?.artistName ?? null,
         previewUrl: data.track?.previewUrl ?? null,
@@ -214,7 +229,13 @@ export default function PostPage() {
                   「{data.track.trackName}」をYouTubeで探す
                 </a>
                 <input type="text" value={data.youtubeUrl} onChange={(e) => setData((d) => ({ ...d, youtubeUrl: e.target.value }))} placeholder="ここにYouTubeのリンクを貼る" className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-xs placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]" />
-                {videoId && <p className="text-[#c48a9f] text-[10px]">✓ 動画が設定されました</p>}
+                {videoId && (
+                  <>
+                    <p className="text-[#c48a9f] text-[10px]">✓ 動画が設定されました</p>
+                    <label className="text-[#b899a8] text-xs block pt-1">再生を始める位置（任意・サビなど）</label>
+                    <input type="text" value={data.youtubeStart} onChange={(e) => setData((d) => ({ ...d, youtubeStart: e.target.value }))} placeholder="例：1:30（1分30秒から）" className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-xs placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]" />
+                  </>
+                )}
               </div>
             )}
             <div className="flex justify-between pt-2">

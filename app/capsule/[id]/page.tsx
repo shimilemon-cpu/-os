@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, Eye, Music, ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
+import { ArrowLeft, Eye, Music, ChevronLeft, ChevronRight, Play, Pause, Share2, ImageDown } from "lucide-react";
 import { doc, getDoc, updateDoc, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { CapsuleDoc } from "@/lib/types";
@@ -51,6 +51,68 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
     load();
   }, [id]);
 
+  // カプセルを開いたら試聴を自動再生（ブラウザがブロックした場合はボタンで再生）
+  useEffect(() => {
+    if (!capsule?.previewUrl) return;
+    const audio = audioRef.current;
+    if (audio) audio.play().catch(() => {});
+  }, [capsule?.previewUrl]);
+
+  const buildShareImageUrl = (c: CapsuleDoc) => {
+    const params = new URLSearchParams({
+      img: (c.images ?? []).filter(Boolean)[0] ?? "",
+      text: c.memoryText ?? "",
+      song: c.songTitle ?? "",
+      artist: c.artistName ?? "",
+      year: c.memoryYear ? String(c.memoryYear) : "",
+    });
+    return `/api/share-image?${params.toString()}`;
+  };
+
+  const [sharing, setSharing] = useState(false);
+
+  const handleShare = async () => {
+    if (!capsule) return;
+    setSharing(true);
+    try {
+      const res = await fetch(buildShareImageUrl(capsule));
+      const blob = await res.blob();
+      const file = new File([blob], "capsule.png", { type: "image/png" });
+      const shareText = `${capsule.memoryText}\n♪ ${capsule.songTitle ?? ""} / ${capsule.artistName ?? ""}\n#CAPSULE`;
+      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+      if (nav.canShare && nav.canShare({ files: [file] })) {
+        await nav.share({ files: [file], text: shareText });
+      } else if (navigator.share) {
+        await navigator.share({ text: shareText, url: window.location.href });
+      } else {
+        // PC など共有非対応 → Xを開く
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(window.location.href)}`;
+        window.open(url, "_blank");
+      }
+    } catch {
+      // ユーザーがキャンセルした場合など。何もしない
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!capsule) return;
+    setSharing(true);
+    try {
+      const res = await fetch(buildShareImageUrl(capsule));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "capsule.png";
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setSharing(false);
+    }
+  };
+
   if (!capsule) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -70,22 +132,14 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
         <Link href="/" className="text-[#b899a8] hover:text-[#ede0e8] transition-colors">
           <ArrowLeft size={20} />
         </Link>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-[#ede0e8] text-sm font-medium truncate">{capsule.songTitle ?? "—"}</p>
           <p className="text-[#7a6475] text-xs truncate">{capsule.artistName ?? ""}</p>
         </div>
+        <button onClick={handleShare} disabled={sharing} className="shrink-0 text-[#b899a8] hover:text-[#c48a9f] transition-colors disabled:opacity-40" aria-label="シェア">
+          <Share2 size={19} />
+        </button>
       </div>
-
-      {capsule.youtubeVideoId && (
-        <div className="youtube-wrapper bg-black">
-          <iframe
-            src={`https://www.youtube.com/embed/${capsule.youtubeVideoId}?autoplay=0&rel=0&modestbranding=1`}
-            title={capsule.songTitle ?? ""}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-      )}
 
       <div className="px-4 pt-5 space-y-5">
         <div className="space-y-1">
@@ -158,7 +212,7 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
             <p className="text-[#ede0e8] text-sm font-medium truncate">{capsule.songTitle}</p>
             <p className="text-[#7a6475] text-xs truncate">{capsule.artistName}</p>
           </div>
-          {capsule.previewUrl && !capsule.youtubeVideoId && (
+          {capsule.previewUrl && (
             <button
               onClick={togglePlay}
               className="shrink-0 w-10 h-10 rounded-full bg-[#c48a9f] text-[#0e0b0e] flex items-center justify-center"
@@ -169,7 +223,7 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
           )}
         </div>
 
-        {capsule.previewUrl && !capsule.youtubeVideoId && (
+        {capsule.previewUrl && (
           <>
             <audio
               ref={audioRef}
@@ -178,10 +232,38 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
               onPause={() => setPlaying(false)}
               onEnded={() => setPlaying(false)}
             />
-            <p className="text-center text-[#7a6475] text-[10px]">
-              ♪ 30秒の試聴（フル再生はYouTube URLを添えると流れます）
-            </p>
+            <p className="text-center text-[#7a6475] text-[10px]">♪ 30秒の試聴</p>
           </>
+        )}
+
+        {/* シェア */}
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={handleShare} disabled={sharing} className="flex items-center justify-center gap-2 bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold py-3 rounded-full disabled:opacity-50">
+            <Share2 size={16} />
+            {sharing ? "準備中…" : "シェア"}
+          </button>
+          <button onClick={handleDownload} disabled={sharing} className="flex items-center justify-center gap-2 bg-[#221928] border border-[#2d1e30] text-[#ede0e8] text-sm py-3 rounded-full disabled:opacity-50">
+            <ImageDown size={16} className="text-[#c48a9f]" />
+            画像を保存
+          </button>
+        </div>
+        <p className="text-center text-[#7a6475] text-[10px] -mt-3">
+          画像を保存してインスタのストーリーに、「シェア」からXやLINEへ
+        </p>
+
+        {/* フル尺YouTube（任意・下部に小さく） */}
+        {capsule.youtubeVideoId && (
+          <div className="pt-2">
+            <p className="text-[#7a6475] text-[10px] tracking-widest uppercase mb-2">フル尺で聴く</p>
+            <div className="youtube-wrapper bg-black rounded-xl overflow-hidden border border-[#2d1e30]">
+              <iframe
+                src={`https://www.youtube.com/embed/${capsule.youtubeVideoId}?rel=0&modestbranding=1${capsule.youtubeStart ? `&start=${capsule.youtubeStart}` : ""}`}
+                title={capsule.songTitle ?? ""}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>
