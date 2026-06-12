@@ -35,8 +35,8 @@ async function generateImage(prompt: string): Promise<string> {
       num_images: 1,
       enable_safety_checker: true,
     },
-  })) as unknown as { images: { url: string }[] };
-  return result.images[0].url;
+  })) as unknown as { data: { images: { url: string }[] } };
+  return result.data.images[0].url;
 }
 
 export async function POST(request: Request) {
