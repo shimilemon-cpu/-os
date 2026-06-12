@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, Eye, Music, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Eye, Music, ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
 import { doc, getDoc, updateDoc, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { CapsuleDoc } from "@/lib/types";
@@ -11,6 +11,18 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
   const { id } = use(params);
   const [capsule, setCapsule] = useState<CapsuleDoc | null>(null);
   const [activeImage, setActiveImage] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) {
+      audio.pause();
+    } else {
+      audio.play().catch(() => {});
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -113,12 +125,41 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
         )}
 
         <div className="flex items-center gap-3 p-3 rounded-xl bg-[#1a1520] border border-[#2d1e30]">
-          <Music size={16} className="text-[#c48a9f] shrink-0" />
-          <div>
-            <p className="text-[#ede0e8] text-sm font-medium">{capsule.songTitle}</p>
-            <p className="text-[#7a6475] text-xs">{capsule.artistName}</p>
+          {capsule.artworkUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={capsule.artworkUrl} alt="" className="w-11 h-11 rounded-lg object-cover shrink-0" />
+          ) : (
+            <Music size={16} className="text-[#c48a9f] shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-[#ede0e8] text-sm font-medium truncate">{capsule.songTitle}</p>
+            <p className="text-[#7a6475] text-xs truncate">{capsule.artistName}</p>
           </div>
+          {capsule.previewUrl && !capsule.youtubeVideoId && (
+            <button
+              onClick={togglePlay}
+              className="shrink-0 w-10 h-10 rounded-full bg-[#c48a9f] text-[#0e0b0e] flex items-center justify-center"
+              aria-label={playing ? "一時停止" : "再生"}
+            >
+              {playing ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
+            </button>
+          )}
         </div>
+
+        {capsule.previewUrl && !capsule.youtubeVideoId && (
+          <>
+            <audio
+              ref={audioRef}
+              src={capsule.previewUrl}
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onEnded={() => setPlaying(false)}
+            />
+            <p className="text-center text-[#7a6475] text-[10px]">
+              ♪ 30秒の試聴（フル再生はYouTube URLを添えると流れます）
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

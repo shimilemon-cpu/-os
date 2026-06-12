@@ -10,6 +10,8 @@ export interface CapsuleDoc {
   youtubeVideoId: string | null;
   songTitle: string | null;
   artistName: string | null;
+  previewUrl: string | null;
+  artworkUrl: string | null;
   images: string[];
   views: number;
   status: string;

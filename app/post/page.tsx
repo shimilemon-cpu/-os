@@ -75,6 +75,8 @@ export default function PostPage() {
         youtubeVideoId: videoId,
         songTitle: data.track?.trackName ?? null,
         artistName: data.track?.artistName ?? null,
+        previewUrl: data.track?.previewUrl ?? null,
+        artworkUrl: data.track?.artworkUrl100 ?? null,
         images: data.images,
         views: 0,
         status: "published",
