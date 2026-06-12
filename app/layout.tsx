@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import BottomNav from "@/components/BottomNav";
+import ClientProviders from "@/components/ClientProviders";
 
 export const metadata: Metadata = {
   title: "CAPSULE — あの日に帰ろう",
@@ -26,8 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ja" className="h-full">
       <body className="min-h-full bg-[#0e0b0e]">
         <div className="relative mx-auto max-w-sm min-h-screen">
-          {children}
-          <BottomNav />
+          <ClientProviders>{children}</ClientProviders>
         </div>
       </body>
     </html>

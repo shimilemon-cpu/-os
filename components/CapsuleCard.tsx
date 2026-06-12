@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Eye, Music } from "lucide-react";
-import type { Capsule } from "@/lib/types";
+import type { CapsuleDoc } from "@/lib/types";
 
-export default function CapsuleCard({ capsule }: { capsule: Capsule }) {
-  const image = capsule.image_1;
-  const age = capsule.users?.birth_year
-    ? new Date().getFullYear() - capsule.users.birth_year
+export default function CapsuleCard({ capsule }: { capsule: CapsuleDoc }) {
+  const image = capsule.images?.[0];
+  const age = capsule.userBirthYear
+    ? new Date().getFullYear() - capsule.userBirthYear
     : null;
 
   return (
@@ -28,10 +28,10 @@ export default function CapsuleCard({ capsule }: { capsule: Capsule }) {
               <Music size={11} className="text-[#c48a9f] shrink-0" />
               <div className="min-w-0">
                 <p className="text-[#ede0e8] text-xs font-medium truncate leading-tight">
-                  {capsule.song_title ?? "—"}
+                  {capsule.songTitle ?? "—"}
                 </p>
                 <p className="text-[#b899a8] text-[10px] truncate leading-tight">
-                  {capsule.artist_name ?? ""}
+                  {capsule.artistName ?? ""}
                 </p>
               </div>
             </div>
@@ -40,22 +40,22 @@ export default function CapsuleCard({ capsule }: { capsule: Capsule }) {
 
         <div className="p-3 space-y-2">
           <p className="text-[#ede0e8] text-xs leading-relaxed line-clamp-2">
-            {capsule.memory_text}
+            {capsule.memoryText}
           </p>
           <div className="flex items-center justify-between">
             <span className="text-[#7a6475] text-[10px]">
               {age ? `${age}歳` : ""}
-              {age && capsule.users?.gender ? "・" : ""}
-              {capsule.users?.gender ?? ""}
+              {age && capsule.userGender ? "・" : ""}
+              {capsule.userGender ?? ""}
             </span>
             <div className="flex items-center gap-1 text-[#7a6475]">
               <Eye size={10} />
-              <span className="text-[10px]">{capsule.views.toLocaleString()}</span>
+              <span className="text-[10px]">{(capsule.views ?? 0).toLocaleString()}</span>
             </div>
           </div>
-          {capsule.memory_year && (
+          {capsule.memoryYear && (
             <p className="text-[#7a6475] text-[10px]">
-              {capsule.memory_year}年・{capsule.life_stage ?? ""}
+              {capsule.memoryYear}年・{capsule.lifeStage ?? ""}
             </p>
           )}
         </div>

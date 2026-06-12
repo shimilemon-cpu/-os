@@ -1,35 +1,26 @@
-export interface User {
+export interface CapsuleDoc {
   id: string;
-  nickname: string;
-  birth_year: number | null;
-  gender: string | null;
-  created_at: string;
-}
-
-export interface Capsule {
-  id: string;
-  user_id: string;
-  memory_text: string;
-  memory_year: number | null;
-  life_stage: string | null;
-  youtube_video_id: string | null;
-  song_title: string | null;
-  artist_name: string | null;
-  image_1: string | null;
-  image_2: string | null;
-  image_3: string | null;
-  image_4: string | null;
+  userId: string;
+  userNickname: string | null;
+  userBirthYear: number | null;
+  userGender: string | null;
+  memoryText: string;
+  memoryYear: number | null;
+  lifeStage: string | null;
+  youtubeVideoId: string | null;
+  songTitle: string | null;
+  artistName: string | null;
+  images: string[];
   views: number;
-  status: "draft" | "generating" | "published";
-  created_at: string;
-  users?: Pick<User, "nickname" | "birth_year" | "gender">;
+  status: string;
+  createdAt: { seconds: number } | null;
 }
 
-export interface Draft {
+export interface UserDoc {
   id: string;
-  user_id: string;
-  draft_data: Partial<PostData>;
-  updated_at: string;
+  nickname: string | null;
+  birthYear: number | null;
+  gender: string | null;
 }
 
 export interface PostData {
@@ -39,6 +30,5 @@ export interface PostData {
   youtubeVideoId: string;
   songTitle: string;
   artistName: string;
-  songArtwork: string;
   images: string[];
 }
