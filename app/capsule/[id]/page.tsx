@@ -12,6 +12,7 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
   const [capsule, setCapsule] = useState<CapsuleDoc | null>(null);
   const [activeImage, setActiveImage] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [showCounts, setShowCounts] = useState<Record<number, number>>({0: 0});
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const togglePlay = () => {
@@ -24,13 +25,18 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  // 4枚の画像を自動でスライドショー（クロスフェード）
+  // activeImageが変わるたびにそのスライドのアニメーションを再スタートさせる
+  useEffect(() => {
+    setShowCounts((prev) => ({ ...prev, [activeImage]: (prev[activeImage] ?? 0) + 1 }));
+  }, [activeImage]);
+
+  // 7秒ごとに自動スライド
   const imageCount = (capsule?.images ?? []).filter(Boolean).length;
   useEffect(() => {
     if (imageCount <= 1) return;
     const timer = setInterval(() => {
       setActiveImage((i) => (i + 1) % imageCount);
-    }, 5000);
+    }, 7000);
     return () => clearInterval(timer);
   }, [imageCount]);
 
@@ -110,11 +116,11 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
               {images.map((img, i) => (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  key={i}
+                  key={i === activeImage ? `${i}-${showCounts[i] ?? 0}` : i}
                   src={img}
                   alt=""
                   className={`absolute inset-0 w-full h-full object-cover sepia-[.4] brightness-75 transition-opacity duration-[2000ms] ease-in-out ${
-                    i === activeImage ? "opacity-100 kenburns" : "opacity-0"
+                    i === activeImage ? `opacity-100 kb-${i % 4}` : "opacity-0"
                   }`}
                 />
               ))}

@@ -32,15 +32,25 @@ body {
   height: 100%;
 }
 
-@keyframes kenburns {
-  0% {
-    transform: scale(1) translate(0, 0);
-  }
-  100% {
-    transform: scale(1.12) translate(1.5%, -1.5%);
-  }
+/* Ken Burns 4バリエーション — スライドごとに異なる動き */
+@keyframes kb-zoom-in {
+  0%   { transform: scale(1)    translate(0, 0); }
+  100% { transform: scale(1.14) translate(1%, -1%); }
+}
+@keyframes kb-zoom-out {
+  0%   { transform: scale(1.14) translate(-1%, 1%); }
+  100% { transform: scale(1)    translate(0, 0); }
+}
+@keyframes kb-pan-right {
+  0%   { transform: scale(1.1) translate(-2%, 0); }
+  100% { transform: scale(1.1) translate(2%, 0); }
+}
+@keyframes kb-pan-up {
+  0%   { transform: scale(1.1) translate(0, 1.5%); }
+  100% { transform: scale(1.1) translate(0, -1.5%); }
 }
 
-.kenburns {
-  animation: kenburns 7s ease-out forwards;
-}
+.kb-0 { animation: kb-zoom-in   9s ease-out  forwards; }
+.kb-1 { animation: kb-zoom-out  9s ease-out  forwards; }
+.kb-2 { animation: kb-pan-right 9s linear    forwards; }
+.kb-3 { animation: kb-pan-up    9s linear    forwards; }
