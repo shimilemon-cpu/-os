@@ -24,6 +24,16 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
     }
   };
 
+  // 4枚の画像を自動でスライドショー（クロスフェード）
+  const imageCount = (capsule?.images ?? []).filter(Boolean).length;
+  useEffect(() => {
+    if (imageCount <= 1) return;
+    const timer = setInterval(() => {
+      setActiveImage((i) => (i + 1) % imageCount);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [imageCount]);
+
   useEffect(() => {
     const load = async () => {
       const snap = await getDoc(doc(db, "capsules", id));
@@ -96,21 +106,28 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
             <p className="text-[#7a6475] text-[10px] tracking-widest uppercase mb-3">
               AI が描いた記憶のシーン
             </p>
-            <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={images[activeImage]} alt="" className="w-full h-full object-cover sepia-[.4] brightness-75" />
-              {activeImage > 0 && (
-                <button onClick={() => setActiveImage((i) => i - 1)} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 rounded-full p-1">
-                  <ChevronLeft size={16} className="text-white" />
-                </button>
-              )}
-              {activeImage < images.length - 1 && (
-                <button onClick={() => setActiveImage((i) => i + 1)} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 rounded-full p-1">
-                  <ChevronRight size={16} className="text-white" />
-                </button>
-              )}
-              <div className="absolute bottom-2 right-2 bg-black/50 rounded-full px-2 py-0.5">
-                <span className="text-white text-[10px]">{activeImage + 1} / {images.length}</span>
+            <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-2 bg-black">
+              {images.map((img, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={i}
+                  src={img}
+                  alt=""
+                  className={`absolute inset-0 w-full h-full object-cover sepia-[.4] brightness-75 transition-opacity duration-[2000ms] ease-in-out ${
+                    i === activeImage ? "opacity-100 kenburns" : "opacity-0"
+                  }`}
+                />
+              ))}
+              <button onClick={() => setActiveImage((i) => (i - 1 + images.length) % images.length)} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 rounded-full p-1 z-10">
+                <ChevronLeft size={16} className="text-white" />
+              </button>
+              <button onClick={() => setActiveImage((i) => (i + 1) % images.length)} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 rounded-full p-1 z-10">
+                <ChevronRight size={16} className="text-white" />
+              </button>
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 z-10">
+                {images.map((_, i) => (
+                  <span key={i} className={`h-1 rounded-full transition-all duration-500 ${i === activeImage ? "w-4 bg-[#c48a9f]" : "w-1 bg-white/40"}`} />
+                ))}
               </div>
             </div>
             <div className="grid grid-cols-4 gap-1.5">

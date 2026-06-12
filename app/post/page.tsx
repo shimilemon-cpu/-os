@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Search, Music, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Search, Music, CheckCircle, Loader2, ExternalLink } from "lucide-react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/client";
 import { searchMusic, extractYoutubeId, type ItunesTrack } from "@/lib/itunes";
@@ -198,8 +198,22 @@ export default function PostPage() {
             )}
             {data.track && (
               <div className="space-y-2">
-                <label className="text-[#b899a8] text-xs block">YouTube URL を貼る（任意）</label>
-                <input type="text" value={data.youtubeUrl} onChange={(e) => setData((d) => ({ ...d, youtubeUrl: e.target.value }))} placeholder="https://www.youtube.com/watch?v=..." className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-xs placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]" />
+                <label className="text-[#b899a8] text-xs block">フル尺で流したい場合（任意）</label>
+                <p className="text-[#7a6475] text-[10px] leading-relaxed">
+                  下のボタンでYouTubeを開き、曲の動画を見つけたら「共有 → リンクをコピー」して、ここに貼ってください。貼らなくても30秒の試聴は流れます。
+                </p>
+                <a
+                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+                    `${data.track.artistName} ${data.track.trackName}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full bg-[#221928] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-xs hover:border-[#c48a9f] transition-colors"
+                >
+                  <ExternalLink size={16} className="text-[#c48a9f]" />
+                  「{data.track.trackName}」をYouTubeで探す
+                </a>
+                <input type="text" value={data.youtubeUrl} onChange={(e) => setData((d) => ({ ...d, youtubeUrl: e.target.value }))} placeholder="ここにYouTubeのリンクを貼る" className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-xs placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]" />
                 {videoId && <p className="text-[#c48a9f] text-[10px]">✓ 動画が設定されました</p>}
               </div>
             )}
