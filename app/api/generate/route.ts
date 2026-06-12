@@ -40,13 +40,28 @@ async function generateImage(prompt: string): Promise<string> {
 }
 
 export async function POST(request: Request) {
+  // 環境変数が未設定なら、原因がはっきり分かるエラーを返す
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(
+      { error: "ANTHROPIC_API_KEY が設定されていません（Vercelの環境変数を確認してください）" },
+      { status: 500 }
+    );
+  }
+  if (!process.env.FAL_KEY) {
+    return NextResponse.json(
+      { error: "FAL_KEY が設定されていません（Vercelの環境変数を確認してください）" },
+      { status: 500 }
+    );
+  }
+
   try {
     const { memoryText, memoryYear, lifeStage } = await request.json();
     const scenes = await generateScenes(memoryText, memoryYear, lifeStage);
     const images = await Promise.all(scenes.map((s) => generateImage(s)));
     return NextResponse.json({ images });
   } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "Generation failed" }, { status: 500 });
+    console.error("画像生成エラー:", e);
+    const message = e instanceof Error ? e.message : "Generation failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

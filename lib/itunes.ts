@@ -8,11 +8,30 @@ export interface ItunesTrack {
 }
 
 export async function searchMusic(query: string): Promise<ItunesTrack[]> {
-  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=8&country=JP`;
-  const res = await fetch(url);
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.results ?? [];
+  // 日本ストアと米国ストアの両方を検索して、より多くの候補を返す
+  const stores = ["JP", "US"];
+  const requests = stores.map(async (country) => {
+    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(
+      query
+    )}&media=music&entity=song&limit=25&country=${country}`;
+    const res = await fetch(url);
+    if (!res.ok) return [] as ItunesTrack[];
+    const data = await res.json();
+    return (data.results ?? []) as ItunesTrack[];
+  });
+
+  const all = (await Promise.all(requests)).flat();
+
+  // trackId で重複を除去
+  const seen = new Set<number>();
+  const unique: ItunesTrack[] = [];
+  for (const track of all) {
+    if (track.trackId && !seen.has(track.trackId)) {
+      seen.add(track.trackId);
+      unique.push(track);
+    }
+  }
+  return unique.slice(0, 40);
 }
 
 export function extractYoutubeId(input: string): string | null {

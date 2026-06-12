@@ -16,17 +16,23 @@ export default function HomeClient() {
 
   useEffect(() => {
     const load = async () => {
-      const q = query(
-        collection(db, "capsules"),
-        orderBy("createdAt", "desc"),
-        limit(20)
-      );
-      const snap = await getDocs(q);
-      const data = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() } as CapsuleDoc))
-        .filter((c) => c.status === "published");
-      setCapsules(data);
-      setLoading(false);
+      try {
+        const q = query(
+          collection(db, "capsules"),
+          orderBy("createdAt", "desc"),
+          limit(20)
+        );
+        const snap = await getDocs(q);
+        const data = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() } as CapsuleDoc))
+          .filter((c) => c.status === "published");
+        setCapsules(data);
+      } catch (e) {
+        console.error("カプセル読み込み失敗:", e);
+        setCapsules([]);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, []);

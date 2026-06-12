@@ -47,12 +47,12 @@ export default function PostPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memoryText: data.memoryText, memoryYear: data.memoryYear, lifeStage: data.lifeStage }),
       });
-      if (!res.ok) throw new Error();
-      const { images } = await res.json();
-      setData((d) => ({ ...d, images }));
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "画像生成に失敗しました");
+      setData((d) => ({ ...d, images: json.images }));
       setStep(5);
-    } catch {
-      alert("画像生成に失敗しました。もう一度お試しください。");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "画像生成に失敗しました。もう一度お試しください。");
     } finally {
       setGenerating(false);
     }
