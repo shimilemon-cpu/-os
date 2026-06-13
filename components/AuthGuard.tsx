@@ -13,14 +13,27 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const isPublic = pathname.startsWith("/auth");
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user && !isPublic) {
-        router.push("/auth/login");
-      } else {
-        setReady(true);
-      }
+    if (isPublic) {
+      setReady(true);
+      return;
+    }
+
+    let unsubscribe: (() => void) | null = null;
+
+    // Wait for Firebase to finish loading auth state from IndexedDB before
+    // deciding to redirect. Without this, onAuthStateChanged may fire null
+    // during initialization and cause a redirect loop.
+    auth.authStateReady().then(() => {
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          router.push("/auth/login");
+        } else {
+          setReady(true);
+        }
+      });
     });
-    return () => unsub();
+
+    return () => { unsubscribe?.(); };
   }, [router, isPublic]);
 
   if (!ready && !isPublic) {

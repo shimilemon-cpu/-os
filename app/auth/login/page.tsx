@@ -4,16 +4,19 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithRedirect, getRedirectResult, type User } from "firebase/auth";
+import { signInWithRedirect, signInWithPopup, getRedirectResult, type User } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "@/lib/firebase/client";
+
+// Stored in localStorage (persists across page navigation) to detect when a
+// redirect was initiated but auth state was not restored on return (iOS ITP).
+const REDIRECT_FLAG = "capsule_login_redirect_ts";
 
 export default function LoginPage() {
   const router = useRouter();
   const [processing, setProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ログイン成功後：初回ならFirestoreにユーザー作成して遷移
   const handleUser = async (user: User) => {
     const userRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userRef);
@@ -30,21 +33,32 @@ export default function LoginPage() {
     }
   };
 
-  // リダイレクトから戻ってきた結果を処理
+  // Handle result from signInWithRedirect (runs on page load after redirect returns)
   useEffect(() => {
     getRedirectResult(auth)
       .then(async (result) => {
         if (result?.user) {
+          localStorage.removeItem(REDIRECT_FLAG);
           await handleUser(result.user);
         } else if (auth.currentUser) {
-          // すでにログイン済み
           router.push("/");
         } else {
+          // If we flagged a redirect but came back with no auth state, the
+          // redirect failed — iOS Safari ITP blocks the cross-site sessionStorage
+          // Firebase uses to track the pending redirect result.
+          const ts = localStorage.getItem(REDIRECT_FLAG);
+          if (ts && Date.now() - Number(ts) < 5 * 60 * 1000) {
+            localStorage.removeItem(REDIRECT_FLAG);
+            setError(
+              "ログインできませんでした。\niOS Safariの場合は「設定」→「Safari」→「クロスサイトトラッキングを防ぐ」をオフにするか、Chromeをお試しください。"
+            );
+          }
           setProcessing(false);
         }
       })
       .catch((e) => {
         console.error(e);
+        localStorage.removeItem(REDIRECT_FLAG);
         setError("ログインに失敗しました。もう一度お試しください。");
         setProcessing(false);
       });
@@ -55,11 +69,40 @@ export default function LoginPage() {
     setError(null);
     setProcessing(true);
     try {
-      await signInWithRedirect(auth, googleProvider);
-    } catch (e) {
-      console.error(e);
-      setError("ログインを開始できませんでした。もう一度お試しください。");
-      setProcessing(false);
+      // Try popup first — works on desktop and most Android browsers
+      const result = await signInWithPopup(auth, googleProvider);
+      await handleUser(result.user);
+    } catch (e: unknown) {
+      const code = (e as { code?: string }).code ?? "";
+
+      // User closed the popup — reset quietly with no error
+      if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+        setProcessing(false);
+        return;
+      }
+
+      // Popup blocked or not supported (iOS Safari) — fall back to redirect
+      const needsRedirect = [
+        "auth/popup-blocked",
+        "auth/missing-initial-state",
+        "auth/web-storage-unsupported",
+        "auth/operation-not-supported-in-this-environment",
+      ].includes(code);
+
+      if (needsRedirect) {
+        try {
+          localStorage.setItem(REDIRECT_FLAG, Date.now().toString());
+          await signInWithRedirect(auth, googleProvider);
+        } catch {
+          localStorage.removeItem(REDIRECT_FLAG);
+          setError("ログインを開始できませんでした。もう一度お試しください。");
+          setProcessing(false);
+        }
+      } else {
+        console.error(e);
+        setError("ログインに失敗しました。もう一度お試しください。");
+        setProcessing(false);
+      }
     }
   };
 
@@ -95,7 +138,7 @@ export default function LoginPage() {
           </button>
         )}
 
-        {error && <p className="text-center text-[#c48a9f] text-xs">{error}</p>}
+        {error && <p className="text-center text-[#c48a9f] text-xs whitespace-pre-line">{error}</p>}
 
         <p className="text-center text-[#7a6475] text-[10px] leading-relaxed">
           ログインすることで、利用規約とプライバシーポリシーに同意したことになります。
