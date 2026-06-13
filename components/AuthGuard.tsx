@@ -18,22 +18,29 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // cancelled guards against a zombie listener if this effect re-runs
+    // before authStateReady() resolves (e.g. rapid pathname changes).
+    let cancelled = false;
     let unsubscribe: (() => void) | null = null;
 
-    // Wait for Firebase to finish loading auth state from IndexedDB before
-    // deciding to redirect. Without this, onAuthStateChanged may fire null
-    // during initialization and cause a redirect loop.
     auth.authStateReady().then(() => {
+      if (cancelled) return;
       unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (!user) {
-          router.push("/auth/login");
-        } else {
+        // auth.currentUser is a synchronous fallback — onAuthStateChanged can
+        // briefly report null right after a popup sign-in before the state
+        // has propagated, so we double-check before redirecting.
+        if (user || auth.currentUser) {
           setReady(true);
+        } else {
+          router.push("/auth/login");
         }
       });
     });
 
-    return () => { unsubscribe?.(); };
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, [router, isPublic]);
 
   if (!ready && !isPublic) {

@@ -8,9 +8,17 @@ import { signInWithRedirect, signInWithPopup, getRedirectResult, type User } fro
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "@/lib/firebase/client";
 
-// Stored in localStorage (persists across page navigation) to detect when a
-// redirect was initiated but auth state was not restored on return (iOS ITP).
 const REDIRECT_FLAG = "capsule_login_redirect_ts";
+
+// iOS Safari doesn't support the OAuth popup mechanism — detect it so we can
+// skip straight to signInWithRedirect instead of confusing the user.
+function isIOS() {
+  if (typeof window === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -65,44 +73,46 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const doRedirect = async () => {
+    localStorage.setItem(REDIRECT_FLAG, Date.now().toString());
+    try {
+      await signInWithRedirect(auth, googleProvider);
+    } catch {
+      localStorage.removeItem(REDIRECT_FLAG);
+      setError("ログインを開始できませんでした。もう一度お試しください。");
+      setProcessing(false);
+    }
+  };
+
   const signIn = async () => {
     setError(null);
     setProcessing(true);
+
+    // iOS Safari does not support signInWithPopup — use redirect directly.
+    if (isIOS()) {
+      await doRedirect();
+      return;
+    }
+
     try {
-      // Try popup first — works on desktop and most Android browsers
       const result = await signInWithPopup(auth, googleProvider);
       await handleUser(result.user);
     } catch (e: unknown) {
       const code = (e as { code?: string }).code ?? "";
 
-      // User closed the popup — reset quietly with no error
       if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
-        setProcessing(false);
+        // On some browsers the popup closes AFTER auth succeeds (e.g. mobile Safari
+        // opening Google in a new tab). Check if we got a user anyway.
+        if (auth.currentUser) {
+          try { await handleUser(auth.currentUser); } catch { setProcessing(false); }
+        } else {
+          setProcessing(false);
+        }
         return;
       }
 
-      // Popup blocked or not supported (iOS Safari) — fall back to redirect
-      const needsRedirect = [
-        "auth/popup-blocked",
-        "auth/missing-initial-state",
-        "auth/web-storage-unsupported",
-        "auth/operation-not-supported-in-this-environment",
-      ].includes(code);
-
-      if (needsRedirect) {
-        try {
-          localStorage.setItem(REDIRECT_FLAG, Date.now().toString());
-          await signInWithRedirect(auth, googleProvider);
-        } catch {
-          localStorage.removeItem(REDIRECT_FLAG);
-          setError("ログインを開始できませんでした。もう一度お試しください。");
-          setProcessing(false);
-        }
-      } else {
-        console.error(e);
-        setError("ログインに失敗しました。もう一度お試しください。");
-        setProcessing(false);
-      }
+      // Any other popup failure → fall back to redirect
+      await doRedirect();
     }
   };
 
