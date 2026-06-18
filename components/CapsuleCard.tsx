@@ -39,7 +39,7 @@ export default function CapsuleCard({ capsule }: { capsule: CapsuleDoc }) {
         </div>
 
         <div className="p-3 space-y-2">
-          <p className="text-[#ede0e8] text-xs leading-relaxed line-clamp-2">
+          <p className="serif text-[#ede0e8] text-xs leading-relaxed line-clamp-2">
             {capsule.memoryText}
           </p>
           <div className="flex items-center justify-between">

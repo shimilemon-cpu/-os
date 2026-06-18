@@ -127,7 +127,10 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
     : null;
 
   return (
-    <div className="pb-24">
+    <div className="capsule-reveal pb-24">
+      {/* 開封カーテン — 暗幕がフェードアウトして記憶が浮かび上がる */}
+      <div className="capsule-curtain fixed inset-0 z-[55] bg-[#0e0b0e] pointer-events-none" aria-hidden="true" />
+
       <div className="sticky top-0 z-40 flex items-center gap-3 px-4 py-4 bg-[#0e0b0e]/90 backdrop-blur border-b border-[#2d1e30]">
         <Link href="/" className="text-[#b899a8] hover:text-[#ede0e8] transition-colors">
           <ArrowLeft size={20} />
@@ -143,7 +146,7 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
 
       <div className="px-4 pt-5 space-y-5">
         <div className="space-y-1">
-          <p className="text-[#ede0e8] text-sm leading-relaxed">{capsule.memoryText}</p>
+          <p className="serif text-[#ede0e8] text-base leading-loose">{capsule.memoryText}</p>
           <p className="text-[#c48a9f] text-xs">{capsule.memoryYear}年・{capsule.lifeStage}</p>
         </div>
 

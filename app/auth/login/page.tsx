@@ -120,7 +120,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-8 bg-[#0e0b0e]">
       <div className="w-full max-w-sm space-y-10">
         <div className="text-center space-y-2">
-          <h1 className="text-[#c48a9f] text-3xl font-bold tracking-[0.3em]">CAPSULE</h1>
+          <h1 className="serif text-[#c48a9f] text-3xl font-bold tracking-[0.3em]">CAPSULE</h1>
           <p className="text-[#7a6475] text-sm tracking-wider">3分半で、あの日に帰ろう。</p>
         </div>
 
