@@ -101,3 +101,9 @@ body {
 .kb-1 { animation: kb-zoom-out  9s ease-out  forwards; }
 .kb-2 { animation: kb-pan-right 9s linear    forwards; }
 .kb-3 { animation: kb-pan-up    9s linear    forwards; }
+
+/* 年代別フィルター — 古い時代ほどセピア寄り、現代は自然な色調 */
+.img-era-80s    { filter: sepia(.5)  brightness(.72); }
+.img-era-90s    { filter: sepia(.2)  brightness(.82); }
+.img-era-00s    { filter: sepia(.07) brightness(.9);  }
+.img-era-modern { filter: brightness(.95) saturate(1.05); }

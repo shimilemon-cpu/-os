@@ -7,6 +7,13 @@ import { doc, getDoc, updateDoc, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { CapsuleDoc } from "@/lib/types";
 
+function eraFilter(year: number | null | undefined): string {
+  if (!year || year < 1990) return "img-era-80s";
+  if (year < 2000) return "img-era-90s";
+  if (year < 2010) return "img-era-00s";
+  return "img-era-modern";
+}
+
 export default function CapsulePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [capsule, setCapsule] = useState<CapsuleDoc | null>(null);
@@ -176,7 +183,7 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
                   key={i === activeImage ? `${i}-${showCounts[i] ?? 0}` : i}
                   src={img}
                   alt=""
-                  className={`absolute inset-0 w-full h-full object-cover sepia-[.4] brightness-75 transition-opacity duration-[2000ms] ease-in-out ${
+                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ease-in-out ${eraFilter(capsule.memoryYear)} ${
                     i === activeImage ? `opacity-100 kb-${i % 4}` : "opacity-0"
                   }`}
                 />
@@ -197,7 +204,7 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
               {images.map((img, i) => (
                 <button key={i} onClick={() => setActiveImage(i)} className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${activeImage === i ? "border-[#c48a9f]" : "border-transparent"}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt="" className="w-full h-full object-cover sepia-[.4] brightness-75" />
+                  <img src={img} alt="" className={`w-full h-full object-cover ${eraFilter(capsule.memoryYear)}`} />
                 </button>
               ))}
             </div>

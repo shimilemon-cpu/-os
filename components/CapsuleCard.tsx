@@ -2,6 +2,13 @@ import Link from "next/link";
 import { Eye, Music } from "lucide-react";
 import type { CapsuleDoc } from "@/lib/types";
 
+function eraFilter(year: number | null | undefined): string {
+  if (!year || year < 1990) return "img-era-80s";
+  if (year < 2000) return "img-era-90s";
+  if (year < 2010) return "img-era-00s";
+  return "img-era-modern";
+}
+
 export default function CapsuleCard({ capsule }: { capsule: CapsuleDoc }) {
   const image = capsule.images?.[0];
   const age = capsule.userBirthYear
@@ -17,7 +24,7 @@ export default function CapsuleCard({ capsule }: { capsule: CapsuleDoc }) {
             <img
               src={image}
               alt=""
-              className="w-full h-full object-cover sepia-[.35] brightness-75 group-hover:scale-105 transition-transform duration-700"
+              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${eraFilter(capsule.memoryYear)}`}
             />
           ) : (
             <div className="w-full h-full bg-[#221928]" />

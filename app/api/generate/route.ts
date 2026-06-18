@@ -12,42 +12,79 @@ const JAPAN_SCENE_SUFFIX = [
   "sakura trees, Japanese coastal town, red torii gate, stone steps at a shrine",
 ];
 
-async function generateScenes(memoryText: string, memoryYear: string, lifeStage: string): Promise<string[]> {
+function eraStyle(year: number): string {
+  if (year < 1990)
+    return "Super 8 film grain, faded Kodak Ektachrome slide film, warm amber vintage tones, Showa analog haze, heavily aged";
+  if (year < 2000)
+    return "Fujifilm disposable camera, 90s film grain, slightly faded saturated Heisei colors, soft vignette";
+  if (year < 2010)
+    return "early 2000s digital compact camera, Canon PowerShot, crisp slightly warm colors, mild Y2K softness";
+  return "contemporary natural light photography, sharp vivid colors, VSCO C1 preset, modern Japan, clean bright tones";
+}
+
+function moodStyle(mood: string): string {
+  if (mood === "bright")
+    return "bright sunny daylight, vivid saturated colors, wide open cheerful space, joyful warm golden light, uplifting atmosphere";
+  if (mood === "muted")
+    return "overcast diffused light, desaturated muted palette, quiet stillness, soft cool shadows, melancholy tone";
+  return "golden hour warm light, gentle nostalgic atmosphere, soft amber glow";
+}
+
+async function generateScenes(
+  memoryText: string,
+  memoryYear: string,
+  lifeStage: string
+): Promise<{ mood: string; scenes: string[] }> {
   const msg = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 600,
-    messages: [{
-      role: "user",
-      content: `You are a cinematic art director specializing in nostalgic Japanese photography for a memory capsule app.
+    max_tokens: 700,
+    messages: [
+      {
+        role: "user",
+        content: `You are a cinematic art director for a Japanese memory capsule app.
 
-Generate exactly 4 image prompts based on this Japanese memory.
+Analyze this Japanese memory and generate 4 image prompts.
 
 Memory: "${memoryText}"
 Year: ${memoryYear}
 Life stage: ${lifeStage}
 
-Rules:
-- Each prompt MUST feature unmistakably Japanese scenery (NOT Chinese, NOT Korean, NOT generic Asian)
+Step 1 — Detect the emotional tone of this memory:
+- "bright": joyful, fun, exciting, happy, carefree, celebratory
+- "muted": sad, grief, lonely, anxious, struggling, bittersweet
+- "warm": nostalgic but positive, bittersweet fondness, gentle yearning
+
+Step 2 — Generate 4 scene prompts:
+- Each MUST feature unmistakably Japanese scenery (NOT Chinese, NOT Korean, NOT generic Asian)
 - Use specific Japanese visual references: tatami, shoji, engawa, furin, matsuri, yakitori stall, JR train, school randoseru bag, kotatsu, Japanese apartment balcony, etc.
-- Cinematic 35mm film photography aesthetic, warm faded tones, dust particles, golden hour or dusk light
 - NO faces, NO people visible, NO text in image
 - 1-2 sentences per prompt
-- Each of the 4 prompts shows a DIFFERENT scene angle (close-up object, wide landscape, indoor detail, outdoor atmosphere)
+- 4 different angles: close-up object, wide landscape, indoor detail, outdoor atmosphere
 
-Return ONLY a valid JSON array of 4 strings. No explanation.`,
-    }],
+Return ONLY valid JSON (no explanation):
+{"mood":"bright|warm|muted","scenes":["...","...","...","..."]}`,
+      },
+    ],
   });
   const text = msg.content[0].type === "text" ? msg.content[0].text : "";
-  const match = text.match(/\[[\s\S]*\]/);
+  const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("Invalid scene response");
-  return JSON.parse(match[0]) as string[];
+  const parsed = JSON.parse(match[0]) as { mood: string; scenes: string[] };
+  if (!Array.isArray(parsed.scenes) || parsed.scenes.length < 4)
+    throw new Error("Invalid scenes array");
+  return parsed;
 }
 
 const NEGATIVE_PROMPT =
   "Chinese architecture, Chinese lanterns, Korean style, generic Asian, Southeast Asian, anime, illustration, painting, watercolor, 3D render, cartoon, people, faces, text, logo, signature";
 
-async function generateImage(prompt: string, index: number): Promise<string> {
-  const enhancedPrompt = `${prompt}, ${JAPAN_SCENE_SUFFIX[index % 4]}, 35mm film photography, Kodak Portra 400, nostalgic, cinematic, warm amber tones, Japan`;
+async function generateImage(
+  prompt: string,
+  index: number,
+  year: number,
+  mood: string
+): Promise<string> {
+  const enhancedPrompt = `${prompt}, ${JAPAN_SCENE_SUFFIX[index % 4]}, ${eraStyle(year)}, ${moodStyle(mood)}, Japan`;
   const falInput = {
     prompt: enhancedPrompt,
     negative_prompt: NEGATIVE_PROMPT,
@@ -64,7 +101,6 @@ async function generateImage(prompt: string, index: number): Promise<string> {
 }
 
 export async function POST(request: Request) {
-  // 環境変数が未設定なら、原因がはっきり分かるエラーを返す
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY が設定されていません（Vercelの環境変数を確認してください）" },
@@ -80,8 +116,11 @@ export async function POST(request: Request) {
 
   try {
     const { memoryText, memoryYear, lifeStage } = await request.json();
-    const scenes = await generateScenes(memoryText, memoryYear, lifeStage);
-    const images = await Promise.all(scenes.map((s, i) => generateImage(s, i)));
+    const year = parseInt(memoryYear, 10) || new Date().getFullYear();
+    const { mood, scenes } = await generateScenes(memoryText, memoryYear, lifeStage);
+    const images = await Promise.all(
+      scenes.map((s, i) => generateImage(s, i, year, mood))
+    );
     return NextResponse.json({ images });
   } catch (e) {
     console.error("画像生成エラー:", e);
