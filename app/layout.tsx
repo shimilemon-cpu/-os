@@ -33,21 +33,28 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0e0b0e",
+  themeColor: "#1b1410",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
 };
 
+// 描画前に保存済みテーマを適用してチラつきを防ぐ
+const themeScript = `(function(){try{var t=localStorage.getItem('capsule_theme');if(t==='wine'||t==='sepia'){document.documentElement.dataset.theme=t;}}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja" className={`h-full ${notoSerif.variable} ${notoSans.variable}`}>
-      <body className="min-h-full bg-[#0e0b0e]">
+    <html lang="ja" data-theme="sepia" className={`h-full ${notoSerif.variable} ${notoSans.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="min-h-full bg-[var(--bg)]">
         <div className="relative mx-auto max-w-sm min-h-screen">
           <ClientProviders>{children}</ClientProviders>
         </div>
-        {/* フィルムグレイン（全画面に薄く重ねて古い写真の質感を出す） */}
+        {/* 周辺減光とフィルムグレインを全画面に薄く重ねて、古い写真の情緒を出す */}
+        <div className="vignette" aria-hidden="true" />
         <div className="film-grain" aria-hidden="true" />
       </body>
     </html>

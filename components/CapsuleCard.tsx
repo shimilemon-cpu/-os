@@ -17,7 +17,7 @@ export default function CapsuleCard({ capsule }: { capsule: CapsuleDoc }) {
 
   return (
     <Link href={`/capsule/${capsule.id}`} className="block group">
-      <div className="relative rounded-xl overflow-hidden bg-[#1a1520] border border-[#2d1e30]">
+      <div className="relative rounded-xl overflow-hidden bg-[var(--surface)] border border-[var(--border)]">
         <div className="relative aspect-[3/4] overflow-hidden">
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -27,17 +27,17 @@ export default function CapsuleCard({ capsule }: { capsule: CapsuleDoc }) {
               className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${eraFilter(capsule.memoryYear)}`}
             />
           ) : (
-            <div className="w-full h-full bg-[#221928]" />
+            <div className="w-full h-full bg-[var(--surface-2)]" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e0b0e] via-[#0e0b0e]/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/30 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-3">
             <div className="flex items-center gap-2">
-              <Music size={11} className="text-[#c48a9f] shrink-0" />
+              <Music size={11} className="text-[var(--accent)] shrink-0" />
               <div className="min-w-0">
-                <p className="text-[#ede0e8] text-xs font-medium truncate leading-tight">
+                <p className="text-[var(--text)] text-xs font-medium truncate leading-tight">
                   {capsule.songTitle ?? "—"}
                 </p>
-                <p className="text-[#b899a8] text-[10px] truncate leading-tight">
+                <p className="text-[var(--accent-2)] text-[10px] truncate leading-tight">
                   {capsule.artistName ?? ""}
                 </p>
               </div>
@@ -46,22 +46,22 @@ export default function CapsuleCard({ capsule }: { capsule: CapsuleDoc }) {
         </div>
 
         <div className="p-3 space-y-2">
-          <p className="serif text-[#ede0e8] text-xs leading-relaxed line-clamp-2">
+          <p className="serif text-[var(--text)] text-xs leading-relaxed line-clamp-2">
             {capsule.memoryText}
           </p>
           <div className="flex items-center justify-between">
-            <span className="text-[#7a6475] text-[10px]">
+            <span className="text-[var(--muted)] text-[10px]">
               {age ? `${age}歳` : ""}
               {age && capsule.userGender ? "・" : ""}
               {capsule.userGender ?? ""}
             </span>
-            <div className="flex items-center gap-1 text-[#7a6475]">
+            <div className="flex items-center gap-1 text-[var(--muted)]">
               <Eye size={10} />
               <span className="text-[10px]">{(capsule.views ?? 0).toLocaleString()}</span>
             </div>
           </div>
           {capsule.memoryYear && (
-            <p className="text-[#7a6475] text-[10px]">
+            <p className="text-[var(--muted)] text-[10px]">
               {capsule.memoryYear}年・{capsule.lifeStage ?? ""}
             </p>
           )}

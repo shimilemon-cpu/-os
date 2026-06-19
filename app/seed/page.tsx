@@ -303,19 +303,19 @@ function SeedBatch({
   const doneCount = statuses.filter((s) => s === "done").length;
 
   return (
-    <div className="space-y-4 rounded-2xl bg-[#150f1a] border border-[#2d1e30] p-4">
+    <div className="space-y-4 rounded-2xl bg-[var(--bg-elev)] border border-[var(--border)] p-4">
       <div className="space-y-1">
-        <h2 className="flex items-center gap-2 text-[#ede0e8] text-base font-medium">
+        <h2 className="flex items-center gap-2 text-[var(--text)] text-base font-medium">
           {icon}
           {title}
         </h2>
-        <p className="text-[#7a6475] text-xs leading-relaxed">{description}</p>
+        <p className="text-[var(--muted)] text-xs leading-relaxed">{description}</p>
       </div>
 
       <button
         onClick={runAll}
         disabled={running || finished}
-        className="w-full flex items-center justify-center gap-2 text-[#0e0b0e] text-sm font-semibold py-3.5 rounded-full disabled:opacity-40"
+        className="w-full flex items-center justify-center gap-2 text-[var(--bg)] text-sm font-semibold py-3.5 rounded-full disabled:opacity-40"
         style={{ backgroundColor: accent }}
       >
         {running ? (
@@ -331,16 +331,16 @@ function SeedBatch({
         {demos.map((demo, i) => {
           const s = statuses[i];
           return (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-[#1a1520] border border-[#2d1e30]">
+            <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
               <div className="shrink-0">
-                {s === "running" && <Loader2 size={16} className="text-[#c48a9f] animate-spin" />}
-                {s === "done" && <CheckCircle size={16} className="text-[#7ec48a]" />}
-                {s === "error" && <XCircle size={16} className="text-[#c4727f]" />}
-                {s === "pending" && <div className="w-4 h-4 rounded-full border border-[#2d1e30]" />}
+                {s === "running" && <Loader2 size={16} className="text-[var(--accent)] animate-spin" />}
+                {s === "done" && <CheckCircle size={16} className="text-[var(--ok)]" />}
+                {s === "error" && <XCircle size={16} className="text-[var(--danger)]" />}
+                {s === "pending" && <div className="w-4 h-4 rounded-full border border-[var(--border)]" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[#ede0e8] text-xs font-medium truncate">{demo.expectTitle} / {demo.expectArtist}</p>
-                <p className="text-[#7a6475] text-[10px] truncate">{demo.memoryYear}年・{demo.lifeStage}</p>
+                <p className="text-[var(--text)] text-xs font-medium truncate">{demo.expectTitle} / {demo.expectArtist}</p>
+                <p className="text-[var(--muted)] text-[10px] truncate">{demo.memoryYear}年・{demo.lifeStage}</p>
               </div>
             </div>
           );
@@ -350,7 +350,7 @@ function SeedBatch({
       {log.length > 0 && (
         <div className="space-y-1 pt-1">
           {log.map((l, i) => (
-            <p key={i} className="text-[#7a6475] text-[10px] font-mono">{l}</p>
+            <p key={i} className="text-[var(--muted)] text-[10px] font-mono">{l}</p>
           ))}
         </div>
       )}
@@ -361,15 +361,15 @@ function SeedBatch({
 export default function SeedPage() {
   return (
     <div className="pb-24 min-h-screen">
-      <div className="sticky top-0 z-40 bg-[#0e0b0e]/90 backdrop-blur border-b border-[#2d1e30]">
+      <div className="sticky top-0 z-40 bg-[var(--bg)]/90 backdrop-blur border-b border-[var(--border)]">
         <div className="flex items-center gap-3 px-4 pt-12 pb-3">
-          <Link href="/" className="text-[#b899a8]"><ArrowLeft size={20} /></Link>
-          <span className="text-[#ede0e8] text-sm font-medium">デモを作成</span>
+          <Link href="/" className="text-[var(--accent-2)]"><ArrowLeft size={20} /></Link>
+          <span className="text-[var(--text)] text-sm font-medium">デモを作成</span>
         </div>
       </div>
 
       <div className="px-4 pt-6 space-y-5">
-        <p className="text-[#7a6475] text-xs leading-relaxed">
+        <p className="text-[var(--muted)] text-xs leading-relaxed">
           本物のAI画像つきのデモ投稿を作成します。1セットあたり3〜5分ほどかかります。途中で画面を閉じないでください。
         </p>
 
@@ -377,19 +377,19 @@ export default function SeedPage() {
           title="各年代の名曲セット"
           description="80年代〜2020年代の名曲に紐づくデモ6件。しっとりした記憶は年代に合わせたセピア調になります。"
           demos={DEMOS}
-          accent="#c48a9f"
-          icon={<Sparkles size={16} className="text-[#c48a9f]" />}
+          accent="var(--accent)"
+          icon={<Sparkles size={16} className="text-[var(--accent)]" />}
         />
 
         <SeedBatch
           title="明るい思い出セット"
           description="夏・青春・はしゃいだ記憶 × アップテンポな名曲6件。AIが前向きなムードを検出し、晴れた鮮やかな画像を生成します。"
           demos={BRIGHT_DEMOS}
-          accent="#e0b35a"
-          icon={<Sun size={16} className="text-[#e0b35a]" />}
+          accent="var(--gold)"
+          icon={<Sun size={16} className="text-[var(--gold)]" />}
         />
 
-        <Link href="/" className="block text-center bg-[#221928] border border-[#2d1e30] text-[#ede0e8] text-sm py-3 rounded-full">
+        <Link href="/" className="block text-center bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] text-sm py-3 rounded-full">
           ホームで確認する
         </Link>
       </div>

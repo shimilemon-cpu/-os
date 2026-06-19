@@ -117,26 +117,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-8 bg-[#0e0b0e]">
+    <div className="min-h-screen flex flex-col items-center justify-center px-8 bg-[var(--bg)]">
       <div className="w-full max-w-sm space-y-10">
         <div className="text-center space-y-2">
-          <h1 className="serif text-[#c48a9f] text-3xl font-bold tracking-[0.3em]">CAPSULE</h1>
-          <p className="text-[#7a6475] text-sm tracking-wider">3分半で、あの日に帰ろう。</p>
+          <h1 className="serif text-[var(--accent)] text-3xl font-bold tracking-[0.3em]">CAPSULE</h1>
+          <p className="text-[var(--muted)] text-sm tracking-wider">3分半で、あの日に帰ろう。</p>
         </div>
 
-        <div className="text-center space-y-1 py-4 border-y border-[#2d1e30]">
-          <p className="text-[#ede0e8] text-sm leading-relaxed">曲を聴く。誰かの記憶を覗く。</p>
-          <p className="text-[#ede0e8] text-sm leading-relaxed">自分の記憶も蘇る。</p>
+        <div className="text-center space-y-1 py-4 border-y border-[var(--border)]">
+          <p className="text-[var(--text)] text-sm leading-relaxed">曲を聴く。誰かの記憶を覗く。</p>
+          <p className="text-[var(--text)] text-sm leading-relaxed">自分の記憶も蘇る。</p>
         </div>
 
         {processing ? (
           <div className="flex justify-center py-4">
-            <div className="w-6 h-6 rounded-full border-2 border-[#c48a9f] border-t-transparent animate-spin" />
+            <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
           </div>
         ) : (
           <button
             onClick={signIn}
-            className="w-full flex items-center justify-center gap-3 bg-[#1a1520] border border-[#2d1e30] rounded-2xl py-4 text-[#ede0e8] text-sm font-medium hover:border-[#c48a9f]/40 transition-colors"
+            className="w-full flex items-center justify-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl py-4 text-[var(--text)] text-sm font-medium hover:border-[var(--accent)]/40 transition-colors"
           >
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -148,9 +148,9 @@ export default function LoginPage() {
           </button>
         )}
 
-        {error && <p className="text-center text-[#c48a9f] text-xs whitespace-pre-line">{error}</p>}
+        {error && <p className="text-center text-[var(--accent)] text-xs whitespace-pre-line">{error}</p>}
 
-        <p className="text-center text-[#7a6475] text-[10px] leading-relaxed">
+        <p className="text-center text-[var(--muted)] text-[10px] leading-relaxed">
           ログインすることで、利用規約とプライバシーポリシーに同意したことになります。
         </p>
       </div>

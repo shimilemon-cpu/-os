@@ -139,10 +139,10 @@ export default function PostPage() {
 
   return (
     <div className="pb-24 min-h-screen">
-      <div className="sticky top-0 z-40 bg-[#0e0b0e]/90 backdrop-blur border-b border-[#2d1e30]">
+      <div className="sticky top-0 z-40 bg-[var(--bg)]/90 backdrop-blur border-b border-[var(--border)]">
         <div className="flex items-center gap-3 px-4 pt-12 pb-3">
-          <Link href="/" className="text-[#b899a8]"><ArrowLeft size={20} /></Link>
-          <span className="text-[#ede0e8] text-sm font-medium">タイムカプセルを作る</span>
+          <Link href="/" className="text-[var(--accent-2)]"><ArrowLeft size={20} /></Link>
+          <span className="text-[var(--text)] text-sm font-medium">タイムカプセルを作る</span>
         </div>
         <div className="flex px-4 pb-3 gap-1.5">
           {STEP_LABELS.map((label, i) => {
@@ -150,8 +150,8 @@ export default function PostPage() {
             const done = step > n; const active = step === n;
             return (
               <div key={n} className="flex-1 flex flex-col items-center gap-1">
-                <div className={`h-1 w-full rounded-full transition-colors ${done || active ? "bg-[#c48a9f]" : "bg-[#2d1e30]"}`} />
-                <span className={`text-[9px] tracking-wide ${active ? "text-[#c48a9f]" : done ? "text-[#b899a8]" : "text-[#2d1e30]"}`}>{label}</span>
+                <div className={`h-1 w-full rounded-full transition-colors ${done || active ? "bg-[var(--accent)]" : "bg-[var(--border)]"}`} />
+                <span className={`text-[9px] tracking-wide ${active ? "text-[var(--accent)]" : done ? "text-[var(--accent-2)]" : "text-[var(--border)]"}`}>{label}</span>
               </div>
             );
           })}
@@ -162,16 +162,16 @@ export default function PostPage() {
         {step === 1 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-[#ede0e8] text-base font-medium mb-1">あの日の記憶を書いてください</h2>
-              <p className="text-[#7a6475] text-xs">100文字以内</p>
+              <h2 className="text-[var(--text)] text-base font-medium mb-1">あの日の記憶を書いてください</h2>
+              <p className="text-[var(--muted)] text-xs">100文字以内</p>
             </div>
-            <textarea value={data.memoryText} onChange={(e) => { setData((d) => ({ ...d, memoryText: e.target.value.slice(0, 100) })); setModerationError(""); }} placeholder="あの頃の記憶を、ありのままに。" rows={5} className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl p-4 text-[#ede0e8] text-sm placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f] resize-none leading-relaxed" />
+            <textarea value={data.memoryText} onChange={(e) => { setData((d) => ({ ...d, memoryText: e.target.value.slice(0, 100) })); setModerationError(""); }} placeholder="あの頃の記憶を、ありのままに。" rows={5} className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-[var(--text)] text-sm placeholder-[var(--placeholder)] focus:outline-none focus:border-[var(--accent)] resize-none leading-relaxed" />
             {moderationError && (
-              <p className="text-[#c4727f] text-xs leading-relaxed bg-[#c4727f]/10 border border-[#c4727f]/30 rounded-xl p-3">{moderationError}</p>
+              <p className="text-[var(--danger)] text-xs leading-relaxed bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-xl p-3">{moderationError}</p>
             )}
             <div className="flex justify-between items-center">
-              <span className="text-[#7a6475] text-xs">{data.memoryText.length} / 100</span>
-              <button onClick={handleNextFromStep1} disabled={!data.memoryText.trim() || moderating} className="bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30">{moderating ? "確認中…" : "次へ"}</button>
+              <span className="text-[var(--muted)] text-xs">{data.memoryText.length} / 100</span>
+              <button onClick={handleNextFromStep1} disabled={!data.memoryText.trim() || moderating} className="bg-[var(--accent)] text-[var(--bg)] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30">{moderating ? "確認中…" : "次へ"}</button>
             </div>
           </div>
         )}
@@ -179,30 +179,30 @@ export default function PostPage() {
         {step === 2 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-[#ede0e8] text-base font-medium mb-1">それはいつの記憶ですか？</h2>
-              <p className="text-[#7a6475] text-xs">年と、そのときの自分</p>
+              <h2 className="text-[var(--text)] text-base font-medium mb-1">それはいつの記憶ですか？</h2>
+              <p className="text-[var(--muted)] text-xs">年と、そのときの自分</p>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-[#b899a8] text-xs block mb-1.5">年</label>
-                <input type="number" value={data.memoryYear} onChange={(e) => setData((d) => ({ ...d, memoryYear: e.target.value }))} placeholder="例：2008" min={1950} max={2025} className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-sm placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]" />
+                <label className="text-[var(--accent-2)] text-xs block mb-1.5">年</label>
+                <input type="number" value={data.memoryYear} onChange={(e) => setData((d) => ({ ...d, memoryYear: e.target.value }))} placeholder="例：2008" min={1950} max={2025} className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] text-sm placeholder-[var(--placeholder)] focus:outline-none focus:border-[var(--accent)]" />
               </div>
               <div>
-                <label className="text-[#b899a8] text-xs block mb-1.5">そのときの自分</label>
-                <input type="text" value={data.lifeStage} onChange={(e) => setData((d) => ({ ...d, lifeStage: e.target.value }))} placeholder="例：高校3年生の夏" className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-sm placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]" />
+                <label className="text-[var(--accent-2)] text-xs block mb-1.5">そのときの自分</label>
+                <input type="text" value={data.lifeStage} onChange={(e) => setData((d) => ({ ...d, lifeStage: e.target.value }))} placeholder="例：高校3年生の夏" className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] text-sm placeholder-[var(--placeholder)] focus:outline-none focus:border-[var(--accent)]" />
               </div>
             </div>
             <div>
-              <p className="text-[#7a6475] text-[10px] mb-2">よく使われる</p>
+              <p className="text-[var(--muted)] text-[10px] mb-2">よく使われる</p>
               <div className="flex flex-wrap gap-2">
                 {["小学生の夏", "中学の部活", "高校3年生の受験", "大学の卒業式", "就職1年目", "第一子誕生"].map((p) => (
-                  <button key={p} onClick={() => setData((d) => ({ ...d, lifeStage: p }))} className="text-[10px] text-[#b899a8] border border-[#2d1e30] rounded-full px-3 py-1 hover:border-[#c48a9f] hover:text-[#c48a9f] transition-colors">{p}</button>
+                  <button key={p} onClick={() => setData((d) => ({ ...d, lifeStage: p }))} className="text-[10px] text-[var(--accent-2)] border border-[var(--border)] rounded-full px-3 py-1 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">{p}</button>
                 ))}
               </div>
             </div>
             <div className="flex justify-between pt-2">
-              <button onClick={() => setStep(1)} className="text-[#7a6475] text-sm px-4 py-2">戻る</button>
-              <button onClick={() => setStep(3)} disabled={!data.memoryYear || !data.lifeStage} className="bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30">次へ</button>
+              <button onClick={() => setStep(1)} className="text-[var(--muted)] text-sm px-4 py-2">戻る</button>
+              <button onClick={() => setStep(3)} disabled={!data.memoryYear || !data.lifeStage} className="bg-[var(--accent)] text-[var(--bg)] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30">次へ</button>
             </div>
           </div>
         )}
@@ -210,35 +210,35 @@ export default function PostPage() {
         {step === 3 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-[#ede0e8] text-base font-medium mb-1">あの頃の曲を選んでください</h2>
-              <p className="text-[#7a6475] text-xs">曲名またはアーティスト名で検索</p>
+              <h2 className="text-[var(--text)] text-base font-medium mb-1">あの頃の曲を選んでください</h2>
+              <p className="text-[var(--muted)] text-xs">曲名またはアーティスト名で検索</p>
             </div>
             <div className="relative">
-              <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} placeholder="曲名 / アーティスト" className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl pl-4 pr-12 py-3 text-[#ede0e8] text-sm placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]" />
-              <button onClick={handleSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#c48a9f]">
+              <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} placeholder="曲名 / アーティスト" className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl pl-4 pr-12 py-3 text-[var(--text)] text-sm placeholder-[var(--placeholder)] focus:outline-none focus:border-[var(--accent)]" />
+              <button onClick={handleSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--accent)]">
                 {searching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
               </button>
             </div>
             {data.track && (
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-[#1a1520] border border-[#c48a9f]/40">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface)] border border-[var(--accent)]/40">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={data.track.artworkUrl100} alt="" className="w-10 h-10 rounded-lg object-cover" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[#ede0e8] text-sm font-medium truncate">{data.track.trackName}</p>
-                  <p className="text-[#7a6475] text-xs truncate">{data.track.artistName}</p>
+                  <p className="text-[var(--text)] text-sm font-medium truncate">{data.track.trackName}</p>
+                  <p className="text-[var(--muted)] text-xs truncate">{data.track.artistName}</p>
                 </div>
-                <CheckCircle size={16} className="text-[#c48a9f] shrink-0" />
+                <CheckCircle size={16} className="text-[var(--accent)] shrink-0" />
               </div>
             )}
             {searchResults.length > 0 && !data.track && (
               <div className="space-y-1.5 max-h-64 overflow-y-auto">
                 {searchResults.map((track) => (
-                  <button key={track.trackId} onClick={() => { setData((d) => ({ ...d, track })); setSearchResults([]); }} className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[#1a1520] border border-[#2d1e30] hover:border-[#c48a9f]/40 transition-colors text-left">
+                  <button key={track.trackId} onClick={() => { setData((d) => ({ ...d, track })); setSearchResults([]); }} className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)]/40 transition-colors text-left">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={track.artworkUrl100} alt="" className="w-10 h-10 rounded-lg object-cover" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[#ede0e8] text-xs font-medium truncate">{track.trackName}</p>
-                      <p className="text-[#7a6475] text-[10px] truncate">{track.artistName}</p>
+                      <p className="text-[var(--text)] text-xs font-medium truncate">{track.trackName}</p>
+                      <p className="text-[var(--muted)] text-[10px] truncate">{track.artistName}</p>
                     </div>
                   </button>
                 ))}
@@ -246,8 +246,8 @@ export default function PostPage() {
             )}
             {data.track && (
               <div className="space-y-2">
-                <label className="text-[#b899a8] text-xs block">フル尺で流したい場合（任意）</label>
-                <p className="text-[#7a6475] text-[10px] leading-relaxed">
+                <label className="text-[var(--accent-2)] text-xs block">フル尺で流したい場合（任意）</label>
+                <p className="text-[var(--muted)] text-[10px] leading-relaxed">
                   下のボタンでYouTubeを開き、曲の動画を見つけたら「共有 → リンクをコピー」して、ここに貼ってください。貼らなくても30秒の試聴は流れます。
                 </p>
                 <a
@@ -256,24 +256,24 @@ export default function PostPage() {
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full bg-[#221928] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-xs hover:border-[#c48a9f] transition-colors"
+                  className="flex items-center justify-center gap-2 w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] text-xs hover:border-[var(--accent)] transition-colors"
                 >
-                  <ExternalLink size={16} className="text-[#c48a9f]" />
+                  <ExternalLink size={16} className="text-[var(--accent)]" />
                   「{data.track.trackName}」をYouTubeで探す
                 </a>
-                <input type="text" value={data.youtubeUrl} onChange={(e) => setData((d) => ({ ...d, youtubeUrl: e.target.value }))} placeholder="ここにYouTubeのリンクを貼る" className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-xs placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]" />
+                <input type="text" value={data.youtubeUrl} onChange={(e) => setData((d) => ({ ...d, youtubeUrl: e.target.value }))} placeholder="ここにYouTubeのリンクを貼る" className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] text-xs placeholder-[var(--placeholder)] focus:outline-none focus:border-[var(--accent)]" />
                 {videoId && (
                   <>
-                    <p className="text-[#c48a9f] text-[10px]">✓ 動画が設定されました</p>
-                    <label className="text-[#b899a8] text-xs block pt-1">再生を始める位置（任意・サビなど）</label>
-                    <input type="text" value={data.youtubeStart} onChange={(e) => setData((d) => ({ ...d, youtubeStart: e.target.value }))} placeholder="例：1:30（1分30秒から）" className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-xs placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]" />
+                    <p className="text-[var(--accent)] text-[10px]">✓ 動画が設定されました</p>
+                    <label className="text-[var(--accent-2)] text-xs block pt-1">再生を始める位置（任意・サビなど）</label>
+                    <input type="text" value={data.youtubeStart} onChange={(e) => setData((d) => ({ ...d, youtubeStart: e.target.value }))} placeholder="例：1:30（1分30秒から）" className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] text-xs placeholder-[var(--placeholder)] focus:outline-none focus:border-[var(--accent)]" />
                   </>
                 )}
               </div>
             )}
             <div className="flex justify-between pt-2">
-              <button onClick={() => setStep(2)} className="text-[#7a6475] text-sm px-4 py-2">戻る</button>
-              <button onClick={() => setStep(4)} disabled={!data.track} className="bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30">次へ</button>
+              <button onClick={() => setStep(2)} className="text-[var(--muted)] text-sm px-4 py-2">戻る</button>
+              <button onClick={() => setStep(4)} disabled={!data.track} className="bg-[var(--accent)] text-[var(--bg)] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30">次へ</button>
             </div>
           </div>
         )}
@@ -281,40 +281,40 @@ export default function PostPage() {
         {step === 4 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-[#ede0e8] text-base font-medium mb-1">記憶をAIが描きます</h2>
-              <p className="text-[#7a6475] text-xs">4枚のシーンを生成します（約30〜60秒）</p>
+              <h2 className="text-[var(--text)] text-base font-medium mb-1">記憶をAIが描きます</h2>
+              <p className="text-[var(--muted)] text-xs">4枚のシーンを生成します（約30〜60秒）</p>
             </div>
-            <div className="p-4 rounded-xl bg-[#1a1520] border border-[#2d1e30] space-y-2">
+            <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-2">
               <div className="flex items-center gap-2">
-                <Music size={12} className="text-[#c48a9f]" />
-                <span className="text-[#c48a9f] text-xs">{data.track?.trackName} / {data.track?.artistName}</span>
+                <Music size={12} className="text-[var(--accent)]" />
+                <span className="text-[var(--accent)] text-xs">{data.track?.trackName} / {data.track?.artistName}</span>
               </div>
-              <p className="text-[#b899a8] text-xs leading-relaxed">{data.memoryText}</p>
-              <p className="text-[#7a6475] text-[10px]">{data.memoryYear}年・{data.lifeStage}</p>
+              <p className="text-[var(--accent-2)] text-xs leading-relaxed">{data.memoryText}</p>
+              <p className="text-[var(--muted)] text-[10px]">{data.memoryYear}年・{data.lifeStage}</p>
             </div>
             {generating ? (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   {[...Array(4)].map((_, i) => (
-                    <div key={i} className="aspect-[3/4] rounded-xl bg-[#1a1520] border border-[#2d1e30] flex items-center justify-center">
-                      <Loader2 size={20} className="text-[#c48a9f] animate-spin" />
+                    <div key={i} className="aspect-[3/4] rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center">
+                      <Loader2 size={20} className="text-[var(--accent)] animate-spin" />
                     </div>
                   ))}
                 </div>
-                <p className="text-center text-[#7a6475] text-xs">AIが記憶を描いています…</p>
+                <p className="text-center text-[var(--muted)] text-xs">AIが記憶を描いています…</p>
               </div>
             ) : (
-              <button onClick={handleGenerateImages} className="w-full bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold py-3.5 rounded-full">画像を生成する</button>
+              <button onClick={handleGenerateImages} className="w-full bg-[var(--accent)] text-[var(--bg)] text-sm font-semibold py-3.5 rounded-full">画像を生成する</button>
             )}
-            {!generating && <button onClick={() => setStep(3)} className="w-full text-[#7a6475] text-sm py-2">戻る</button>}
+            {!generating && <button onClick={() => setStep(3)} className="w-full text-[var(--muted)] text-sm py-2">戻る</button>}
           </div>
         )}
 
         {step === 5 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-[#ede0e8] text-base font-medium mb-1">プレビュー</h2>
-              <p className="text-[#7a6475] text-xs">タイムカプセルを確認してください</p>
+              <h2 className="text-[var(--text)] text-base font-medium mb-1">プレビュー</h2>
+              <p className="text-[var(--muted)] text-xs">タイムカプセルを確認してください</p>
             </div>
             {data.images.length > 0 && (
               <div className="grid grid-cols-2 gap-1.5">
@@ -324,18 +324,18 @@ export default function PostPage() {
                 ))}
               </div>
             )}
-            <div className="p-4 rounded-xl bg-[#1a1520] border border-[#2d1e30] space-y-3">
+            <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-3">
               <div className="flex items-center gap-2">
-                <Music size={12} className="text-[#c48a9f]" />
-                <span className="text-[#c48a9f] text-xs">{data.track?.trackName} / {data.track?.artistName}</span>
+                <Music size={12} className="text-[var(--accent)]" />
+                <span className="text-[var(--accent)] text-xs">{data.track?.trackName} / {data.track?.artistName}</span>
               </div>
-              <p className="text-[#ede0e8] text-sm leading-relaxed">{data.memoryText}</p>
-              <p className="text-[#7a6475] text-xs">{data.memoryYear}年・{data.lifeStage}</p>
+              <p className="text-[var(--text)] text-sm leading-relaxed">{data.memoryText}</p>
+              <p className="text-[var(--muted)] text-xs">{data.memoryYear}年・{data.lifeStage}</p>
             </div>
-            <button onClick={handlePublish} disabled={publishing} className="w-full bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold py-3.5 rounded-full disabled:opacity-50">
+            <button onClick={handlePublish} disabled={publishing} className="w-full bg-[var(--accent)] text-[var(--bg)] text-sm font-semibold py-3.5 rounded-full disabled:opacity-50">
               {publishing ? "投稿中…" : "タイムカプセルを残す"}
             </button>
-            <button onClick={() => setStep(4)} className="w-full text-[#7a6475] text-sm py-2">戻る</button>
+            <button onClick={() => setStep(4)} className="w-full text-[var(--muted)] text-sm py-2">戻る</button>
           </div>
         )}
       </div>

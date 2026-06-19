@@ -56,7 +56,7 @@ export async function GET(request: Request) {
             width: "1080px",
             height: "1920px",
             display: "flex",
-            backgroundColor: "#0e0b0e",
+            backgroundColor: "#1b1410",
           }}
         >
           {img && (
@@ -81,7 +81,7 @@ export async function GET(request: Request) {
           height: "1920px",
           display: "flex",
           flexDirection: "column",
-          backgroundColor: "#0e0b0e",
+          backgroundColor: "#1b1410",
           fontFamily: "NotoJP",
         }}
       >
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
               alt=""
             />
           ) : (
-            <div style={{ width: "1080px", height: "1180px", backgroundColor: "#1a1520" }} />
+            <div style={{ width: "1080px", height: "1180px", backgroundColor: "#2a1f17" }} />
           )}
           {/* 下方向への暗いグラデーション */}
           <div
@@ -132,13 +132,13 @@ export async function GET(request: Request) {
             marginTop: "-260px",
           }}
         >
-          <div style={{ display: "flex", color: "#c48a9f", fontSize: "34px", marginBottom: "24px" }}>
+          <div style={{ display: "flex", color: "#e0a567", fontSize: "34px", marginBottom: "24px" }}>
             {year ? `${year}年の記憶` : "ある日の記憶"}
           </div>
           <div
             style={{
               display: "flex",
-              color: "#ede0e8",
+              color: "#f3e7d6",
               fontSize: "52px",
               lineHeight: 1.6,
               marginBottom: "44px",
@@ -146,21 +146,21 @@ export async function GET(request: Request) {
           >
             {text}
           </div>
-          <div style={{ display: "flex", color: "#b899a8", fontSize: "32px", marginBottom: "70px" }}>
+          <div style={{ display: "flex", color: "#cbab84", fontSize: "32px", marginBottom: "70px" }}>
             {song ? `♪ ${song} ／ ${artist}` : ""}
           </div>
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              borderTop: "1px solid #2d1e30",
+              borderTop: "1px solid #45331f",
               paddingTop: "40px",
             }}
           >
             <div
               style={{
                 display: "flex",
-                color: "#c48a9f",
+                color: "#e0a567",
                 fontSize: "40px",
                 letterSpacing: "12px",
                 fontWeight: 700,
@@ -168,7 +168,7 @@ export async function GET(request: Request) {
             >
               CAPSULE
             </div>
-            <div style={{ display: "flex", color: "#7a6475", fontSize: "26px", marginTop: "10px" }}>
+            <div style={{ display: "flex", color: "#b0916f", fontSize: "26px", marginTop: "10px" }}>
               3分半で、あの日に帰ろう。
             </div>
           </div>

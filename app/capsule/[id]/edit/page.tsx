@@ -151,7 +151,7 @@ export default function EditCapsulePage({ params }: { params: Promise<{ id: stri
   if (!authReady || (!capsule && !notFound)) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="w-6 h-6 rounded-full border-2 border-[#c48a9f] border-t-transparent animate-spin" />
+        <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -159,8 +159,8 @@ export default function EditCapsulePage({ params }: { params: Promise<{ id: stri
   if (notFound) {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-3">
-        <p className="text-[#7a6475] text-sm">カプセルが見つかりません</p>
-        <Link href="/" className="text-[#c48a9f] text-sm">ホームへ戻る</Link>
+        <p className="text-[var(--muted)] text-sm">カプセルが見つかりません</p>
+        <Link href="/" className="text-[var(--accent)] text-sm">ホームへ戻る</Link>
       </div>
     );
   }
@@ -168,38 +168,38 @@ export default function EditCapsulePage({ params }: { params: Promise<{ id: stri
   if (!canEdit) {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-3 px-8 text-center">
-        <p className="text-[#7a6475] text-sm">このカプセルを編集する権限がありません。</p>
-        <Link href={`/capsule/${id}`} className="text-[#c48a9f] text-sm">カプセルへ戻る</Link>
+        <p className="text-[var(--muted)] text-sm">このカプセルを編集する権限がありません。</p>
+        <Link href={`/capsule/${id}`} className="text-[var(--accent)] text-sm">カプセルへ戻る</Link>
       </div>
     );
   }
 
-  const labelCls = "text-[#b899a8] text-xs block mb-1.5";
+  const labelCls = "text-[var(--accent-2)] text-xs block mb-1.5";
   const inputCls =
-    "w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl px-4 py-3 text-[#ede0e8] text-sm placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f]";
+    "w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] text-sm placeholder-[var(--placeholder)] focus:outline-none focus:border-[var(--accent)]";
 
   return (
     <div className="pb-28 min-h-screen">
-      <div className="sticky top-0 z-40 bg-[#0e0b0e]/90 backdrop-blur border-b border-[#2d1e30]">
+      <div className="sticky top-0 z-40 bg-[var(--bg)]/90 backdrop-blur border-b border-[var(--border)]">
         <div className="flex items-center gap-3 px-4 pt-12 pb-3">
-          <Link href={`/capsule/${id}`} className="text-[#b899a8]"><ArrowLeft size={20} /></Link>
-          <span className="text-[#ede0e8] text-sm font-medium">カプセルを編集</span>
+          <Link href={`/capsule/${id}`} className="text-[var(--accent-2)]"><ArrowLeft size={20} /></Link>
+          <span className="text-[var(--text)] text-sm font-medium">カプセルを編集</span>
           {admin && capsule && capsule.userId !== user?.uid && (
-            <span className="ml-auto text-[10px] text-[#e0b35a] border border-[#e0b35a]/40 rounded-full px-2 py-0.5">管理者編集</span>
+            <span className="ml-auto text-[10px] text-[var(--gold)] border border-[var(--gold)]/40 rounded-full px-2 py-0.5">管理者編集</span>
           )}
         </div>
       </div>
 
       <div className="px-4 pt-6 space-y-5">
         {/* 公開状態 */}
-        <div className="flex items-center justify-between p-3 rounded-xl bg-[#1a1520] border border-[#2d1e30]">
+        <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
           <div className="flex items-center gap-2">
-            {status === "published" ? <Eye size={16} className="text-[#7ec48a]" /> : <EyeOff size={16} className="text-[#c4727f]" />}
-            <span className="text-[#ede0e8] text-sm">{status === "published" ? "公開中" : "非表示"}</span>
+            {status === "published" ? <Eye size={16} className="text-[var(--ok)]" /> : <EyeOff size={16} className="text-[var(--danger)]" />}
+            <span className="text-[var(--text)] text-sm">{status === "published" ? "公開中" : "非表示"}</span>
           </div>
           <button
             onClick={() => setStatus((s) => (s === "published" ? "hidden" : "published"))}
-            className="text-xs px-3 py-1.5 rounded-full border border-[#2d1e30] text-[#b899a8] hover:border-[#c48a9f] hover:text-[#c48a9f] transition-colors"
+            className="text-xs px-3 py-1.5 rounded-full border border-[var(--border)] text-[var(--accent-2)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
           >
             {status === "published" ? "非表示にする" : "公開する"}
           </button>
@@ -213,7 +213,7 @@ export default function EditCapsulePage({ params }: { params: Promise<{ id: stri
             rows={4}
             className={`${inputCls} resize-none leading-relaxed`}
           />
-          <p className="text-right text-[#7a6475] text-xs mt-1">{memoryText.length} / 100</p>
+          <p className="text-right text-[var(--muted)] text-xs mt-1">{memoryText.length} / 100</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -248,16 +248,16 @@ export default function EditCapsulePage({ params }: { params: Promise<{ id: stri
         <div className="space-y-2">
           <label className={labelCls}>楽曲</label>
           {songTitle && (
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-[#1a1520] border border-[#c48a9f]/40">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface)] border border-[var(--accent)]/40">
               {artworkUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={artworkUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
-              ) : <div className="w-10 h-10 rounded-lg bg-[#221928]" />}
+              ) : <div className="w-10 h-10 rounded-lg bg-[var(--surface-2)]" />}
               <div className="flex-1 min-w-0">
-                <p className="text-[#ede0e8] text-sm font-medium truncate">{songTitle}</p>
-                <p className="text-[#7a6475] text-xs truncate">{artistName}</p>
+                <p className="text-[var(--text)] text-sm font-medium truncate">{songTitle}</p>
+                <p className="text-[var(--muted)] text-xs truncate">{artistName}</p>
               </div>
-              <CheckCircle size={16} className="text-[#c48a9f] shrink-0" />
+              <CheckCircle size={16} className="text-[var(--accent)] shrink-0" />
             </div>
           )}
           <div className="relative">
@@ -269,19 +269,19 @@ export default function EditCapsulePage({ params }: { params: Promise<{ id: stri
               placeholder="曲を変える場合は検索"
               className={`${inputCls} pr-12`}
             />
-            <button onClick={handleSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#c48a9f]">
+            <button onClick={handleSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--accent)]">
               {searching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
             </button>
           </div>
           {searchResults.length > 0 && (
             <div className="space-y-1.5 max-h-56 overflow-y-auto">
               {searchResults.map((t) => (
-                <button key={t.trackId} onClick={() => selectTrack(t)} className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[#1a1520] border border-[#2d1e30] hover:border-[#c48a9f]/40 transition-colors text-left">
+                <button key={t.trackId} onClick={() => selectTrack(t)} className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)]/40 transition-colors text-left">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={t.artworkUrl100} alt="" className="w-10 h-10 rounded-lg object-cover" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[#ede0e8] text-xs font-medium truncate">{t.trackName}</p>
-                    <p className="text-[#7a6475] text-[10px] truncate">{t.artistName}</p>
+                    <p className="text-[var(--text)] text-xs font-medium truncate">{t.trackName}</p>
+                    <p className="text-[var(--muted)] text-[10px] truncate">{t.artistName}</p>
                   </div>
                 </button>
               ))}
@@ -290,14 +290,14 @@ export default function EditCapsulePage({ params }: { params: Promise<{ id: stri
         </div>
 
         {error && (
-          <p className="text-[#c4727f] text-xs leading-relaxed bg-[#c4727f]/10 border border-[#c4727f]/30 rounded-xl p-3">{error}</p>
+          <p className="text-[var(--danger)] text-xs leading-relaxed bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-xl p-3">{error}</p>
         )}
 
-        <button onClick={handleSave} disabled={saving || deleting} className="w-full bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold py-3.5 rounded-full disabled:opacity-50">
+        <button onClick={handleSave} disabled={saving || deleting} className="w-full bg-[var(--accent)] text-[var(--bg)] text-sm font-semibold py-3.5 rounded-full disabled:opacity-50">
           {saving ? "保存中…" : "保存する"}
         </button>
 
-        <button onClick={handleDelete} disabled={saving || deleting} className="w-full flex items-center justify-center gap-2 text-[#c4727f] text-sm py-2 disabled:opacity-50">
+        <button onClick={handleDelete} disabled={saving || deleting} className="w-full flex items-center justify-center gap-2 text-[var(--danger)] text-sm py-2 disabled:opacity-50">
           <Trash2 size={15} />
           {deleting ? "削除中…" : "このカプセルを削除する"}
         </button>
