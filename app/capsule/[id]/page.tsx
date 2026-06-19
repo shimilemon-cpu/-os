@@ -2,9 +2,12 @@
 
 import { use, useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, Eye, Music, ChevronLeft, ChevronRight, Play, Pause, Share2, ImageDown } from "lucide-react";
-import { doc, getDoc, updateDoc, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Eye, EyeOff, Music, ChevronLeft, ChevronRight, Play, Pause, Share2, ImageDown, Pencil, Trash2 } from "lucide-react";
+import { doc, getDoc, updateDoc, deleteDoc, increment } from "firebase/firestore";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { auth, db } from "@/lib/firebase/client";
+import { isAdmin } from "@/lib/admin";
 import type { CapsuleDoc } from "@/lib/types";
 
 function eraFilter(year: number | null | undefined): string {
@@ -16,11 +19,19 @@ function eraFilter(year: number | null | undefined): string {
 
 export default function CapsulePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [capsule, setCapsule] = useState<CapsuleDoc | null>(null);
   const [activeImage, setActiveImage] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [showCounts, setShowCounts] = useState<Record<number, number>>({0: 0});
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setCurrentUser(u));
+    return () => unsub();
+  }, []);
 
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -120,6 +131,33 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
     }
   };
 
+  const canEdit =
+    !!capsule && !!currentUser && (isAdmin(currentUser) || capsule.userId === currentUser.uid);
+
+  const toggleStatus = async () => {
+    if (!capsule) return;
+    const next = capsule.status === "published" ? "hidden" : "published";
+    setUpdatingStatus(true);
+    try {
+      await updateDoc(doc(db, "capsules", id), { status: next });
+      setCapsule({ ...capsule, status: next });
+    } catch {
+      alert("状態の変更に失敗しました。");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("このカプセルを完全に削除します。元に戻せません。よろしいですか？")) return;
+    try {
+      await deleteDoc(doc(db, "capsules", id));
+      router.push("/");
+    } catch {
+      alert("削除に失敗しました。");
+    }
+  };
+
   if (!capsule) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -156,6 +194,24 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
           <p className="serif text-[#ede0e8] text-base leading-loose">{capsule.memoryText}</p>
           <p className="text-[#c48a9f] text-xs">{capsule.memoryYear}年・{capsule.lifeStage}</p>
         </div>
+
+        {/* 投稿者本人・管理者だけに見える管理メニュー */}
+        {canEdit && (
+          <div className="flex items-center gap-2 p-2 rounded-xl bg-[#150f1a] border border-[#2d1e30]">
+            {capsule.status !== "published" && (
+              <span className="text-[10px] text-[#c4727f] border border-[#c4727f]/40 rounded-full px-2 py-0.5">非表示中</span>
+            )}
+            <Link href={`/capsule/${id}/edit`} className="flex items-center gap-1 text-xs text-[#b899a8] hover:text-[#c48a9f] transition-colors px-2 py-1">
+              <Pencil size={13} />編集
+            </Link>
+            <button onClick={toggleStatus} disabled={updatingStatus} className="flex items-center gap-1 text-xs text-[#b899a8] hover:text-[#c48a9f] transition-colors px-2 py-1 disabled:opacity-40">
+              {capsule.status === "published" ? <><EyeOff size={13} />非表示</> : <><Eye size={13} />公開</>}
+            </button>
+            <button onClick={handleDelete} className="flex items-center gap-1 text-xs text-[#c4727f] hover:opacity-80 transition-opacity px-2 py-1 ml-auto">
+              <Trash2 size={13} />削除
+            </button>
+          </div>
+        )}
 
         <div className="flex items-center justify-between text-xs">
           <span className="text-[#7a6475]">

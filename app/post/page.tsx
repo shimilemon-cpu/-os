@@ -45,6 +45,36 @@ export default function PostPage() {
   const [searching, setSearching] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [moderating, setModerating] = useState(false);
+  const [moderationError, setModerationError] = useState("");
+
+  // 記憶テキストを公開して問題ないかチェックしてから次へ進む
+  const handleNextFromStep1 = async () => {
+    setModerationError("");
+    setModerating(true);
+    try {
+      const res = await fetch("/api/moderate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: data.memoryText }),
+      });
+      const json = await res.json();
+      if (!json.allowed) {
+        setModerationError(
+          json.reason
+            ? `この内容は投稿できません：${json.reason}`
+            : "この内容は投稿できません。表現を見直してください。"
+        );
+        return;
+      }
+      setStep(2);
+    } catch {
+      // チェックに失敗したら進行は止めない
+      setStep(2);
+    } finally {
+      setModerating(false);
+    }
+  };
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -135,10 +165,13 @@ export default function PostPage() {
               <h2 className="text-[#ede0e8] text-base font-medium mb-1">あの日の記憶を書いてください</h2>
               <p className="text-[#7a6475] text-xs">100文字以内</p>
             </div>
-            <textarea value={data.memoryText} onChange={(e) => setData((d) => ({ ...d, memoryText: e.target.value.slice(0, 100) }))} placeholder="あの頃の記憶を、ありのままに。" rows={5} className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl p-4 text-[#ede0e8] text-sm placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f] resize-none leading-relaxed" />
+            <textarea value={data.memoryText} onChange={(e) => { setData((d) => ({ ...d, memoryText: e.target.value.slice(0, 100) })); setModerationError(""); }} placeholder="あの頃の記憶を、ありのままに。" rows={5} className="w-full bg-[#1a1520] border border-[#2d1e30] rounded-xl p-4 text-[#ede0e8] text-sm placeholder-[#3d2d3a] focus:outline-none focus:border-[#c48a9f] resize-none leading-relaxed" />
+            {moderationError && (
+              <p className="text-[#c4727f] text-xs leading-relaxed bg-[#c4727f]/10 border border-[#c4727f]/30 rounded-xl p-3">{moderationError}</p>
+            )}
             <div className="flex justify-between items-center">
               <span className="text-[#7a6475] text-xs">{data.memoryText.length} / 100</span>
-              <button onClick={() => setStep(2)} disabled={!data.memoryText.trim()} className="bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30">次へ</button>
+              <button onClick={handleNextFromStep1} disabled={!data.memoryText.trim() || moderating} className="bg-[#c48a9f] text-[#0e0b0e] text-sm font-semibold px-6 py-2.5 rounded-full disabled:opacity-30">{moderating ? "確認中…" : "次へ"}</button>
             </div>
           </div>
         )}
