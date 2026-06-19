@@ -2,13 +2,16 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Search, Music, CheckCircle, Loader2, ExternalLink } from "lucide-react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, doc, getDoc, serverTimestamp } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client";
+import { buildRegionContext } from "@/lib/region";
 import { searchMusic, extractYoutubeId, type ItunesTrack } from "@/lib/itunes";
+import type { UserDoc } from "@/lib/types";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 const STEP_LABELS = ["記憶", "年代", "楽曲", "画像生成", "完成"];
@@ -47,6 +50,21 @@ export default function PostPage() {
   const [publishing, setPublishing] = useState(false);
   const [moderating, setModerating] = useState(false);
   const [moderationError, setModerationError] = useState("");
+  const [userProfile, setUserProfile] = useState<UserDoc | null>(null);
+
+  // 投稿者のプロフィール（地域情報）をページ読み込み時に取得する
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      try {
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if (snap.exists()) setUserProfile({ id: user.uid, ...snap.data() } as UserDoc);
+      } catch {
+        // プロフィール取得に失敗しても投稿フローは止めない
+      }
+    });
+    return () => unsub();
+  }, []);
 
   // 記憶テキストを公開して問題ないかチェックしてから次へ進む
   const handleNextFromStep1 = async () => {
@@ -86,10 +104,11 @@ export default function PostPage() {
   const handleGenerateImages = async () => {
     setGenerating(true);
     try {
+      const userRegion = buildRegionContext(userProfile?.region, userProfile?.envType);
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memoryText: data.memoryText, memoryYear: data.memoryYear, lifeStage: data.lifeStage }),
+        body: JSON.stringify({ memoryText: data.memoryText, memoryYear: data.memoryYear, lifeStage: data.lifeStage, userRegion }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "画像生成に失敗しました");
@@ -320,7 +339,7 @@ export default function PostPage() {
               <div className="grid grid-cols-2 gap-1.5">
                 {data.images.map((img, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img key={i} src={img} alt="" className="aspect-[3/4] w-full object-cover rounded-xl sepia-[.4] brightness-75" />
+                  <img key={i} src={img} alt="" className="aspect-[3/4] w-full object-cover rounded-xl" />
                 ))}
               </div>
             )}

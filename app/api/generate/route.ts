@@ -33,11 +33,16 @@ function moodStyle(mood: string): string {
 async function generateScenes(
   memoryText: string,
   memoryYear: string,
-  lifeStage: string
+  lifeStage: string,
+  userRegion: string,
 ): Promise<{ mood: string; scenes: string[] }> {
+  const regionBlock = userRegion
+    ? `\nUser's hometown visual context (use as default backdrop): ${userRegion}`
+    : "";
+
   const msg = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 700,
+    max_tokens: 750,
     messages: [
       {
         role: "user",
@@ -47,7 +52,7 @@ Analyze this Japanese memory and generate 4 image prompts.
 
 Memory: "${memoryText}"
 Year: ${memoryYear}
-Life stage: ${lifeStage}
+Life stage: ${lifeStage}${regionBlock}
 
 Step 1 — Detect the emotional tone of this memory:
 - "bright": joyful, fun, exciting, happy, carefree, celebratory
@@ -56,7 +61,8 @@ Step 1 — Detect the emotional tone of this memory:
 
 Step 2 — Generate 4 scene prompts:
 - Each MUST feature unmistakably Japanese scenery (NOT Chinese, NOT Korean, NOT generic Asian)
-- Use specific Japanese visual references: tatami, shoji, engawa, furin, matsuri, yakitori stall, JR train, school randoseru bag, kotatsu, Japanese apartment balcony, etc.
+- LOCATION PRIORITY: If the memory text explicitly mentions a specific place or scenery (e.g. 海, 山, 渋谷, 田んぼ, 実家, 海岸, 駅, 公園), use that as the setting. Otherwise, draw from the user's hometown context above.
+- Use specific Japanese visual references appropriate to the setting: tatami, shoji, engawa, furin, matsuri, yakitori stall, JR train, school randoseru bag, kotatsu, fishing port, rice paddy canal, apartment balcony, etc.
 - NO faces, NO people visible, NO text in image
 - 1-2 sentences per prompt
 - 4 different angles: close-up object, wide landscape, indoor detail, outdoor atmosphere
@@ -82,9 +88,11 @@ async function generateImage(
   prompt: string,
   index: number,
   year: number,
-  mood: string
+  mood: string,
+  userRegion: string,
 ): Promise<string> {
-  const enhancedPrompt = `${prompt}, ${JAPAN_SCENE_SUFFIX[index % 4]}, ${eraStyle(year)}, ${moodStyle(mood)}, Japan`;
+  const regionSuffix = userRegion ? `, ${userRegion}` : "";
+  const enhancedPrompt = `${prompt}, ${JAPAN_SCENE_SUFFIX[index % 4]}, ${eraStyle(year)}, ${moodStyle(mood)}${regionSuffix}, Japan`;
   const falInput = {
     prompt: enhancedPrompt,
     negative_prompt: NEGATIVE_PROMPT,
@@ -115,11 +123,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { memoryText, memoryYear, lifeStage } = await request.json();
+    const { memoryText, memoryYear, lifeStage, userRegion = "" } = await request.json();
     const year = parseInt(memoryYear, 10) || new Date().getFullYear();
-    const { mood, scenes } = await generateScenes(memoryText, memoryYear, lifeStage);
+    const { mood, scenes } = await generateScenes(memoryText, memoryYear, lifeStage, userRegion);
     const images = await Promise.all(
-      scenes.map((s, i) => generateImage(s, i, year, mood))
+      scenes.map((s, i) => generateImage(s, i, year, mood, userRegion))
     );
     return NextResponse.json({ images });
   } catch (e) {

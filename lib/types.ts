@@ -24,6 +24,8 @@ export interface UserDoc {
   nickname: string | null;
   birthYear: number | null;
   gender: string | null;
+  region: string | null;
+  envType: string | null;
 }
 
 export interface PostData {

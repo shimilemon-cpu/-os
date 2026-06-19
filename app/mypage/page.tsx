@@ -6,14 +6,15 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  doc, getDoc, collection, query, where, orderBy, limit, getDocs,
+  doc, getDoc, setDoc, collection, query, where, orderBy, limit, getDocs,
 } from "firebase/firestore";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client";
 import { isAdmin } from "@/lib/admin";
+import { REGIONS, ENV_TYPES } from "@/lib/region";
 import CapsuleCard from "@/components/CapsuleCard";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
-import { Eye, EyeOff, Archive, LogOut, ShieldCheck, Pencil, AlertTriangle } from "lucide-react";
+import { Eye, EyeOff, Archive, LogOut, ShieldCheck, Pencil, AlertTriangle, MapPin, ChevronDown, ChevronUp } from "lucide-react";
 import type { CapsuleDoc, UserDoc } from "@/lib/types";
 
 type AdminFilter = "all" | "published" | "hidden";
@@ -26,6 +27,10 @@ export default function MyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<AdminFilter>("all");
+  const [regionOpen, setRegionOpen] = useState(false);
+  const [regionEdit, setRegionEdit] = useState("");
+  const [envEdit, setEnvEdit] = useState("");
+  const [savingRegion, setSavingRegion] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -34,7 +39,10 @@ export default function MyPage() {
       setAdmin(amAdmin);
       try {
         const profileSnap = await getDoc(doc(db, "users", user.uid));
-        setProfile(profileSnap.exists() ? { id: user.uid, ...profileSnap.data() } as UserDoc : null);
+        const p = profileSnap.exists() ? { id: user.uid, ...profileSnap.data() } as UserDoc : null;
+        setProfile(p);
+        setRegionEdit(p?.region ?? "");
+        setEnvEdit(p?.envType ?? "");
 
         if (amAdmin) {
           // 管理者：全ユーザーの最近のカプセルを取得（単一フィールド並び替え＝索引不要）
@@ -68,6 +76,21 @@ export default function MyPage() {
   const handleSignOut = async () => {
     await signOut(auth);
     router.push("/auth/login");
+  };
+
+  const saveRegion = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    setSavingRegion(true);
+    try {
+      await setDoc(doc(db, "users", user.uid), { region: regionEdit || null, envType: envEdit || null }, { merge: true });
+      setProfile((p) => p ? { ...p, region: regionEdit || null, envType: envEdit || null } : p);
+      setRegionOpen(false);
+    } catch {
+      // 保存エラーはサイレントに無視
+    } finally {
+      setSavingRegion(false);
+    }
   };
 
   const totalViews = capsules.reduce((sum, c) => sum + (c.views ?? 0), 0);
@@ -178,6 +201,73 @@ export default function MyPage() {
           <div className="grid grid-cols-2 gap-3 p-4">
             <StatCard icon={<Archive size={18} className="text-[var(--accent)]" />} value={capsules.length} label="投稿数" big />
             <StatCard icon={<Eye size={18} className="text-[var(--accent)]" />} value={totalViews.toLocaleString()} label="開かれた回数" big />
+          </div>
+
+          {/* 地域プロフィール — 画像生成に使われる */}
+          <div className="px-4 mb-5">
+            <button
+              onClick={() => setRegionOpen((o) => !o)}
+              className="w-full flex items-center gap-2 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)]"
+            >
+              <MapPin size={14} className="text-[var(--accent)] shrink-0" />
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-[var(--text)] text-xs font-medium">
+                  {profile?.region || profile?.envType
+                    ? [profile.region, profile.envType].filter(Boolean).join("・")
+                    : "育ったエリアを設定"}
+                </p>
+                <p className="text-[var(--muted)] text-[10px]">画像の背景シーンに反映されます</p>
+              </div>
+              {regionOpen ? <ChevronUp size={14} className="text-[var(--muted)]" /> : <ChevronDown size={14} className="text-[var(--muted)]" />}
+            </button>
+
+            {regionOpen && (
+              <div className="mt-2 p-4 rounded-xl bg-[var(--bg-elev)] border border-[var(--border)] space-y-4">
+                <div>
+                  <p className="text-[var(--accent-2)] text-[10px] mb-2">地域</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {REGIONS.map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => setRegionEdit(r === regionEdit ? "" : r)}
+                        className={`text-[11px] py-2 px-2 rounded-lg border text-left transition-colors ${
+                          regionEdit === r
+                            ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10"
+                            : "border-[var(--border)] text-[var(--muted)]"
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[var(--accent-2)] text-[10px] mb-2">景色タイプ</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {ENV_TYPES.map((e) => (
+                      <button
+                        key={e}
+                        onClick={() => setEnvEdit(e === envEdit ? "" : e)}
+                        className={`text-[11px] py-2 px-2 rounded-lg border text-left transition-colors ${
+                          envEdit === e
+                            ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10"
+                            : "border-[var(--border)] text-[var(--muted)]"
+                        }`}
+                      >
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  onClick={saveRegion}
+                  disabled={savingRegion}
+                  className="w-full bg-[var(--accent)] text-[var(--bg)] text-sm font-semibold py-2.5 rounded-full disabled:opacity-50"
+                >
+                  {savingRegion ? "保存中…" : "保存する"}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="px-4">
