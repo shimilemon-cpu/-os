@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>家の故障、どうする？</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", sans-serif;
+      background: #f5f5f5;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    header {
+      text-align: center;
+      padding: 24px 0 20px;
+    }
+
+    header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    header p {
+      font-size: 13px;
+      color: #666;
+      margin-top: 6px;
+    }
+
+    .step {
+      display: none;
+    }
+
+    .step.active {
+      display: block;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+
+    .step-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .card h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      line-height: 1.4;
+    }
+
+    /* 緊急ボタン */
+    .emergency-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .emergency-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      text-align: left;
+      width: 100%;
+      transition: opacity 0.15s;
+    }
+
+    .emergency-btn:active { opacity: 0.75; }
+
+    .emergency-btn.danger {
+      background: #FFF0F0;
+      color: #D92B2B;
+    }
+
+    .emergency-btn.safe {
+      background: #F0F7FF;
+      color: #1A6FD9;
+    }
+
+    .emergency-btn .icon {
+      font-size: 24px;
+      width: 36px;
+      text-align: center;
+    }
+
+    .emergency-btn .text-block small {
+      display: block;
+      font-size: 12px;
+      font-weight: 400;
+      color: inherit;
+      opacity: 0.7;
+      margin-top: 2px;
+    }
+
+    /* 緊急アクション画面 */
+    .action-card {
+      background: #FFF0F0;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .action-card h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #D92B2B;
+      margin-bottom: 16px;
+    }
+
+    .action-step {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .action-num {
+      width: 28px;
+      height: 28px;
+      background: #D92B2B;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .action-text {
+      font-size: 15px;
+      line-height: 1.5;
+      padding-top: 3px;
+    }
+
+    .call-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 16px;
+      background: #D92B2B;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 16px;
+      text-decoration: none;
+    }
+
+    /* 選択ボタン（2択） */
+    .choice-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .choice-btn {
+      padding: 20px 12px;
+      border-radius: 12px;
+      border: 2px solid #e8e8e8;
+      background: white;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .choice-btn:hover {
+      border-color: #1A6FD9;
+      background: #F0F7FF;
+    }
+
+    .choice-btn .icon { font-size: 28px; display: block; margin-bottom: 8px; }
+    .choice-btn .label { font-size: 14px; font-weight: 600; }
+    .choice-btn .sub { font-size: 11px; color: #999; margin-top: 4px; }
+
+    /* 写真アップロード */
+    .upload-area {
+      border: 2px dashed #d0d0d0;
+      border-radius: 12px;
+      padding: 32px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: #fafafa;
+    }
+
+    .upload-area:hover {
+      border-color: #1A6FD9;
+      background: #F0F7FF;
+    }
+
+    .upload-area .icon { font-size: 40px; display: block; margin-bottom: 12px; }
+    .upload-area .text { font-size: 15px; font-weight: 600; color: #333; }
+    .upload-area .sub { font-size: 12px; color: #999; margin-top: 6px; }
+
+    #file-input { display: none; }
+
+    .analyzing {
+      text-align: center;
+      padding: 24px;
+      display: none;
+    }
+
+    .analyzing.active { display: block; }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e8e8e8;
+      border-top-color: #1A6FD9;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 保険・保証 */
+    .info-box {
+      background: #F6F8FF;
+      border-left: 4px solid #1A6FD9;
+      border-radius: 0 12px 12px 0;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    .info-box strong { color: #1A6FD9; }
+
+    .choice-full-btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      border-radius: 12px;
+      border: 2px solid #e8e8e8;
+      background: white;
+      cursor: pointer;
+      text-align: left;
+      margin-bottom: 10px;
+      transition: all 0.15s;
+    }
+
+    .choice-full-btn:hover {
+      border-color: #1A6FD9;
+      background: #F0F7FF;
+    }
+
+    .choice-full-btn .label { font-size: 15px; font-weight: 600; display: block; }
+    .choice-full-btn .sub { font-size: 12px; color: #666; margin-top: 4px; display: block; }
+
+    /* 結果 */
+    .result-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      margin-bottom: 12px;
+    }
+
+    .result-tag {
+      display: inline-block;
+      background: #E8F4E8;
+      color: #1E7E34;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+
+    .result-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .result-desc {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .contact-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px;
+      background: #1A6FD9;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      margin-bottom: 8px;
+    }
+
+    .contact-btn.secondary {
+      background: white;
+      color: #1A6FD9;
+      border: 2px solid #1A6FD9;
+    }
+
+    .warning-box {
+      background: #FFFBF0;
+      border: 1px solid #F5C842;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #6B5900;
+      line-height: 1.6;
+      margin-top: 8px;
+    }
+
+    .warning-box::before {
+      content: "⚠️ ";
+    }
+
+    /* 戻るボタン */
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      color: #999;
+      font-size: 13px;
+      cursor: pointer;
+      margin-bottom: 12px;
+      padding: 4px 0;
+    }
+
+    /* プログレスバー */
+    .progress {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+
+    .progress-dot {
+      height: 4px;
+      flex: 1;
+      border-radius: 2px;
+      background: #e8e8e8;
+      transition: background 0.3s;
+    }
+
+    .progress-dot.done { background: #1A6FD9; }
+    .progress-dot.active { background: #1A6FD9; opacity: 0.5; }
+
+    /* 識別結果バッジ */
+    .device-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #F0F7FF;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 20px;
+    }
+
+    .device-badge .icon { font-size: 28px; }
+    .device-badge .name { font-size: 14px; font-weight: 700; color: #1A6FD9; }
+    .device-badge .maker { font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔧 家の故障、どうする？</h1>
+      <p>写真を撮るだけで、正しい相談先がわかる</p>
+    </header>
+
+    <!-- STEP 1: 緊急チェック -->
+    <div class="step active" id="step-emergency">
+      <div class="card">
+        <div class="step-label">まず確認</div>
+        <h2>今、どんな状況ですか？</h2>
+        <div class="emergency-grid">
+          <button class="emergency-btn danger" onclick="showEmergency('gas')">
+            <span class="icon">💨</span>
+            <span class="text-block">
+              ガスの臭いがする
+              <small>すぐに対応が必要</small>
+            </span>
+          </button>
+          <button class="emergency-btn danger" onclick="showEmergency('water')">
+            <span class="icon">🚿</span>
+            <span class="text-block">
+              水が止まらない
+              <small>すぐに対応が必要</small>
+            </span>
+          </button>
+          <button class="emergency-btn danger" onclick="showEmergency('electric')">
+            <span class="icon">⚡</span>
+            <span class="text-block">
+              漏電・火花が出ている
+              <small>すぐに対応が必要</small>
+            </span>
+          </button>
+          <button class="emergency-btn safe" onclick="goToStep('step-photo')">
+            <span class="icon">🙂</span>
+            <span class="text-block">
+              緊急ではない
+              <small>故障・不具合の相談</small>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 緊急アクション：ガス -->
+    <div class="step" id="step-gas">
+      <button class="back-btn" onclick="goToStep('step-emergency')">← 戻る</button>
+      <div class="action-card">
+        <h2>💨 ガス漏れの疑いあり</h2>
+        <div class="action-step">
+          <div class="action-num">1</div>
+          <div class="action-text">窓を開けて<strong>すぐに換気</strong>する</div>
+        </div>
+        <div class="action-step">
+          <div class="action-num">2</div>
+          <div class="action-text">ガスの元栓を<strong>閉める</strong></div>
+        </div>
+        <div class="action-step">
+          <div class="action-num">3</div>
+          <div class="action-text">電気スイッチ・火は<strong>絶対に触らない</strong></div>
+        </div>
+        <div class="action-step">
+          <div class="action-num">4</div>
+          <div class="action-text">建物の外に出てから電話する</div>
+        </div>
+        <a href="tel:0570-002-299" class="call-btn">📞 ガス漏れ通報（東京ガス）に電話</a>
+      </div>
+    </div>
+
+    <!-- 緊急アクション：水 -->
+    <div class="step" id="step-water-emergency">
+      <button class="back-btn" onclick="goToStep('step-emergency')">← 戻る</button>
+      <div class="action-card">
+        <h2>🚿 水が止まらない</h2>
+        <div class="action-step">
+          <div class="action-num">1</div>
+          <div class="action-text">洗面台・トイレ下の<strong>止水栓を閉める</strong>（右に回す）</div>
+        </div>
+        <div class="action-step">
+          <div class="action-num">2</div>
+          <div class="action-text">止まらない場合は<strong>元栓を閉める</strong>（玄関付近・外）</div>
+        </div>
+        <div class="action-step">
+          <div class="action-num">3</div>
+          <div class="action-text">賃貸なら<strong>管理会社へ連絡</strong>（自分で業者を呼ばない）</div>
+        </div>
+        <a href="tel:0570-045-072" class="call-btn">📞 水道局の緊急窓口に電話</a>
+      </div>
+    </div>
+
+    <!-- 緊急アクション：電気 -->
+    <div class="step" id="step-electric-emergency">
+      <button class="back-btn" onclick="goToStep('step-emergency')">← 戻る</button>
+      <div class="action-card">
+        <h2>⚡ 漏電・火花の疑いあり</h2>
+        <div class="action-step">
+          <div class="action-num">1</div>
+          <div class="action-text"><strong>ブレーカーを落とす</strong>（分電盤の主ブレーカー）</div>
+        </div>
+        <div class="action-step">
+          <div class="action-num">2</div>
+          <div class="action-text">濡れた手・濡れた状態で触らない</div>
+        </div>
+        <div class="action-step">
+          <div class="action-num">3</div>
+          <div class="action-text">電力会社または管理会社へ連絡</div>
+        </div>
+        <a href="tel:0120-995-002" class="call-btn">📞 東京電力 緊急窓口に電話</a>
+      </div>
+    </div>
+
+    <!-- STEP 2: 写真撮影 -->
+    <div class="step" id="step-photo">
+      <button class="back-btn" onclick="goToStep('step-emergency')">← 戻る</button>
+      <div class="progress">
+        <div class="progress-dot done"></div>
+        <div class="progress-dot active"></div>
+        <div class="progress-dot"></div>
+        <div class="progress-dot"></div>
+        <div class="progress-dot"></div>
+      </div>
+      <div class="card">
+        <div class="step-label">STEP 1 / 4</div>
+        <h2>故障した機器の写真を撮ってください</h2>
+        <label for="file-input">
+          <div class="upload-area" id="upload-area">
+            <span class="icon">📷</span>
+            <span class="text">写真を撮る・選ぶ</span>
+            <span class="sub">製品名・型番のシールが写るとより正確</span>
+          </div>
+        </label>
+        <input type="file" id="file-input" accept="image/*" capture="environment" onchange="handlePhoto(this)" />
+
+        <div class="analyzing" id="analyzing">
+          <div class="spinner"></div>
+          <p style="font-size:14px;color:#666;">AIが機器を識別中...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: 賃貸 or 持ち家 -->
+    <div class="step" id="step-ownership">
+      <button class="back-btn" onclick="goToStep('step-photo')">← 戻る</button>
+      <div class="progress">
+        <div class="progress-dot done"></div>
+        <div class="progress-dot done"></div>
+        <div class="progress-dot active"></div>
+        <div class="progress-dot"></div>
+        <div class="progress-dot"></div>
+      </div>
+      <div class="card">
+        <div class="step-label">STEP 2 / 4</div>
+        <div class="device-badge">
+          <span class="icon">🔥</span>
+          <div>
+            <div class="name">リンナイ 給湯器</div>
+            <div class="maker">型番: RUF-A2005SAW</div>
+          </div>
+        </div>
+        <h2>住まいの種類を教えてください</h2>
+        <div class="choice-grid">
+          <button class="choice-btn" onclick="setOwnership('rental')">
+            <span class="icon">🏢</span>
+            <span class="label">賃貸</span>
+            <span class="sub">アパート・マンション</span>
+          </button>
+          <button class="choice-btn" onclick="setOwnership('own')">
+            <span class="icon">🏠</span>
+            <span class="label">持ち家</span>
+            <span class="sub">一戸建て・分譲</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: 火災保険 -->
+    <div class="step" id="step-insurance">
+      <button class="back-btn" onclick="goToStep('step-ownership')">← 戻る</button>
+      <div class="progress">
+        <div class="progress-dot done"></div>
+        <div class="progress-dot done"></div>
+        <div class="progress-dot done"></div>
+        <div class="progress-dot active"></div>
+        <div class="progress-dot"></div>
+      </div>
+      <div class="card">
+        <div class="step-label">STEP 3 / 4</div>
+        <h2>故障の原因は何ですか？</h2>
+        <div class="info-box">
+          <strong>火災保険が使えるかも</strong><br>
+          突発的な事故（水漏れ・落雷・衝突など）は保険対象になる場合があります。業者を呼ぶ前に確認すると、修理費が0円になることも。
+        </div>
+        <button class="choice-full-btn" onclick="setInsurance('accident')">
+          <span class="label">⚡ 突然壊れた・水漏れした</span>
+          <span class="sub">保険が使える可能性あり</span>
+        </button>
+        <button class="choice-full-btn" onclick="setInsurance('old')">
+          <span class="label">🕰️ 古くなって動かなくなった</span>
+          <span class="sub">経年劣化・消耗品は保険対象外</span>
+        </button>
+        <button class="choice-full-btn" onclick="setInsurance('unknown')">
+          <span class="label">🤔 よくわからない</span>
+          <span class="sub">一緒に確認しましょう</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 5: 保証期間 -->
+    <div class="step" id="step-warranty">
+      <button class="back-btn" onclick="goToStep('step-insurance')">← 戻る</button>
+      <div class="progress">
+        <div class="progress-dot done"></div>
+        <div class="progress-dot done"></div>
+        <div class="progress-dot done"></div>
+        <div class="progress-dot done"></div>
+        <div class="progress-dot active"></div>
+      </div>
+      <div class="card">
+        <div class="step-label">STEP 4 / 4</div>
+        <h2>購入・設置からどのくらい経ちますか？</h2>
+        <button class="choice-full-btn" onclick="showResult('maker')">
+          <span class="label">📦 1〜2年以内</span>
+          <span class="sub">メーカー保証が使える可能性あり（無料修理）</span>
+        </button>
+        <button class="choice-full-btn" onclick="showResult('own-repair')">
+          <span class="label">📅 2年以上経っている</span>
+          <span class="sub">メーカー修理 or 地元業者へ</span>
+        </button>
+        <button class="choice-full-btn" onclick="showResult('own-repair')">
+          <span class="label">🤷 わからない</span>
+          <span class="sub">メーカーに問い合わせてみましょう</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 結果：メーカー保証 -->
+    <div class="step" id="result-maker">
+      <button class="back-btn" onclick="goToStep('step-warranty')">← 戻る</button>
+      <div class="result-card">
+        <div class="result-tag">✅ 無料修理の可能性あり</div>
+        <div class="result-title">まずメーカーに連絡しましょう</div>
+        <div class="result-desc">
+          保証期間内であれば、無料で修理してもらえる可能性があります。
+          クラシアン等の業者を呼ぶ前に、必ずメーカーへ確認を。
+        </div>
+        <a href="tel:0120-054-321" class="contact-btn">📞 リンナイ サポートセンターへ電話</a>
+        <a href="https://www.rinnai.co.jp/contact/repair/" class="contact-btn secondary" target="_blank">🔗 修理申し込みページを開く</a>
+        <div class="warning-box">
+          自分で業者を手配すると、保証が無効になる場合があります。
+        </div>
+      </div>
+    </div>
+
+    <!-- 結果：持ち家・保証切れ -->
+    <div class="step" id="result-own-repair">
+      <button class="back-btn" onclick="goToStep('step-warranty')">← 戻る</button>
+      <div class="result-card">
+        <div class="result-tag" style="background:#FFF0E8;color:#D96A1A;">修理業者を手配しましょう</div>
+        <div class="result-title">メーカー修理 or 地元の業者へ</div>
+        <div class="result-desc">
+          まずメーカーに問い合わせるのがおすすめです。
+          メーカー対応が難しい場合は、地元の信頼できる業者を探しましょう。
+        </div>
+        <a href="tel:0120-054-321" class="contact-btn">📞 リンナイ サポートセンターへ電話</a>
+        <a href="https://www.rinnai.co.jp/contact/repair/" class="contact-btn secondary" target="_blank">🔗 修理申し込みページを開く</a>
+        <div class="warning-box">
+          クラシアン等の緊急業者は割高になりがちです。急ぎでない場合はメーカーか地元業者が安心です。
+        </div>
+      </div>
+    </div>
+
+    <!-- 結果：賃貸 -->
+    <div class="step" id="result-rental">
+      <button class="back-btn" onclick="goToStep('step-ownership')">← 戻る</button>
+      <div class="result-card">
+        <div class="result-tag">🏢 賃貸の場合</div>
+        <div class="result-title">まず管理会社・大家さんへ連絡</div>
+        <div class="result-desc">
+          賃貸の場合、設備の修理費は基本的にオーナー負担です。
+          <strong>自分で業者を呼ぶと費用を請求できなくなる</strong>ことがあるので、必ず先に管理会社へ連絡しましょう。
+        </div>
+        <button class="contact-btn">📞 管理会社に電話する</button>
+        <div class="warning-box">
+          緊急の場合（水が溢れているなど）はこの限りではありません。状況に応じて判断してください。
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function goToStep(id) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      window.scrollTo(0, 0);
+    }
+
+    function showEmergency(type) {
+      const map = { gas: 'step-gas', water: 'step-water-emergency', electric: 'step-electric-emergency' };
+      goToStep(map[type]);
+    }
+
+    function handlePhoto(input) {
+      if (!input.files || !input.files[0]) return;
+      const area = document.getElementById('upload-area');
+      const analyzing = document.getElementById('analyzing');
+      area.style.display = 'none';
+      analyzing.classList.add('active');
+      // モック：1.5秒後に次のステップへ
+      setTimeout(() => {
+        analyzing.classList.remove('active');
+        area.style.display = '';
+        goToStep('step-ownership');
+      }, 1500);
+    }
+
+    function setOwnership(type) {
+      if (type === 'rental') {
+        goToStep('result-rental');
+      } else {
+        goToStep('step-insurance');
+      }
+    }
+
+    function setInsurance(type) {
+      goToStep('step-warranty');
+    }
+
+    function showResult(type) {
+      goToStep('result-' + type);
+    }
+  </script>
+</body>
+</html>
