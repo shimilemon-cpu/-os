@@ -10,7 +10,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
 
-  const isPublic = pathname.startsWith("/auth");
+  const isPublic = pathname.startsWith("/auth") || pathname.startsWith("/play");
 
   useEffect(() => {
     if (isPublic) {

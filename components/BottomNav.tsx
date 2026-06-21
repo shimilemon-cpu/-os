@@ -12,6 +12,7 @@ const items = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  if (pathname.startsWith("/play")) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center h-16 bg-[var(--bg-elev)] border-t border-[var(--border)] max-w-sm mx-auto">
