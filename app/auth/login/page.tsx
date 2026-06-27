@@ -37,7 +37,7 @@ export default function LoginPage() {
       });
       router.push("/onboarding");
     } else {
-      router.push("/");
+      router.push("/rooms");
     }
   };
 
@@ -120,13 +120,13 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-8 bg-[var(--bg)]">
       <div className="w-full max-w-sm space-y-10">
         <div className="text-center space-y-2">
-          <h1 className="serif text-[var(--accent)] text-3xl font-bold tracking-[0.3em]">CAPSULE</h1>
-          <p className="text-[var(--muted)] text-sm tracking-wider">3分半で、あの日に帰ろう。</p>
+          <h1 className="serif text-[var(--accent)] text-3xl font-bold tracking-[0.1em]">大喜利Pocket</h1>
+          <p className="text-[var(--muted)] text-sm tracking-wider">AIがあなたたちだけの笑いを覚える</p>
         </div>
 
         <div className="text-center space-y-1 py-4 border-y border-[var(--border)]">
-          <p className="text-[var(--text)] text-sm leading-relaxed">曲を聴く。誰かの記憶を覗く。</p>
-          <p className="text-[var(--text)] text-sm leading-relaxed">自分の記憶も蘇る。</p>
+          <p className="text-[var(--text)] text-sm leading-relaxed">友達と遊ぶ。AIが笑いを学ぶ。</p>
+          <p className="text-[var(--text)] text-sm leading-relaxed">回数を重ねるほど精度が上がる。</p>
         </div>
 
         {processing ? (

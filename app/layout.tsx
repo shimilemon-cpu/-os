@@ -22,13 +22,13 @@ const notoSans = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: "CAPSULE — あの日に帰ろう",
-  description: "音楽と記憶のタイムカプセルアプリ",
+  title: "大喜利Pocket",
+  description: "AIがあなたたちだけの笑いを覚える大喜利アプリ",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "CAPSULE",
+    title: "大喜利Pocket",
   },
 };
 

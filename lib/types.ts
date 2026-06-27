@@ -64,6 +64,8 @@ export interface RoundDoc {
   status: RoundStatus;
   answerCount: number;
   startedAt: Timestamp | null;
+  answerDeadline: Timestamp | null;
+  voteDeadline: Timestamp | null;
 }
 
 // ─── 回答 ──────────────────────────────────────────────────
