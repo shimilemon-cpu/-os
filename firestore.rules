@@ -2,26 +2,97 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // モデレーション権限を持つ管理者（Googleログインのメールで判定）
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
     function isAdmin() {
-      return request.auth != null &&
+      return isSignedIn() &&
         request.auth.token.email in ['shimilemon@gmail.com'];
     }
 
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    function isRoomMember(roomId) {
+      return isSignedIn() &&
+        request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.memberIds;
     }
 
-    match /capsules/{capsuleId} {
+    // ユーザープロフィール
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // 招待コードルックアップ（誰でも読める・認証済みのみ作成）
+    match /inviteCodes/{code} {
       allow read: if true;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      // 投稿者本人・管理者は全項目を編集可能。それ以外は views のみ加算できる
-      allow update: if request.auth != null &&
-        (resource.data.userId == request.auth.uid || isAdmin() ||
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views']));
-      // 投稿者本人・管理者は削除可能
-      allow delete: if request.auth != null &&
-        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // ルーム
+    match /rooms/{roomId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.hostId == request.auth.uid;
+      allow update: if isRoomMember(roomId);
+      allow delete: if isSignedIn() && resource.data.hostId == request.auth.uid;
+
+      // ルームメンバー
+      match /members/{userId} {
+        allow read: if isRoomMember(roomId);
+        allow write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // グループ統計（累積学習データ）
+      match /stats/{doc} {
+        allow read: if isRoomMember(roomId);
+        allow write: if isRoomMember(roomId);
+      }
+
+      // 殿堂入り
+      match /hallOfFame/{answerId} {
+        allow read: if isRoomMember(roomId);
+        allow write: if isRoomMember(roomId);
+      }
+    }
+
+    // ゲームセッション
+    match /sessions/{sessionId} {
+      allow read: if isSignedIn() &&
+        isRoomMember(resource.data.roomId);
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() &&
+        isRoomMember(resource.data.roomId);
+
+      // ラウンド（お題 + 進行ステータス）
+      match /rounds/{roundId} {
+        allow read: if isSignedIn() &&
+          isRoomMember(get(/databases/$(database)/documents/sessions/$(sessionId)).data.roomId);
+        allow write: if isSignedIn() &&
+          isRoomMember(get(/databases/$(database)/documents/sessions/$(sessionId)).data.roomId);
+
+        // 回答（投票フェーズまでuserIdを隠す必要あり → Cloud Functions推奨）
+        match /answers/{answerId} {
+          allow read: if isSignedIn() &&
+            isRoomMember(get(/databases/$(database)/documents/sessions/$(sessionId)).data.roomId);
+          allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+          allow update, delete: if isAdmin();
+        }
+
+        // 投票（1人1回答1票 → ユニーク制約はCloud Functionsで担保）
+        match /votes/{voteId} {
+          allow read: if isSignedIn() &&
+            isRoomMember(get(/databases/$(database)/documents/sessions/$(sessionId)).data.roomId);
+          allow create: if isSignedIn() && request.resource.data.voterId == request.auth.uid;
+          allow update, delete: if isAdmin();
+        }
+
+        // AI講評（サーバーサイドのみ書き込み）
+        match /aiReviews/{reviewId} {
+          allow read: if isSignedIn() &&
+            isRoomMember(get(/databases/$(database)/documents/sessions/$(sessionId)).data.roomId);
+          allow write: if isAdmin();
+        }
+      }
     }
   }
 }
