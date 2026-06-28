@@ -13,6 +13,7 @@ import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, RoomDoc } f
 import AnswerCard from "@/components/ogiri/AnswerCard";
 import Mascot from "@/components/Mascot";
 import AdSlot from "@/components/AdSlot";
+import InterstitialAd from "@/components/InterstitialAd";
 
 type QuestionData = { question: string; genre: string; difficulty: string };
 
@@ -45,6 +46,7 @@ export default function ResultPage() {
   const [aiReviews, setAiReviews] = useState<AiReviewDoc[]>([]);
   const uid = auth.currentUser?.uid ?? "";
   const isHost = room?.hostId === uid;
+  const [showInterstitial, setShowInterstitial] = useState(false);
   const advancingRef = useRef(false);
   const prefetchRef = useRef<Promise<QuestionData> | null>(null);
 
@@ -74,16 +76,26 @@ export default function ResultPage() {
     prefetchRef.current = prefetchQuestion();
   }, [isHost, session]);
 
-  const goNext = useCallback(async () => {
-    if (!session || !isHost || advancingRef.current) return;
+  const doFinish = useCallback(async () => {
+    if (advancingRef.current) return;
     advancingRef.current = true;
     try {
-      const nextRound = session.currentRound + 1;
-      if (nextRound > session.totalRounds) {
-        await updateSession(sessionId, { status: "finished" });
-        await finishGame(roomId);
-        return;
-      }
+      await updateSession(sessionId, { status: "finished" });
+      await finishGame(roomId);
+    } finally {
+      advancingRef.current = false;
+    }
+  }, [sessionId, roomId]);
+
+  const goNext = useCallback(async () => {
+    if (!session || !isHost || advancingRef.current) return;
+    const nextRound = session.currentRound + 1;
+    if (nextRound > session.totalRounds) {
+      setShowInterstitial(true);
+      return;
+    }
+    advancingRef.current = true;
+    try {
       const data = await (prefetchRef.current ?? prefetchQuestion());
       prefetchRef.current = null;
       await createRound(sessionId, nextRound, {
@@ -110,6 +122,12 @@ export default function ResultPage() {
 
   return (
     <div className="min-h-screen flex flex-col px-4 pt-8 pb-8">
+      {showInterstitial && (
+        <InterstitialAd
+          onClose={() => { setShowInterstitial(false); doFinish(); }}
+          skipAfter={5}
+        />
+      )}
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
