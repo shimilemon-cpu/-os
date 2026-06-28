@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { getRoom } from "@/lib/ogiri/rooms";
 import type { RoomDoc } from "@/lib/types";
 import Mascot from "@/components/Mascot";
@@ -88,12 +89,13 @@ export default function InvitePage() {
       </div>
 
       {/* ロビーへ */}
-      <button
-        onClick={() => router.push(`/rooms/${roomId}`)}
-        className="mt-8 w-full text-center text-zinc-500 text-sm py-3 active:text-white transition-colors"
+      <Link
+        href={`/rooms/${roomId}`}
+        className="mt-8 w-full text-center text-zinc-500 text-sm py-3 active:text-white transition-colors block"
+        prefetch={true}
       >
         友達を待ちながらロビーへ進む →
-      </button>
+      </Link>
     </div>
   );
 }

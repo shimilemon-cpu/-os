@@ -4,40 +4,30 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
 import { createRoom } from "@/lib/ogiri/rooms";
-import Mascot from "@/components/Mascot";
 
 type Judge = "王道" | "辛口";
+type Mode = "realtime" | "async";
 
 const JUDGE_INFO: Record<Judge, { emoji: string; title: string; desc: string; color: string }> = {
-  王道: {
-    emoji: "👑",
-    title: "王道AI",
-    desc: "芸人目線の本格採点",
-    color: "#FFD600",
-  },
-  辛口: {
-    emoji: "🔪",
-    title: "辛口AI",
-    desc: "厳しめ・下ネタNG",
-    color: "#FF4D6D",
-  },
+  王道: { emoji: "👑", title: "王道AI", desc: "芸人目線の本格採点", color: "#FFD600" },
+  辛口: { emoji: "🔪", title: "辛口AI", desc: "厳しめ・下ネタNG", color: "#FF4D6D" },
+};
+
+const MODE_INFO: Record<Mode, { emoji: string; title: string; desc: string }> = {
+  realtime: { emoji: "⚡", title: "リアルタイム", desc: "全員同時にプレイ" },
+  async:    { emoji: "⏰", title: "非同期",       desc: "自分のペースで回答" },
 };
 
 export default function NewRoomPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [judges, setJudges] = useState<Judge[]>(["王道", "辛口"]);
+  const [mode, setMode] = useState<Mode>("realtime");
+  const [judge, setJudge] = useState<Judge>("王道");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const toggleJudge = (j: Judge) => {
-    setJudges((prev) =>
-      prev.includes(j) ? prev.filter((x) => x !== j) : [...prev, j]
-    );
-  };
-
   const create = async () => {
-    if (!name.trim() || judges.length === 0) return;
+    if (!name.trim()) return;
     setLoading(true);
     setError("");
     try {
@@ -47,8 +37,8 @@ export default function NewRoomPage() {
         user.uid,
         user.displayName ?? "ゲスト",
         name.trim(),
-        "realtime",
-        judges
+        mode,
+        [judge],
       );
       router.push(`/rooms/${roomId}/invite`);
     } catch (e) {
@@ -82,17 +72,48 @@ export default function NewRoomPage() {
           />
         </div>
 
-        {/* 審査AI選択 */}
+        {/* モード選択 */}
         <div className="space-y-2">
-          <label className="text-xs text-zinc-500 tracking-wide">審査AI（最低1つ選択）</label>
+          <label className="text-xs text-zinc-500 tracking-wide">プレイモード</label>
+          <div className="grid grid-cols-2 gap-3">
+            {(["realtime", "async"] as Mode[]).map((m) => {
+              const info = MODE_INFO[m];
+              const selected = mode === m;
+              return (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  className={`rounded-2xl border p-4 text-left transition-all active:scale-95 ${
+                    selected
+                      ? "border-2 border-pop-yellow bg-pop-yellow/10"
+                      : "border border-line bg-surface opacity-50"
+                  }`}
+                >
+                  <p className="text-xl mb-1">{info.emoji}</p>
+                  <p className="text-sm font-bold text-white">{info.title}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{info.desc}</p>
+                  {selected && (
+                    <div className="mt-2 text-[10px] font-bold tracking-wide text-pop-yellow">
+                      ✓ 選択中
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 審査AI選択（単一選択） */}
+        <div className="space-y-2">
+          <label className="text-xs text-zinc-500 tracking-wide">審査AI</label>
           <div className="grid grid-cols-2 gap-3">
             {(["王道", "辛口"] as Judge[]).map((j) => {
               const info = JUDGE_INFO[j];
-              const selected = judges.includes(j);
+              const selected = judge === j;
               return (
                 <button
                   key={j}
-                  onClick={() => toggleJudge(j)}
+                  onClick={() => setJudge(j)}
                   className={`rounded-2xl border p-4 text-left transition-all active:scale-95 ${
                     selected ? "border-2" : "border border-line bg-surface opacity-50"
                   }`}
@@ -102,10 +123,7 @@ export default function NewRoomPage() {
                   <p className="text-sm font-bold text-white">{info.title}</p>
                   <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{info.desc}</p>
                   {selected && (
-                    <div
-                      className="mt-2 text-[10px] font-bold tracking-wide"
-                      style={{ color: info.color }}
-                    >
+                    <div className="mt-2 text-[10px] font-bold tracking-wide" style={{ color: info.color }}>
                       ✓ 選択中
                     </div>
                   )}
@@ -122,7 +140,7 @@ export default function NewRoomPage() {
 
         <button
           onClick={create}
-          disabled={!name.trim() || judges.length === 0 || loading}
+          disabled={!name.trim() || loading}
           className="w-full bg-pop-yellow text-ink font-bold py-4 rounded-2xl text-base disabled:opacity-40 active:scale-[0.98] transition-all"
         >
           {loading ? (

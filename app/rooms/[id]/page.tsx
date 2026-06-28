@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { subscribeRoom, subscribeMembers, setMemberReady, startGame } from "@/lib/ogiri/rooms";
 import { createSession, createRound, getActiveSession } from "@/lib/ogiri/sessions";
@@ -30,8 +31,12 @@ export default function WaitingRoomPage() {
   const [members, setMembers] = useState<RoomMemberDoc[]>([]);
   const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
-  const uid = auth.currentUser?.uid ?? "";
+  const [uid, setUid] = useState(auth.currentUser?.uid ?? "");
   const prefetchRef = useRef<Promise<QuestionData> | null>(null);
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, (user) => setUid(user?.uid ?? ""));
+  }, []);
 
   useEffect(() => {
     const unsub1 = subscribeRoom(roomId, (r) => {
