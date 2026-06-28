@@ -20,6 +20,7 @@ export interface RoomDoc {
   mode: RoomMode;
   status: RoomStatus;
   memberIds: string[];       // max 5
+  judges?: AiPersona[];     // undefined → ["王道", "辛口"]
   createdAt: Timestamp | null;
 }
 
@@ -89,7 +90,7 @@ export interface VoteDoc {
 }
 
 // ─── AI講評 ────────────────────────────────────────────────
-export type AiPersona = "王道" | "辛口" | "カオス";
+export type AiPersona = "王道" | "辛口";
 
 export interface AiReviewDoc {
   id: string;
@@ -98,6 +99,13 @@ export interface AiReviewDoc {
   score: number;             // 0〜100
   comment: string;
   createdAt: Timestamp | null;
+}
+
+export interface AiAnalysisResult {
+  userId: string;
+  nickname: string;
+  tendency: string;          // "シュール系", "ボケ系" など
+  comment: string;           // "ちょっと●●に寄った回答するね！"
 }
 
 // ─── グループ統計（学習データ） ────────────────────────────────

@@ -15,7 +15,8 @@ export async function createRoom(
   hostId: string,
   hostNickname: string,
   name: string,
-  mode: "realtime" | "async" = "realtime"
+  mode: "realtime" | "async" = "realtime",
+  judges: ("王道" | "辛口")[] = ["王道", "辛口"]
 ): Promise<string> {
   const inviteCode = generateInviteCode();
 
@@ -26,6 +27,7 @@ export async function createRoom(
     mode,
     status: "waiting",
     memberIds: [hostId],
+    judges,
     createdAt: Timestamp.now(),
   });
 

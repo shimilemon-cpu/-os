@@ -12,12 +12,22 @@ import { subscribeRoom, finishGame } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, RoomDoc } from "@/lib/types";
 import AnswerCard from "@/components/ogiri/AnswerCard";
 import Mascot from "@/components/Mascot";
+import AdSlot from "@/components/AdSlot";
+
+type QuestionData = { question: string; genre: string; difficulty: string };
+
+function prefetchQuestion(): Promise<QuestionData> {
+  return fetch("/api/ogiri/question", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  }).then((r) => r.json() as Promise<QuestionData>);
+}
 
 const ANSWER_SECONDS = 90;
-const PERSONA_CONFIG: Record<string, { emoji: string; mascot: "j_king" | "j_sharp" | "j_chaos"; color: string }> = {
+const PERSONA_CONFIG: Record<string, { emoji: string; mascot: "j_king" | "j_sharp"; color: string }> = {
   王道: { emoji: "👑", mascot: "j_king", color: "#FFD600" },
   辛口: { emoji: "🔪", mascot: "j_sharp", color: "#FF4D6D" },
-  カオス: { emoji: "🌀", mascot: "j_chaos", color: "#BF5FFF" },
 };
 
 export default function ResultPage() {
@@ -36,6 +46,7 @@ export default function ResultPage() {
   const uid = auth.currentUser?.uid ?? "";
   const isHost = room?.hostId === uid;
   const advancingRef = useRef(false);
+  const prefetchRef = useRef<Promise<QuestionData> | null>(null);
 
   useEffect(() => {
     const u1 = subscribeRoom(roomId, setRoom);
@@ -55,6 +66,14 @@ export default function ResultPage() {
     return () => { u1(); u2(); u3(); u4(); u5(); u6(); };
   }, [roomId, sessionId, roundParam, router]);
 
+  // 結果表示中に次ラウンドのお題を先読みしておく
+  useEffect(() => {
+    if (!isHost || !session) return;
+    if (session.currentRound >= session.totalRounds) return;
+    if (prefetchRef.current) return;
+    prefetchRef.current = prefetchQuestion();
+  }, [isHost, session]);
+
   const goNext = useCallback(async () => {
     if (!session || !isHost || advancingRef.current) return;
     advancingRef.current = true;
@@ -65,12 +84,8 @@ export default function ResultPage() {
         await finishGame(roomId);
         return;
       }
-      const res = await fetch("/api/ogiri/question", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json() as { question: string; genre: string; difficulty: string };
+      const data = await (prefetchRef.current ?? prefetchQuestion());
+      prefetchRef.current = null;
       await createRound(sessionId, nextRound, {
         text: data.question,
         genre: data.genre as never,
@@ -150,7 +165,7 @@ export default function ResultPage() {
             AI審査員が採点中...
           </div>
         )}
-        {["王道", "辛口", "カオス"].map((persona) => {
+        {["王道", "辛口"].map((persona) => {
           const cfg = PERSONA_CONFIG[persona];
           const personaReviews = aiReviews.filter((r) => r.persona === persona);
           if (personaReviews.length === 0) return null;
@@ -176,6 +191,8 @@ export default function ResultPage() {
           );
         })}
       </div>
+
+      <AdSlot id="result-banner" size="rect" className="mb-6" />
 
       {isHost && (
         <button

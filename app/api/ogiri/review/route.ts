@@ -1,29 +1,27 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { adminDb } from "@/lib/firebase/admin";
+import { FieldValue } from "firebase-admin/firestore";
 
-const PERSONAS = [
-  {
-    key: "王道",
-    desc: "王道的なセンスを評価するAI。わかりやすくて笑えるかを重視する。コメントは温かみがある。",
-  },
-  {
-    key: "辛口",
-    desc: "厳しい目線で評価するAI。甘えた回答には辛口コメント。ただし傑作には素直に高得点を出す。",
-  },
-  {
-    key: "カオス",
-    desc: "意味不明でシュールな回答を高評価するAI。普通の回答には低い点数。混沌を愛している。",
-  },
-] as const;
+const PERSONAS = {
+  王道: `あなたはM-1グランプリやキングオブコントの審査員です。
+プロの芸人目線で「間」「発想の転換」「わかりやすさ」「笑えるか」を総合評価します。
+一般受けする笑いを重視し、誰もが「うまい！」と思える回答を高評価します。
+コメントは熱量があり、良い点を具体的に指摘します。`,
 
-type Persona = (typeof PERSONAS)[number]["key"];
+  辛口: `あなたは厳しい目線を持つ大喜利の評論家です。
+甘えた回答には低い点数と辛口コメントを出します。傑作には素直に高得点を出します。
+【絶対ルール】下ネタ・性的表現・差別的内容を含む回答は即0点。コメントは「下ネタはNGです」のみ。
+下ネタなしで面白さを追求することがこのゲームの真髄です。`,
+} as const;
+
+type PersonaKey = keyof typeof PERSONAS;
 
 async function reviewAnswer(
   anthropic: Anthropic,
   question: string,
   answer: string,
-  persona: Persona,
-  personaDesc: string
+  persona: PersonaKey,
 ): Promise<{ score: number; comment: string }> {
   const msg = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
@@ -31,8 +29,7 @@ async function reviewAnswer(
     messages: [
       {
         role: "user",
-        content: `あなたは大喜利の審査員（${persona}）です。
-${personaDesc}
+        content: `${PERSONAS[persona]}
 
 お題: 「${question}」
 回答: 「${answer}」
@@ -64,33 +61,32 @@ export async function POST(request: Request) {
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  const { sessionId, roundId, question, answers } = await request.json() as {
+  const { sessionId, roundId, question, answers, judges } = await request.json() as {
     sessionId: string;
     roundId: string;
     question: string;
     answers: { id: string; text: string }[];
+    judges?: string[];
   };
 
-  // Lazy-import Firebase to avoid build-time initialization
-  const { doc, setDoc, Timestamp } = await import("firebase/firestore");
-  const { db } = await import("@/lib/firebase/client");
+  const activePersonas = (Object.keys(PERSONAS) as PersonaKey[]).filter(
+    (p) => !judges || judges.includes(p)
+  );
 
   const tasks = answers.flatMap((answer) =>
-    PERSONAS.map(async (persona) => {
-      const result = await reviewAnswer(anthropic, question, answer.text, persona.key, persona.desc);
-      const reviewRef = doc(
-        db,
-        "sessions", sessionId,
-        "rounds", roundId,
-        "aiReviews", `${answer.id}_${persona.key}`
-      );
-      await setDoc(reviewRef, {
-        answerId: answer.id,
-        persona: persona.key,
-        score: result.score,
-        comment: result.comment,
-        createdAt: Timestamp.now(),
-      });
+    activePersonas.map(async (persona) => {
+      const result = await reviewAnswer(anthropic, question, answer.text, persona);
+      await adminDb
+        .collection("sessions").doc(sessionId)
+        .collection("rounds").doc(roundId)
+        .collection("aiReviews").doc(`${answer.id}_${persona}`)
+        .set({
+          answerId: answer.id,
+          persona,
+          score: result.score,
+          comment: result.comment,
+          createdAt: FieldValue.serverTimestamp(),
+        });
     })
   );
 
