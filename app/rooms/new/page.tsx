@@ -50,7 +50,7 @@ export default function NewRoomPage() {
         "realtime",
         judges
       );
-      router.push(`/rooms/${roomId}`);
+      router.push(`/rooms/${roomId}/invite`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "作成に失敗しました");
       setLoading(false);
