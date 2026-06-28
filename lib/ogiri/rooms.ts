@@ -17,7 +17,7 @@ export async function createRoom(
   name: string,
   mode: "realtime" | "async" = "realtime",
   judges: ("王道" | "辛口")[] = ["王道", "辛口"]
-): Promise<string> {
+): Promise<{ roomId: string; inviteCode: string }> {
   const inviteCode = generateInviteCode();
 
   const roomRef = await addDoc(collection(db, "rooms"), {
@@ -31,7 +31,6 @@ export async function createRoom(
     createdAt: Timestamp.now(),
   });
 
-  // 招待コードとメンバー登録を並列実行
   await Promise.all([
     setDoc(doc(db, "inviteCodes", inviteCode), {
       roomId: roomRef.id,
@@ -45,7 +44,7 @@ export async function createRoom(
     } satisfies Omit<RoomMemberDoc, "id">),
   ]);
 
-  return roomRef.id;
+  return { roomId: roomRef.id, inviteCode };
 }
 
 export async function joinRoomByCode(

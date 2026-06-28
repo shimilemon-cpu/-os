@@ -33,14 +33,14 @@ export default function NewRoomPage() {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("未ログイン");
-      const roomId = await createRoom(
+      const { roomId, inviteCode } = await createRoom(
         user.uid,
         user.displayName ?? "ゲスト",
         name.trim(),
         mode,
         [judge],
       );
-      router.push(`/rooms/${roomId}/invite`);
+      router.push(`/rooms/${roomId}/invite?code=${inviteCode}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "作成に失敗しました");
       setLoading(false);

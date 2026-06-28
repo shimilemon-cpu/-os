@@ -1,24 +1,32 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getRoom } from "@/lib/ogiri/rooms";
-import type { RoomDoc } from "@/lib/types";
 import Mascot from "@/components/Mascot";
 
 export default function InvitePage() {
   const { id: roomId } = useParams<{ id: string }>();
-  const router = useRouter();
-  const [room, setRoom] = useState<RoomDoc | null>(null);
+  const searchParams = useSearchParams();
+  const codeFromUrl = searchParams.get("code");
+
+  const [inviteCode, setInviteCode] = useState(codeFromUrl ?? "");
+  const [roomName, setRoomName] = useState("");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    getRoom(roomId).then(setRoom);
-  }, [roomId]);
+    if (codeFromUrl) return; // URL にコードがあれば Firestore 不要
+    getRoom(roomId).then((r) => {
+      if (r) {
+        setInviteCode(r.inviteCode);
+        setRoomName(r.name);
+      }
+    });
+  }, [roomId, codeFromUrl]);
 
-  const inviteLink = room
-    ? `${window.location.origin}/invite/${room.inviteCode}`
+  const inviteLink = inviteCode
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/invite/${inviteCode}`
     : "";
 
   const copyLink = async () => {
@@ -29,17 +37,13 @@ export default function InvitePage() {
 
   const share = async () => {
     if (navigator.share) {
-      await navigator.share({
-        title: "大喜利Pocket",
-        text: `「${room?.name}」に参加しよう！`,
-        url: inviteLink,
-      });
+      await navigator.share({ title: "大喜利Pocket", url: inviteLink });
     } else {
       await copyLink();
     }
   };
 
-  if (!room) {
+  if (!inviteCode) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-ink">
         <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
@@ -55,14 +59,14 @@ export default function InvitePage() {
           <Mascot kind="mic" size={52} tint="#FFD600" className="animate-floaty" />
         </div>
         <p className="text-zinc-500 text-sm mb-1">ルームを作成しました</p>
-        <h1 className="font-display text-white text-2xl">{room.name}</h1>
+        {roomName && <h1 className="font-display text-white text-2xl">{roomName}</h1>}
       </div>
 
       {/* 招待コード */}
       <div className="bg-surface border border-line rounded-3xl p-8 mb-6 text-center animate-rise">
         <p className="text-xs text-zinc-500 tracking-widest uppercase mb-4">招待コード</p>
         <p className="font-display text-5xl tracking-[0.5em] text-pop-yellow mb-6">
-          {room.inviteCode}
+          {inviteCode}
         </p>
         <p className="text-xs text-zinc-600 leading-relaxed">
           このコードを友達に教えると<br />「招待コードで参加」から入れます
@@ -91,8 +95,8 @@ export default function InvitePage() {
       {/* ロビーへ */}
       <Link
         href={`/rooms/${roomId}`}
-        className="mt-8 w-full text-center text-zinc-500 text-sm py-3 active:text-white transition-colors block"
         prefetch={true}
+        className="mt-8 w-full text-center text-zinc-500 text-sm py-3 active:text-white transition-colors block"
       >
         友達を待ちながらロビーへ進む →
       </Link>
