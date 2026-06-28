@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap");
-
 @import "tailwindcss";
 
 @theme {
@@ -23,9 +21,9 @@
   --color-smart: #00B4FF;
   --color-crazy: #BF5FFF;
 
-  /* ── タイポ ── */
-  --font-display: "Dela Gothic One", system-ui, sans-serif;
-  --font-body: "Zen Maru Gothic", system-ui, sans-serif;
+  /* ── タイポ（next/font が --font-dela / --font-zen を注入する） ── */
+  --font-display: var(--font-dela, "Dela Gothic One", system-ui, sans-serif);
+  --font-body: var(--font-zen, "Zen Maru Gothic", system-ui, sans-serif);
 
   /* ── アニメーション ── */
   --animate-floaty: floaty 4s ease-in-out infinite;
