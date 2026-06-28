@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { adminDb } from "@/lib/firebase/admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 const PERSONAS = [
   {
@@ -71,26 +73,20 @@ export async function POST(request: Request) {
     answers: { id: string; text: string }[];
   };
 
-  // Lazy-import Firebase to avoid build-time initialization
-  const { doc, setDoc, Timestamp } = await import("firebase/firestore");
-  const { db } = await import("@/lib/firebase/client");
-
   const tasks = answers.flatMap((answer) =>
     PERSONAS.map(async (persona) => {
       const result = await reviewAnswer(anthropic, question, answer.text, persona.key, persona.desc);
-      const reviewRef = doc(
-        db,
-        "sessions", sessionId,
-        "rounds", roundId,
-        "aiReviews", `${answer.id}_${persona.key}`
-      );
-      await setDoc(reviewRef, {
-        answerId: answer.id,
-        persona: persona.key,
-        score: result.score,
-        comment: result.comment,
-        createdAt: Timestamp.now(),
-      });
+      await adminDb
+        .collection("sessions").doc(sessionId)
+        .collection("rounds").doc(roundId)
+        .collection("aiReviews").doc(`${answer.id}_${persona.key}`)
+        .set({
+          answerId: answer.id,
+          persona: persona.key,
+          score: result.score,
+          comment: result.comment,
+          createdAt: FieldValue.serverTimestamp(),
+        });
     })
   );
 
