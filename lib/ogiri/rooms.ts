@@ -81,9 +81,11 @@ export async function getRoom(roomId: string): Promise<RoomDoc | null> {
 }
 
 export function subscribeRoom(roomId: string, cb: (room: RoomDoc) => void) {
-  return onSnapshot(doc(db, "rooms", roomId), (snap) => {
-    if (snap.exists()) cb({ id: snap.id, ...snap.data() } as RoomDoc);
-  });
+  return onSnapshot(
+    doc(db, "rooms", roomId),
+    (snap) => { if (snap.exists()) cb({ id: snap.id, ...snap.data() } as RoomDoc); },
+    (err) => console.error("subscribeRoom:", err),
+  );
 }
 
 export function subscribeMembers(roomId: string, cb: (members: RoomMemberDoc[]) => void) {
@@ -96,16 +98,22 @@ export async function setMemberReady(roomId: string, userId: string, isReady: bo
   await updateDoc(doc(db, "rooms", roomId, "members", userId), { isReady });
 }
 
-export function subscribeUserRooms(userId: string, cb: (rooms: RoomDoc[]) => void) {
+export function subscribeUserRooms(
+  userId: string,
+  cb: (rooms: RoomDoc[]) => void,
+  onError?: (e: Error) => void,
+) {
   const q = query(
     collection(db, "rooms"),
     where("memberIds", "array-contains", userId),
     orderBy("createdAt", "desc"),
     limit(20)
   );
-  return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as RoomDoc)));
-  });
+  return onSnapshot(
+    q,
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as RoomDoc))),
+    (err) => { console.error("subscribeUserRooms:", err); onError?.(err); },
+  );
 }
 
 export async function startGame(roomId: string) {

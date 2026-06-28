@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { subscribeUserRooms } from "@/lib/ogiri/rooms";
 import type { RoomDoc } from "@/lib/types";
@@ -25,13 +26,21 @@ export default function RoomsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) return;
-    const unsub = subscribeUserRooms(user.uid, (r) => {
-      setRooms(r);
-      setLoading(false);
+    let roomsUnsub: (() => void) | undefined;
+
+    const authUnsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      roomsUnsub = subscribeUserRooms(
+        user.uid,
+        (r) => { setRooms(r); setLoading(false); },
+        () => setLoading(false),
+      );
     });
-    return unsub;
+
+    return () => { authUnsub(); roomsUnsub?.(); };
   }, []);
 
   return (
