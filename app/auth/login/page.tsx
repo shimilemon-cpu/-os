@@ -31,14 +31,11 @@ export default function LoginPage() {
     if (!userSnap.exists()) {
       await setDoc(userRef, {
         nickname: user.displayName ?? "ゲスト",
-        birthYear: null,
-        gender: null,
+        avatarUrl: user.photoURL ?? null,
         createdAt: new Date(),
       });
-      router.push("/onboarding");
-    } else {
-      router.push("/rooms");
     }
+    router.push("/rooms");
   };
 
   // Handle result from signInWithRedirect (runs on page load after redirect returns)
