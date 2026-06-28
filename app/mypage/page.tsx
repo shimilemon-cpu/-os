@@ -5,14 +5,13 @@ import { useRouter } from "next/navigation";
 import { doc, getDoc, getDocs, collection, query, where } from "firebase/firestore";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
-import { LogOut } from "lucide-react";
+import Mascot from "@/components/Mascot";
 import type { UserDoc } from "@/lib/types";
 
 export default function MyPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserDoc | null>(null);
-  const [stats, setStats] = useState({ rooms: 0, votes: 0 });
+  const [stats, setStats] = useState({ rooms: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,12 +22,11 @@ export default function MyPage() {
         if (profileSnap.exists()) {
           setProfile({ id: user.uid, ...profileSnap.data() } as UserDoc);
         }
-        // Count rooms
         const roomsSnap = await getDocs(query(
           collection(db, "rooms"),
           where("memberIds", "array-contains", user.uid)
         ));
-        setStats({ rooms: roomsSnap.size, votes: 0 });
+        setStats({ rooms: roomsSnap.size });
       } finally {
         setLoading(false);
       }
@@ -43,8 +41,8 @@ export default function MyPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+      <div className="flex items-center justify-center h-screen bg-ink">
+        <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -53,59 +51,55 @@ export default function MyPage() {
 
   return (
     <div className="pb-24 px-4 pt-12">
-      {/* Header */}
+      {/* Profile header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          {user?.photoURL && (
+          {user?.photoURL ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={user.photoURL} alt="" className="w-12 h-12 rounded-full object-cover" />
+            <img src={user.photoURL} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-pop-yellow/40" />
+          ) : (
+            <Mascot kind="char_yellow" size={48} />
           )}
           <div>
-            <h1 className="text-[var(--text)] text-base font-medium">
+            <h1 className="text-white text-base font-bold">
               {profile?.nickname ?? user?.displayName ?? "ゲスト"}
             </h1>
-            <p className="text-[var(--muted)] text-xs">{user?.email}</p>
+            <p className="text-zinc-500 text-xs">{user?.email}</p>
           </div>
         </div>
-        <button onClick={handleSignOut} className="text-[var(--muted)]">
-          <LogOut size={18} />
+        <button onClick={handleSignOut} className="text-zinc-500 active:scale-90 transition-transform">
+          <Mascot kind="bolt" size={20} tint="#525252" />
         </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 mb-8">
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-          <p className="text-[var(--accent)] text-2xl font-bold">{stats.rooms}</p>
-          <p className="text-[var(--muted)] text-xs mt-1">参加ルーム数</p>
+        <div className="bg-surface border border-line rounded-2xl p-4 text-center animate-pop-in">
+          <p className="font-display text-pop-yellow text-3xl">{stats.rooms}</p>
+          <p className="text-zinc-500 text-xs mt-1">参加ルーム数</p>
         </div>
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-          <p className="text-[var(--accent)] text-2xl font-bold">😂</p>
-          <p className="text-[var(--muted)] text-xs mt-1">笑いを届けた</p>
+        <div className="bg-surface border border-line rounded-2xl p-4 text-center animate-pop-in">
+          <p className="text-3xl">😂</p>
+          <p className="text-zinc-500 text-xs mt-1">笑いを届けた</p>
         </div>
       </div>
 
-      {/* テーマ */}
-      <div className="mb-8">
-        <p className="text-xs text-[var(--muted)] tracking-wide mb-3">テーマ</p>
-        <ThemeSwitcher />
-      </div>
-
-      {/* Info */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-3">
-        <p className="text-xs text-[var(--muted)] tracking-wide">大喜利Pocketとは</p>
-        <p className="text-[var(--text)] text-sm leading-relaxed">
+      {/* AI judges info */}
+      <div className="bg-surface border border-line rounded-2xl p-5 space-y-4">
+        <p className="text-xs text-zinc-500 tracking-wide">大喜利Pocketとは</p>
+        <p className="text-white text-sm leading-relaxed">
           AIがあなたたちグループだけの笑いの傾向を学習します。<br />
           ゲームを重ねるほどお題の精度・AI講評の的確さが向上します。
         </p>
         <div className="grid grid-cols-3 gap-2 text-center text-xs">
           {[
-            { emoji: "👑", label: "王道AI" },
-            { emoji: "🔪", label: "辛口AI" },
-            { emoji: "🌀", label: "カオスAI" },
+            { mascot: "j_king" as const, label: "王道AI", color: "#FFD600" },
+            { mascot: "j_sharp" as const, label: "辛口AI", color: "#FF4D6D" },
+            { mascot: "j_chaos" as const, label: "カオスAI", color: "#BF5FFF" },
           ].map((p) => (
-            <div key={p.label} className="bg-[var(--bg)] rounded-xl py-2">
-              <p className="text-base">{p.emoji}</p>
-              <p className="text-[var(--muted)] mt-0.5">{p.label}</p>
+            <div key={p.label} className="bg-surface-2 rounded-xl py-3 space-y-1">
+              <Mascot kind={p.mascot} size={32} className="mx-auto" />
+              <p className="text-xs" style={{ color: p.color }}>{p.label}</p>
             </div>
           ))}
         </div>

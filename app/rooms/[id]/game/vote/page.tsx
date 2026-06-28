@@ -61,7 +61,6 @@ export default function VotePage() {
     try {
       await updateRound(sessionId, roundParam, { status: "reviewing" });
       await updateSession(sessionId, { status: "reviewing" });
-      // Trigger AI reviews
       const answerPayload = answers.map((a) => ({ id: a.id, text: a.text }));
       fetch("/api/ogiri/review", {
         method: "POST",
@@ -83,7 +82,6 @@ export default function VotePage() {
     if (alreadyVoted) return;
     await submitVote(sessionId, roundParam, answerId, uid, reaction);
 
-    // If all members voted on all answers (or close), host can advance
     if (isHost && session && room) {
       const totalExpected = (room.memberIds.length - 1) * answers.length;
       const myVotes = votes.filter((v) => v.voterId === uid).length + 1;
@@ -100,27 +98,31 @@ export default function VotePage() {
 
   if (!session || !round || answers.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-ink">
+        <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-4 pt-12 pb-8">
+    <div className="min-h-screen flex flex-col px-4 pt-8 pb-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-xs text-[var(--muted)]">ラウンド {roundParam} / {session.totalRounds}</p>
-          <p className="text-sm text-[var(--text)] font-medium mt-0.5">投票タイム 😂🧠🤯</p>
+          <div className="bg-surface border border-line rounded-full px-3 py-1.5 inline-block">
+            <p className="text-xs text-zinc-400">
+              Round <span className="text-pop-yellow font-bold">{roundParam}</span>/{session.totalRounds}
+            </p>
+          </div>
+          <p className="text-sm text-white font-bold mt-2">投票タイム 😂🧠🤯</p>
         </div>
-        <Timer deadline={voteDeadline} onExpire={isHost ? advanceToResult : undefined} />
+        <Timer deadline={voteDeadline} totalSeconds={VOTE_SECONDS} onExpire={isHost ? advanceToResult : undefined} />
       </div>
 
       {/* Question */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 mb-5">
-        <p className="text-[var(--muted)] text-xs mb-1">お題</p>
-        <p className="text-[var(--text)] text-sm leading-relaxed">{round.question.text}</p>
+      <div className="bg-surface border border-line rounded-xl px-4 py-3 mb-5">
+        <p className="text-zinc-500 text-xs mb-1">お題</p>
+        <p className="text-white text-sm leading-relaxed">{round.question.text}</p>
       </div>
 
       {/* Answers */}
@@ -142,7 +144,7 @@ export default function VotePage() {
       {isHost && (
         <button
           onClick={advanceToResult}
-          className="mt-4 w-full border border-[var(--accent)]/40 text-[var(--accent)] text-sm py-3 rounded-xl active:scale-[0.98] transition-transform"
+          className="mt-4 w-full border border-pop-yellow/40 text-pop-yellow text-sm py-3 rounded-xl active:scale-[0.98] transition-transform"
         >
           結果を見る →
         </button>

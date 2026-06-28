@@ -8,7 +8,7 @@ import { db } from "@/lib/firebase/client";
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import { tallyVotes } from "@/lib/ogiri/sessions";
 import type { RoomDoc, AnswerDoc, VoteDoc, AiReviewDoc, Reaction } from "@/lib/types";
-import { ArrowLeft } from "lucide-react";
+import Mascot from "@/components/Mascot";
 
 interface Stats {
   totalGames: number;
@@ -21,14 +21,14 @@ interface Stats {
 
 function StatBar({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-[var(--text)]">{label}</span>
-        <span style={{ color }}>{Math.round(value)}%</span>
+        <span className="text-white">{label}</span>
+        <span className="font-bold" style={{ color }}>{Math.round(value)}%</span>
       </div>
-      <div className="h-2 rounded-full bg-[var(--border)] overflow-hidden">
+      <div className="h-2 rounded-full bg-line overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-700"
+          className="h-full rounded-full animate-bar-grow origin-left"
           style={{ width: `${value}%`, backgroundColor: color }}
         />
       </div>
@@ -123,19 +123,22 @@ export default function AnalysisPage() {
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-12">
-      <Link href={`/rooms/${roomId}/summary?sid=${sessionId}`} className="flex items-center gap-1 text-[var(--muted)] text-sm mb-6">
-        <ArrowLeft size={16} /> 結果に戻る
+      <Link
+        href={`/rooms/${roomId}/summary?sid=${sessionId}`}
+        className="flex items-center gap-1 text-zinc-500 text-sm mb-6"
+      >
+        ← 結果に戻る
       </Link>
 
-      <h1 className="serif text-[var(--accent)] text-2xl font-bold mb-1">笑い分析</h1>
-      <p className="text-[var(--muted)] text-xs mb-8">{room?.name}</p>
+      <h1 className="font-display text-pop-yellow text-2xl mb-1">笑い分析</h1>
+      <p className="text-zinc-500 text-xs mb-8">{room?.name}</p>
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
         </div>
       ) : !stats ? (
-        <p className="text-[var(--muted)] text-sm text-center">データがありません</p>
+        <p className="text-zinc-500 text-sm text-center">データがありません</p>
       ) : (
         <div className="space-y-8">
           {/* Overview */}
@@ -144,41 +147,41 @@ export default function AnalysisPage() {
               { label: "ラウンド数", value: stats.totalGames, unit: "回" },
               { label: "総投票数", value: stats.totalVotes, unit: "票" },
             ].map((s) => (
-              <div key={s.label} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-                <p className="text-[var(--accent)] text-2xl font-bold">{s.value}{s.unit}</p>
-                <p className="text-[var(--muted)] text-xs mt-1">{s.label}</p>
+              <div key={s.label} className="bg-surface border border-line rounded-2xl p-4 text-center animate-pop-in">
+                <p className="font-display text-pop-yellow text-3xl">{s.value}{s.unit}</p>
+                <p className="text-zinc-500 text-xs mt-1">{s.label}</p>
               </div>
             ))}
           </div>
 
           {/* Reaction distribution */}
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-4">
-            <p className="text-xs text-[var(--muted)] tracking-wide">このグループの反応傾向</p>
+          <div className="bg-surface border border-line rounded-2xl p-5 space-y-4">
+            <p className="text-xs text-zinc-500 tracking-wide">このグループの反応傾向</p>
             <StatBar
               label="😂 面白い"
               value={totalReactions ? (stats.reactionDist.funny / totalReactions) * 100 : 0}
-              color="var(--gold)"
+              color="#FFD600"
             />
             <StatBar
               label="🧠 うまい"
               value={totalReactions ? (stats.reactionDist.smart / totalReactions) * 100 : 0}
-              color="#60a5fa"
+              color="#00B4FF"
             />
             <StatBar
               label="🤯 狂ってる"
               value={totalReactions ? (stats.reactionDist.crazy / totalReactions) * 100 : 0}
-              color="#c084fc"
+              color="#BF5FFF"
             />
           </div>
 
           {/* AI average scores */}
           {Object.keys(stats.avgAiScores).length > 0 && (
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-3">
-              <p className="text-xs text-[var(--muted)] tracking-wide">AI審査員 平均点</p>
+            <div className="bg-surface border border-line rounded-2xl p-5 space-y-4">
+              <p className="text-xs text-zinc-500 tracking-wide">AI審査員 平均点</p>
               {[
-                { key: "王道", emoji: "👑", color: "var(--gold)" },
-                { key: "辛口", emoji: "🔪", color: "var(--danger)" },
-                { key: "カオス", emoji: "🌀", color: "#c084fc" },
+                { key: "王道", emoji: "👑", color: "#FFD600" },
+                { key: "辛口", emoji: "🔪", color: "#FF4D6D" },
+                { key: "カオス", emoji: "🌀", color: "#BF5FFF" },
               ].map(({ key, emoji, color }) => (
                 <StatBar
                   key={key}
@@ -187,7 +190,7 @@ export default function AnalysisPage() {
                   color={color}
                 />
               ))}
-              <p className="text-xs text-[var(--muted)] mt-2">
+              <p className="text-xs text-zinc-500 pt-2 border-t border-line">
                 {stats.avgAiScores["カオス"] > stats.avgAiScores["王道"]
                   ? "🌀 このグループはシュール・カオス系が強い"
                   : stats.avgAiScores["辛口"] > 70
@@ -200,13 +203,13 @@ export default function AnalysisPage() {
           {/* Top answers */}
           {stats.topAnswers.length > 0 && (
             <div className="space-y-3">
-              <p className="text-xs text-[var(--muted)] tracking-wide">殿堂入り回答 TOP5</p>
+              <p className="text-xs text-zinc-500 tracking-wide">殿堂入り回答 TOP5</p>
               {stats.topAnswers.map((a, i) => (
-                <div key={i} className="flex items-start gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
-                  <span className="text-[var(--accent)] font-bold text-sm w-5 shrink-0">{i + 1}</span>
+                <div key={i} className="flex items-start gap-3 bg-surface border border-line rounded-xl px-4 py-3 animate-rise">
+                  <span className="font-display text-pop-yellow text-sm w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[var(--text)] text-sm leading-relaxed">{a.text}</p>
-                    <p className="text-xs text-[var(--muted)] mt-0.5">{a.total}票</p>
+                    <p className="text-white text-sm leading-relaxed">{a.text}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">{a.total}票</p>
                   </div>
                 </div>
               ))}
