@@ -29,17 +29,19 @@ export async function createRoom(
     createdAt: Timestamp.now(),
   });
 
-  await setDoc(doc(db, "inviteCodes", inviteCode), {
-    roomId: roomRef.id,
-    createdAt: Timestamp.now(),
-  } satisfies Omit<InviteCodeDoc, "id">);
-
-  await setDoc(doc(db, "rooms", roomRef.id, "members", hostId), {
-    userId: hostId,
-    nickname: hostNickname,
-    isReady: false,
-    joinedAt: Timestamp.now(),
-  } satisfies Omit<RoomMemberDoc, "id">);
+  // 招待コードとメンバー登録を並列実行
+  await Promise.all([
+    setDoc(doc(db, "inviteCodes", inviteCode), {
+      roomId: roomRef.id,
+      createdAt: Timestamp.now(),
+    } satisfies Omit<InviteCodeDoc, "id">),
+    setDoc(doc(db, "rooms", roomRef.id, "members", hostId), {
+      userId: hostId,
+      nickname: hostNickname,
+      isReady: false,
+      joinedAt: Timestamp.now(),
+    } satisfies Omit<RoomMemberDoc, "id">),
+  ]);
 
   return roomRef.id;
 }
