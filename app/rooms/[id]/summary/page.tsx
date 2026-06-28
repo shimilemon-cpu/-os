@@ -10,6 +10,7 @@ import { subscribeRoom } from "@/lib/ogiri/rooms";
 import { tallyVotes } from "@/lib/ogiri/sessions";
 import type { RoomDoc, AnswerDoc, VoteDoc } from "@/lib/types";
 import Mascot from "@/components/Mascot";
+import AdSlot from "@/components/AdSlot";
 
 interface RoundSummary {
   round: number;
@@ -112,6 +113,8 @@ export default function SummaryPage() {
           <p className="text-zinc-400 text-sm">{champion.total}票獲得</p>
         </div>
       )}
+
+      <AdSlot id="summary-banner" className="mb-6" />
 
       {/* Score ranking */}
       <div className="space-y-2 mb-8">

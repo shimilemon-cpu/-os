@@ -7,6 +7,7 @@ import { auth } from "@/lib/firebase/client";
 import { subscribeUserRooms } from "@/lib/ogiri/rooms";
 import type { RoomDoc } from "@/lib/types";
 import Mascot from "@/components/Mascot";
+import AdSlot from "@/components/AdSlot";
 
 const STATUS_LABEL: Record<RoomDoc["status"], string> = {
   waiting: "待機中",
@@ -54,7 +55,9 @@ export default function RoomsPage() {
       {/* Invite code join */}
       <JoinByCode onJoined={(id) => router.push(`/rooms/${id}`)} />
 
-      <h2 className="text-zinc-600 text-xs tracking-widest uppercase mt-8 mb-3">
+      <AdSlot id="rooms-banner" className="mt-6" />
+
+      <h2 className="text-zinc-600 text-xs tracking-widest uppercase mt-6 mb-3">
         参加中のルーム
       </h2>
 

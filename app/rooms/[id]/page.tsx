@@ -1,12 +1,23 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
 import { subscribeRoom, subscribeMembers, setMemberReady, startGame } from "@/lib/ogiri/rooms";
 import { createSession, createRound, getActiveSession } from "@/lib/ogiri/sessions";
 import type { RoomDoc, RoomMemberDoc } from "@/lib/types";
 import Mascot from "@/components/Mascot";
+import AdSlot from "@/components/AdSlot";
+
+type QuestionData = { question: string; genre: string; difficulty: string };
+
+function prefetchQuestion(): Promise<QuestionData> {
+  return fetch("/api/ogiri/question", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  }).then((r) => r.json() as Promise<QuestionData>);
+}
 
 const ANSWER_SECONDS = 90;
 const CHAR_KINDS = ["char_yellow", "char_pink", "char_teal", "char_purple", "char_green"] as const;
@@ -20,6 +31,7 @@ export default function WaitingRoomPage() {
   const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
   const uid = auth.currentUser?.uid ?? "";
+  const prefetchRef = useRef<Promise<QuestionData> | null>(null);
 
   useEffect(() => {
     const unsub1 = subscribeRoom(roomId, (r) => {
@@ -52,23 +64,31 @@ export default function WaitingRoomPage() {
     setStarting(true);
     try {
       const sessionId = await createSession(roomId, 5);
-      const res = await fetch("/api/ogiri/question", { method: "POST", body: JSON.stringify({}) });
-      const data = await res.json() as { question: string; genre: string; difficulty: string };
+      const data = await (prefetchRef.current ?? prefetchQuestion());
       await createRound(sessionId, 1, {
         text: data.question,
         genre: data.genre as never,
         difficulty: data.difficulty as never,
       }, ANSWER_SECONDS);
       await startGame(roomId);
+      prefetchRef.current = null;
       router.push(`/rooms/${roomId}/game?sid=${sessionId}`);
     } catch (e) {
       console.error(e);
+      prefetchRef.current = null;
       setStarting(false);
     }
   }, [room, roomId, router]);
 
   const isHost = room?.hostId === uid;
   const me = members.find((m) => m.userId === uid);
+
+  // ロビー表示中にQ1を先読みしておく
+  useEffect(() => {
+    if (isHost && !prefetchRef.current) {
+      prefetchRef.current = prefetchQuestion();
+    }
+  }, [isHost]);
   const allReady = members.length >= 2 && members.every((m) => m.isReady || m.userId === uid);
   const readyCount = members.filter((m) => m.isReady).length;
 
@@ -129,6 +149,8 @@ export default function WaitingRoomPage() {
           </div>
         ))}
       </div>
+
+      <AdSlot id="lobby-banner" className="mb-6" />
 
       {/* アクションボタン */}
       <div className="space-y-3">
