@@ -70,6 +70,7 @@ export default function VotePage() {
           roundId: roundParam,
           question: round?.question.text ?? "",
           answers: answerPayload,
+          judges: room?.judges ?? ["王道", "辛口"],
         }),
       }).catch(console.error);
     } finally {

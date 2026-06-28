@@ -6,21 +6,50 @@ import { auth } from "@/lib/firebase/client";
 import { createRoom } from "@/lib/ogiri/rooms";
 import Mascot from "@/components/Mascot";
 
+type Judge = "王道" | "辛口";
+
+const JUDGE_INFO: Record<Judge, { emoji: string; title: string; desc: string; color: string }> = {
+  王道: {
+    emoji: "👑",
+    title: "王道AI",
+    desc: "芸人目線の本格採点",
+    color: "#FFD600",
+  },
+  辛口: {
+    emoji: "🔪",
+    title: "辛口AI",
+    desc: "厳しめ・下ネタNG",
+    color: "#FF4D6D",
+  },
+};
+
 export default function NewRoomPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [mode, setMode] = useState<"realtime" | "async">("realtime");
+  const [judges, setJudges] = useState<Judge[]>(["王道", "辛口"]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const toggleJudge = (j: Judge) => {
+    setJudges((prev) =>
+      prev.includes(j) ? prev.filter((x) => x !== j) : [...prev, j]
+    );
+  };
+
   const create = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || judges.length === 0) return;
     setLoading(true);
     setError("");
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("未ログイン");
-      const roomId = await createRoom(user.uid, user.displayName ?? "ゲスト", name.trim(), mode);
+      const roomId = await createRoom(
+        user.uid,
+        user.displayName ?? "ゲスト",
+        name.trim(),
+        "realtime",
+        judges
+      );
       router.push(`/rooms/${roomId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "作成に失敗しました");
@@ -39,7 +68,7 @@ export default function NewRoomPage() {
 
       <h1 className="font-display text-pop-yellow text-2xl mb-8">ルームを作る</h1>
 
-      <div className="space-y-6">
+      <div className="space-y-7">
         {/* ルーム名 */}
         <div className="space-y-2">
           <label className="text-xs text-zinc-500 tracking-wide">ルーム名</label>
@@ -49,49 +78,59 @@ export default function NewRoomPage() {
             maxLength={30}
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && create()}
           />
         </div>
 
-        {/* モード選択 */}
+        {/* 審査AI選択 */}
         <div className="space-y-2">
-          <label className="text-xs text-zinc-500 tracking-wide">モード</label>
+          <label className="text-xs text-zinc-500 tracking-wide">審査AI（最低1つ選択）</label>
           <div className="grid grid-cols-2 gap-3">
-            {(["realtime", "async"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`rounded-2xl border p-4 text-left transition-all active:scale-95 ${
-                  mode === m
-                    ? "border-pop-yellow bg-pop-yellow/10"
-                    : "border-line bg-surface"
-                }`}
-              >
-                <p className={`text-sm font-bold ${mode === m ? "text-pop-yellow" : "text-white"}`}>
-                  {m === "realtime" ? "⚡ リアルタイム" : "⏰ 非同期"}
-                </p>
-                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                  {m === "realtime"
-                    ? "全員同時参加。飲み会・通話向け"
-                    : "好きな時間に回答。忙しい人向け"}
-                </p>
-              </button>
-            ))}
+            {(["王道", "辛口"] as Judge[]).map((j) => {
+              const info = JUDGE_INFO[j];
+              const selected = judges.includes(j);
+              return (
+                <button
+                  key={j}
+                  onClick={() => toggleJudge(j)}
+                  className={`rounded-2xl border p-4 text-left transition-all active:scale-95 ${
+                    selected ? "border-2" : "border border-line bg-surface opacity-50"
+                  }`}
+                  style={selected ? { borderColor: info.color, background: `${info.color}15` } : {}}
+                >
+                  <p className="text-xl mb-1">{info.emoji}</p>
+                  <p className="text-sm font-bold text-white">{info.title}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{info.desc}</p>
+                  {selected && (
+                    <div
+                      className="mt-2 text-[10px] font-bold tracking-wide"
+                      style={{ color: info.color }}
+                    >
+                      ✓ 選択中
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
+          <p className="text-[10px] text-zinc-600">
+            ＊「あなたの志向AI」はゲーム終了後に全員の回答を分析して自動表示されます
+          </p>
         </div>
 
         {error && <p className="text-sm text-pop-pink">{error}</p>}
 
         <button
           onClick={create}
-          disabled={!name.trim() || loading}
+          disabled={!name.trim() || judges.length === 0 || loading}
           className="w-full bg-pop-yellow text-ink font-bold py-4 rounded-2xl text-base disabled:opacity-40 active:scale-[0.98] transition-all"
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">
               <span className="w-4 h-4 rounded-full border-2 border-ink border-t-transparent animate-spin" />
-              お題を準備中...
+              作成中...
             </span>
-          ) : "ルームを作成"}
+          ) : "ルームを作成してロビーへ →"}
         </button>
       </div>
     </div>

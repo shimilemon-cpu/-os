@@ -25,10 +25,9 @@ function prefetchQuestion(): Promise<QuestionData> {
 }
 
 const ANSWER_SECONDS = 90;
-const PERSONA_CONFIG: Record<string, { emoji: string; mascot: "j_king" | "j_sharp" | "j_chaos"; color: string }> = {
+const PERSONA_CONFIG: Record<string, { emoji: string; mascot: "j_king" | "j_sharp"; color: string }> = {
   王道: { emoji: "👑", mascot: "j_king", color: "#FFD600" },
   辛口: { emoji: "🔪", mascot: "j_sharp", color: "#FF4D6D" },
-  カオス: { emoji: "🌀", mascot: "j_chaos", color: "#BF5FFF" },
 };
 
 export default function ResultPage() {
@@ -166,7 +165,7 @@ export default function ResultPage() {
             AI審査員が採点中...
           </div>
         )}
-        {["王道", "辛口", "カオス"].map((persona) => {
+        {["王道", "辛口"].map((persona) => {
           const cfg = PERSONA_CONFIG[persona];
           const personaReviews = aiReviews.filter((r) => r.persona === persona);
           if (personaReviews.length === 0) return null;

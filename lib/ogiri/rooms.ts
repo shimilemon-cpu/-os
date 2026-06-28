@@ -15,7 +15,8 @@ export async function createRoom(
   hostId: string,
   hostNickname: string,
   name: string,
-  mode: "realtime" | "async" = "realtime"
+  mode: "realtime" | "async" = "realtime",
+  judges: ("王道" | "辛口")[] = ["王道", "辛口"]
 ): Promise<string> {
   const inviteCode = generateInviteCode();
 
@@ -26,6 +27,7 @@ export async function createRoom(
     mode,
     status: "waiting",
     memberIds: [hostId],
+    judges,
     createdAt: Timestamp.now(),
   });
 
@@ -94,16 +96,22 @@ export async function setMemberReady(roomId: string, userId: string, isReady: bo
   await updateDoc(doc(db, "rooms", roomId, "members", userId), { isReady });
 }
 
-export function subscribeUserRooms(userId: string, cb: (rooms: RoomDoc[]) => void) {
+export function subscribeUserRooms(
+  userId: string,
+  cb: (rooms: RoomDoc[]) => void,
+  onError?: (e: Error) => void,
+) {
   const q = query(
     collection(db, "rooms"),
     where("memberIds", "array-contains", userId),
     orderBy("createdAt", "desc"),
     limit(20)
   );
-  return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as RoomDoc)));
-  });
+  return onSnapshot(
+    q,
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as RoomDoc))),
+    (err) => { console.error("subscribeUserRooms:", err); onError?.(err); },
+  );
 }
 
 export async function startGame(roomId: string) {
