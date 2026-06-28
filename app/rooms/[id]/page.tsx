@@ -6,9 +6,10 @@ import { auth } from "@/lib/firebase/client";
 import { subscribeRoom, subscribeMembers, setMemberReady, startGame } from "@/lib/ogiri/rooms";
 import { createSession, createRound, getActiveSession } from "@/lib/ogiri/sessions";
 import type { RoomDoc, RoomMemberDoc } from "@/lib/types";
-import { Copy, Check } from "lucide-react";
+import Mascot from "@/components/Mascot";
 
 const ANSWER_SECONDS = 90;
+const CHAR_KINDS = ["char_yellow", "char_pink", "char_teal", "char_purple", "char_green"] as const;
 
 export default function WaitingRoomPage() {
   const { id: roomId } = useParams<{ id: string }>();
@@ -23,7 +24,6 @@ export default function WaitingRoomPage() {
   useEffect(() => {
     const unsub1 = subscribeRoom(roomId, (r) => {
       setRoom(r);
-      // If game started, navigate to game
       if (r.status === "active") {
         getActiveSession(roomId).then((session) => {
           if (session) router.push(`/rooms/${roomId}/game?sid=${session.id}`);
@@ -52,7 +52,6 @@ export default function WaitingRoomPage() {
     setStarting(true);
     try {
       const sessionId = await createSession(roomId, 5);
-      // Generate first question
       const res = await fetch("/api/ogiri/question", { method: "POST", body: JSON.stringify({}) });
       const data = await res.json() as { question: string; genre: string; difficulty: string };
       await createRound(sessionId, 1, {
@@ -75,55 +74,56 @@ export default function WaitingRoomPage() {
 
   if (!room) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-ink">
+        <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-12">
-      <h1 className="serif text-[var(--accent)] text-2xl font-bold mb-1">{room.name}</h1>
-      <p className="text-[var(--muted)] text-xs mb-8">
+      <h1 className="font-display text-pop-yellow text-2xl mb-1">{room.name}</h1>
+      <p className="text-zinc-500 text-xs mb-8">
         {room.mode === "realtime" ? "⚡ リアルタイム" : "⏰ 非同期"} モード
       </p>
 
-      {/* 招待リンク */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 mb-6 space-y-3">
-        <p className="text-xs text-[var(--muted)]">招待コード</p>
-        <div className="flex items-center justify-between">
-          <span className="text-2xl font-bold tracking-[0.3em] text-[var(--text)]">
+      {/* 招待コード */}
+      <div className="bg-surface border border-line rounded-2xl p-5 mb-6">
+        <p className="text-xs text-zinc-500 mb-3">友達を招待</p>
+        <div className="text-center mb-4">
+          <span className="font-display text-4xl tracking-[0.4em] text-white">
             {room.inviteCode}
           </span>
-          <button
-            onClick={copyInvite}
-            className="flex items-center gap-1.5 text-xs text-[var(--accent)] border border-[var(--accent)]/40 px-3 py-1.5 rounded-full active:scale-95 transition-transform"
-          >
-            {copied ? <Check size={13} /> : <Copy size={13} />}
-            {copied ? "コピー済み" : "リンクをコピー"}
-          </button>
         </div>
+        <button
+          onClick={copyInvite}
+          className="w-full flex items-center justify-center gap-2 border border-pop-yellow/40 text-pop-yellow text-sm py-2.5 rounded-xl active:scale-95 transition-transform"
+        >
+          <Mascot kind={copied ? "check" : "copy"} size={14} tint="#FFD600" />
+          {copied ? "コピーしました！" : "招待リンクをコピー"}
+        </button>
       </div>
 
       {/* メンバーリスト */}
       <div className="space-y-2 mb-8">
-        <p className="text-xs text-[var(--muted)] tracking-wide">
+        <p className="text-xs text-zinc-500 tracking-wide">
           メンバー {members.length}/5 — {readyCount}人準備完了
         </p>
-        {members.map((m) => (
+        {members.map((m, i) => (
           <div
             key={m.userId}
-            className="flex items-center justify-between bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3"
+            className="flex items-center justify-between bg-surface border border-line rounded-xl px-4 py-3 animate-rise"
           >
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-[var(--text)]">{m.nickname}</span>
-              {m.userId === room.hostId && (
-                <span className="text-[10px] text-[var(--accent)] border border-[var(--accent)]/40 px-1.5 py-0.5 rounded-full">
-                  ホスト
-                </span>
-              )}
+            <div className="flex items-center gap-3">
+              <Mascot kind={CHAR_KINDS[i % CHAR_KINDS.length]} size={32} />
+              <div>
+                <p className="text-sm text-white">{m.nickname}</p>
+                {m.userId === room.hostId && (
+                  <span className="text-[10px] text-pop-yellow">ホスト</span>
+                )}
+              </div>
             </div>
-            <span className={`text-xs font-medium ${m.isReady ? "text-[var(--ok)]" : "text-[var(--muted)]"}`}>
+            <span className={`text-xs font-bold ${m.isReady ? "text-pop-green" : "text-zinc-600"}`}>
               {m.isReady ? "✓ 準備OK" : "待機中"}
             </span>
           </div>
@@ -137,8 +137,8 @@ export default function WaitingRoomPage() {
             onClick={toggleReady}
             className={`w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-[0.98] ${
               me?.isReady
-                ? "bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)]"
-                : "bg-[var(--ok)]/20 border border-[var(--ok)]/60 text-[var(--ok)]"
+                ? "bg-surface border border-line text-zinc-500"
+                : "bg-pop-green/20 border border-pop-green/60 text-pop-green animate-green-glow"
             }`}
           >
             {me?.isReady ? "準備を取り消す" : "準備完了！"}
@@ -149,7 +149,7 @@ export default function WaitingRoomPage() {
           <button
             onClick={handleStart}
             disabled={members.length < 2 || !allReady || starting}
-            className="w-full bg-[var(--accent)] text-[var(--bg)] font-bold py-4 rounded-2xl text-base disabled:opacity-40 active:scale-[0.98] transition-all"
+            className="w-full bg-pop-yellow text-ink font-bold py-4 rounded-2xl text-base disabled:opacity-40 active:scale-[0.98] transition-all animate-pulse-glow"
           >
             {starting
               ? "お題を生成中..."

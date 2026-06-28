@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
 import { createRoom } from "@/lib/ogiri/rooms";
-import { ArrowLeft } from "lucide-react";
+import Mascot from "@/components/Mascot";
 
 export default function NewRoomPage() {
   const router = useRouter();
@@ -32,19 +32,19 @@ export default function NewRoomPage() {
     <div className="min-h-screen px-4 pt-12 pb-24">
       <button
         onClick={() => router.back()}
-        className="flex items-center gap-1 text-[var(--muted)] text-sm mb-8"
+        className="flex items-center gap-1 text-zinc-500 text-sm mb-8"
       >
-        <ArrowLeft size={16} /> 戻る
+        ← 戻る
       </button>
 
-      <h1 className="serif text-[var(--accent)] text-2xl font-bold mb-8">ルームを作る</h1>
+      <h1 className="font-display text-pop-yellow text-2xl mb-8">ルームを作る</h1>
 
       <div className="space-y-6">
         {/* ルーム名 */}
         <div className="space-y-2">
-          <label className="text-xs text-[var(--muted)] tracking-wide">ルーム名</label>
+          <label className="text-xs text-zinc-500 tracking-wide">ルーム名</label>
           <input
-            className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text)] text-base placeholder:text-[var(--placeholder)] outline-none focus:border-[var(--accent)]/60 transition-colors"
+            className="w-full bg-surface border border-line rounded-xl px-4 py-3 text-white text-base placeholder:text-zinc-600 outline-none focus:border-pop-yellow/60 transition-colors"
             placeholder="例：金曜の夜"
             maxLength={30}
             value={name}
@@ -54,22 +54,22 @@ export default function NewRoomPage() {
 
         {/* モード選択 */}
         <div className="space-y-2">
-          <label className="text-xs text-[var(--muted)] tracking-wide">モード</label>
+          <label className="text-xs text-zinc-500 tracking-wide">モード</label>
           <div className="grid grid-cols-2 gap-3">
             {(["realtime", "async"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
-                className={`rounded-xl border p-4 text-left transition-all ${
+                className={`rounded-2xl border p-4 text-left transition-all active:scale-95 ${
                   mode === m
-                    ? "border-[var(--accent)] bg-[var(--accent)]/10"
-                    : "border-[var(--border)] bg-[var(--surface)]"
+                    ? "border-pop-yellow bg-pop-yellow/10"
+                    : "border-line bg-surface"
                 }`}
               >
-                <p className={`text-sm font-bold ${mode === m ? "text-[var(--accent)]" : "text-[var(--text)]"}`}>
+                <p className={`text-sm font-bold ${mode === m ? "text-pop-yellow" : "text-white"}`}>
                   {m === "realtime" ? "⚡ リアルタイム" : "⏰ 非同期"}
                 </p>
-                <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed">
+                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
                   {m === "realtime"
                     ? "全員同時参加。飲み会・通話向け"
                     : "好きな時間に回答。忙しい人向け"}
@@ -79,14 +79,19 @@ export default function NewRoomPage() {
           </div>
         </div>
 
-        {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
+        {error && <p className="text-sm text-pop-pink">{error}</p>}
 
         <button
           onClick={create}
           disabled={!name.trim() || loading}
-          className="w-full bg-[var(--accent)] text-[var(--bg)] font-bold py-4 rounded-2xl text-base disabled:opacity-40 active:scale-[0.98] transition-all"
+          className="w-full bg-pop-yellow text-ink font-bold py-4 rounded-2xl text-base disabled:opacity-40 active:scale-[0.98] transition-all"
         >
-          {loading ? "作成中..." : "ルームを作成"}
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-4 h-4 rounded-full border-2 border-ink border-t-transparent animate-spin" />
+              お題を準備中...
+            </span>
+          ) : "ルームを作成"}
         </button>
       </div>
     </div>

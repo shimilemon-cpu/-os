@@ -7,11 +7,10 @@ import { useRouter } from "next/navigation";
 import { signInWithRedirect, signInWithPopup, getRedirectResult, type User } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "@/lib/firebase/client";
+import Mascot from "@/components/Mascot";
 
 const REDIRECT_FLAG = "capsule_login_redirect_ts";
 
-// iOS Safari doesn't support the OAuth popup mechanism — detect it so we can
-// skip straight to signInWithRedirect instead of confusing the user.
 function isIOS() {
   if (typeof window === "undefined") return false;
   return (
@@ -38,7 +37,6 @@ export default function LoginPage() {
     router.push("/rooms");
   };
 
-  // Handle result from signInWithRedirect (runs on page load after redirect returns)
   useEffect(() => {
     getRedirectResult(auth)
       .then(async (result) => {
@@ -48,9 +46,6 @@ export default function LoginPage() {
         } else if (auth.currentUser) {
           router.push("/");
         } else {
-          // If we flagged a redirect but came back with no auth state, the
-          // redirect failed — iOS Safari ITP blocks the cross-site sessionStorage
-          // Firebase uses to track the pending redirect result.
           const ts = localStorage.getItem(REDIRECT_FLAG);
           if (ts && Date.now() - Number(ts) < 5 * 60 * 1000) {
             localStorage.removeItem(REDIRECT_FLAG);
@@ -85,7 +80,6 @@ export default function LoginPage() {
     setError(null);
     setProcessing(true);
 
-    // iOS Safari does not support signInWithPopup — use redirect directly.
     if (isIOS()) {
       await doRedirect();
       return;
@@ -98,8 +92,6 @@ export default function LoginPage() {
       const code = (e as { code?: string }).code ?? "";
 
       if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
-        // On some browsers the popup closes AFTER auth succeeds (e.g. mobile Safari
-        // opening Google in a new tab). Check if we got a user anyway.
         if (auth.currentUser) {
           try { await handleUser(auth.currentUser); } catch { setProcessing(false); }
         } else {
@@ -108,32 +100,41 @@ export default function LoginPage() {
         return;
       }
 
-      // Any other popup failure → fall back to redirect
       await doRedirect();
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-8 bg-[var(--bg)]">
+    <div className="min-h-screen flex flex-col items-center justify-center px-8 bg-ink">
       <div className="w-full max-w-sm space-y-10">
-        <div className="text-center space-y-2">
-          <h1 className="serif text-[var(--accent)] text-3xl font-bold tracking-[0.1em]">大喜利Pocket</h1>
-          <p className="text-[var(--muted)] text-sm tracking-wider">AIがあなたたちだけの笑いを覚える</p>
+        {/* Hero */}
+        <div className="text-center space-y-4">
+          <div className="flex justify-center gap-2 mb-4 animate-pop-in">
+            <Mascot kind="char_yellow" size={52} className="animate-floaty" style={{ "--r": "-8deg" } as React.CSSProperties} />
+            <Mascot kind="char_pink" size={52} className="animate-floaty" style={{ "--r": "4deg", animationDelay: "0.5s" } as React.CSSProperties} />
+            <Mascot kind="char_teal" size={52} className="animate-floaty" style={{ "--r": "-4deg", animationDelay: "1s" } as React.CSSProperties} />
+          </div>
+          <h1 className="font-display text-pop-yellow text-4xl">大喜利Pocket</h1>
+          <p className="text-zinc-400 text-sm">AIがあなたたちだけの笑いを覚える</p>
         </div>
 
-        <div className="text-center space-y-1 py-4 border-y border-[var(--border)]">
-          <p className="text-[var(--text)] text-sm leading-relaxed">友達と遊ぶ。AIが笑いを学ぶ。</p>
-          <p className="text-[var(--text)] text-sm leading-relaxed">回数を重ねるほど精度が上がる。</p>
+        {/* Feature pills */}
+        <div className="flex flex-wrap justify-center gap-2 animate-rise">
+          {["😂 みんなで大喜利", "🧠 AIが採点", "🤯 笑いが深まる"].map((t) => (
+            <span key={t} className="bg-surface border border-line text-sm text-white px-3 py-1.5 rounded-full">
+              {t}
+            </span>
+          ))}
         </div>
 
         {processing ? (
           <div className="flex justify-center py-4">
-            <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+            <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
           </div>
         ) : (
           <button
             onClick={signIn}
-            className="w-full flex items-center justify-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-2xl py-4 text-[var(--text)] text-sm font-medium hover:border-[var(--accent)]/40 transition-colors"
+            className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 text-sm font-bold rounded-2xl py-4 active:scale-95 transition-transform shadow-lg"
           >
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -145,9 +146,11 @@ export default function LoginPage() {
           </button>
         )}
 
-        {error && <p className="text-center text-[var(--accent)] text-xs whitespace-pre-line">{error}</p>}
+        {error && (
+          <p className="text-center text-pop-pink text-xs whitespace-pre-line">{error}</p>
+        )}
 
-        <p className="text-center text-[var(--muted)] text-[10px] leading-relaxed">
+        <p className="text-center text-zinc-600 text-[10px] leading-relaxed">
           ログインすることで、利用規約とプライバシーポリシーに同意したことになります。
         </p>
       </div>

@@ -9,7 +9,7 @@ import { db } from "@/lib/firebase/client";
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import { tallyVotes } from "@/lib/ogiri/sessions";
 import type { RoomDoc, AnswerDoc, VoteDoc } from "@/lib/types";
-import { Share2, BarChart2 } from "lucide-react";
+import Mascot from "@/components/Mascot";
 
 interface RoundSummary {
   round: number;
@@ -55,7 +55,6 @@ export default function SummaryPage() {
           const votes = votesSnap.docs.map((d) => d.data() as VoteDoc);
           const tally = tallyVotes(votes);
 
-          // Accumulate scores
           for (const a of answers) {
             scoreMap[a.userId] = (scoreMap[a.userId] ?? 0) + (tally[a.id]?.total ?? 0);
           }
@@ -68,11 +67,7 @@ export default function SummaryPage() {
             round: Number(roundDoc.id),
             question: roundData.question?.text ?? "",
             mvp: mvpAnswer
-              ? {
-                  text: mvpAnswer.text,
-                  userId: mvpAnswer.userId,
-                  total: tally[mvpAnswer.id]?.total ?? 0,
-                }
+              ? { text: mvpAnswer.text, userId: mvpAnswer.userId, total: tally[mvpAnswer.id]?.total ?? 0 }
               : null,
           });
         }
@@ -95,66 +90,70 @@ export default function SummaryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-ink">
+        <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-12">
-      <div className="text-center mb-8">
-        <h1 className="serif text-[var(--accent)] text-3xl font-bold">最終結果</h1>
-        <p className="text-[var(--muted)] text-sm mt-1">{room?.name}</p>
+      <div className="text-center mb-8 animate-pop-in">
+        <h1 className="font-display text-pop-yellow text-3xl mb-1">最終結果</h1>
+        <p className="text-zinc-500 text-sm">{room?.name}</p>
       </div>
 
-      {/* Champion */}
+      {/* Champion card */}
       {champion && (
-        <div className="bg-[var(--gold)]/10 border border-[var(--gold)]/40 rounded-2xl p-5 mb-8 text-center space-y-2">
-          <p className="text-4xl">🏆</p>
-          <p className="text-[var(--gold)] text-lg font-bold">今日の優勝</p>
-          <p className="text-[var(--text)] text-base">{champion.userId === uid ? "あなた！" : "チャンピオン"}</p>
-          <p className="text-[var(--muted)] text-sm">{champion.total}票獲得</p>
+        <div className="bg-pop-yellow/10 border-2 border-pop-yellow/60 rounded-3xl p-6 mb-8 text-center space-y-3 animate-pop-in">
+          <Mascot kind="trophy" size={48} tint="#FFD600" className="mx-auto animate-crown-bob" />
+          <p className="font-display text-pop-yellow text-xl">今日の優勝</p>
+          <p className="text-white text-base">{champion.userId === uid ? "🎉 あなた！" : "チャンピオン"}</p>
+          <p className="text-zinc-400 text-sm">{champion.total}票獲得</p>
         </div>
       )}
 
       {/* Score ranking */}
       <div className="space-y-2 mb-8">
-        <p className="text-xs text-[var(--muted)] tracking-wide">スコアランキング</p>
+        <p className="text-xs text-zinc-500 tracking-wide">スコアランキング</p>
         {playerScores.map((p, i) => (
           <div
             key={p.userId}
-            className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
+            className={`flex items-center justify-between rounded-xl border px-4 py-3 animate-rise ${
               p.userId === uid
-                ? "border-[var(--accent)]/40 bg-[var(--accent)]/5"
-                : "border-[var(--border)] bg-[var(--surface)]"
+                ? "border-pop-yellow/40 bg-pop-yellow/5"
+                : "border-line bg-surface"
             }`}
           >
             <div className="flex items-center gap-3">
-              <span className="text-[var(--muted)] text-sm w-5">{i + 1}</span>
-              <span className="text-[var(--text)] text-sm">
+              <span className="text-zinc-500 text-sm w-5 font-bold">{i + 1}</span>
+              <span className="text-white text-sm">
                 {p.userId === uid ? "あなた" : `Player ${i + 1}`}
               </span>
             </div>
-            <span className="text-[var(--accent)] font-bold text-sm">{p.total}票</span>
+            <span className="text-pop-yellow font-bold text-sm">{p.total}票</span>
           </div>
         ))}
       </div>
 
       {/* Round highlights */}
       <div className="space-y-3 mb-8">
-        <p className="text-xs text-[var(--muted)] tracking-wide">各ラウンドのMVP</p>
+        <p className="text-xs text-zinc-500 tracking-wide">各ラウンドのMVP</p>
         {roundSummaries.map((s) => (
-          <div key={s.round} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-2">
-            <p className="text-xs text-[var(--muted)]">Round {s.round}</p>
-            <p className="text-[var(--muted)] text-xs">「{s.question}」</p>
+          <div key={s.round} className="bg-surface border border-line rounded-xl p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-pop-yellow font-bold bg-pop-yellow/10 rounded-full px-2 py-0.5">
+                R{s.round}
+              </span>
+              <p className="text-zinc-500 text-xs truncate">「{s.question}」</p>
+            </div>
             {s.mvp ? (
-              <div>
-                <p className="text-[var(--text)] text-sm">👑 {s.mvp.text}</p>
-                <p className="text-xs text-[var(--muted)] mt-0.5">{s.mvp.total}票</p>
+              <div className="flex items-start gap-2">
+                <Mascot kind="crown" size={14} tint="#FFD600" className="mt-0.5 shrink-0" />
+                <p className="text-white text-sm">{s.mvp.text}</p>
               </div>
             ) : (
-              <p className="text-xs text-[var(--muted)]">データなし</p>
+              <p className="text-xs text-zinc-600">データなし</p>
             )}
           </div>
         ))}
@@ -164,9 +163,9 @@ export default function SummaryPage() {
       <div className="space-y-3">
         <Link
           href={`/rooms/${roomId}/analysis?sid=${sessionId}`}
-          className="flex items-center justify-center gap-2 w-full bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] text-sm font-medium py-3.5 rounded-2xl active:scale-[0.98] transition-transform"
+          className="flex items-center justify-center gap-2 w-full bg-surface border border-line text-white text-sm font-medium py-3.5 rounded-2xl active:scale-[0.98] transition-transform"
         >
-          <BarChart2 size={16} />
+          <Mascot kind="bars" size={16} tint="#FFFFFF" />
           笑い分析を見る
         </Link>
         <button
@@ -178,14 +177,14 @@ export default function SummaryPage() {
               navigator.clipboard.writeText(text);
             }
           }}
-          className="flex items-center justify-center gap-2 w-full border border-[var(--accent)]/40 text-[var(--accent)] text-sm font-medium py-3.5 rounded-2xl active:scale-[0.98] transition-transform"
+          className="flex items-center justify-center gap-2 w-full border border-pop-yellow/40 text-pop-yellow text-sm font-medium py-3.5 rounded-2xl active:scale-[0.98] transition-transform"
         >
-          <Share2 size={16} />
+          <Mascot kind="link" size={16} tint="#FFD600" />
           結果をシェア
         </button>
         <Link
           href="/rooms"
-          className="block text-center text-[var(--muted)] text-sm py-2"
+          className="block text-center text-zinc-500 text-sm py-2"
         >
           ルーム一覧に戻る
         </Link>

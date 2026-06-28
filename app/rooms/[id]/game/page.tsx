@@ -10,6 +10,7 @@ import {
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, RoomDoc } from "@/lib/types";
 import Timer from "@/components/ogiri/Timer";
+import Mascot from "@/components/Mascot";
 
 const ANSWER_SECONDS = 90;
 const VOTE_SECONDS = 45;
@@ -34,7 +35,6 @@ export default function GamePage() {
     const u1 = subscribeRoom(roomId, setRoom);
     const u2 = subscribeSession(sessionId, (s) => {
       setSession(s);
-      // Follow phase changes
       if (s.status === "voting") {
         router.replace(`/rooms/${roomId}/game/vote?sid=${sessionId}&round=${s.currentRound}`);
       }
@@ -53,7 +53,6 @@ export default function GamePage() {
     return u;
   }, [sessionId, session?.currentRound]);
 
-  // Host advances to voting when timer expires or all answered
   const advanceToVoting = useCallback(async () => {
     if (!session || !isHost || advancingRef.current) return;
     if (round?.status !== "answering") return;
@@ -77,7 +76,6 @@ export default function GamePage() {
     try {
       await submitAnswer(sessionId, String(session!.currentRound), uid, answer.trim());
       setSubmitted(true);
-      // If all members answered, host advances
       if (isHost && session && room) {
         const newCount = (round?.answerCount ?? 0) + 1;
         if (newCount >= room.memberIds.length) {
@@ -93,51 +91,57 @@ export default function GamePage() {
 
   if (!session || !round) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-ink">
+        <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-4 pt-12 pb-8">
-      {/* Header */}
+    <div className="min-h-screen flex flex-col px-4 pt-8 pb-8">
+      {/* Header row */}
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <p className="text-xs text-[var(--muted)] tracking-wide">
-            ラウンド {session.currentRound} / {session.totalRounds}
+        <div className="bg-surface border border-line rounded-full px-3 py-1.5">
+          <p className="text-xs text-zinc-400">
+            Round <span className="text-pop-yellow font-bold">{session.currentRound}</span>/{session.totalRounds}
           </p>
-          <p className="text-xs text-[var(--accent)]">{round.question.genre} · {round.question.difficulty}</p>
         </div>
-        <Timer deadline={round.answerDeadline} onExpire={isHost ? advanceToVoting : undefined} />
+        <Timer deadline={round.answerDeadline} totalSeconds={ANSWER_SECONDS} onExpire={isHost ? advanceToVoting : undefined} />
       </div>
 
-      {/* Question */}
-      <div className="flex-1 flex flex-col items-center justify-center space-y-8">
-        <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
-          <p className="text-xs text-[var(--muted)] mb-3">お題</p>
-          <p className="text-[var(--text)] text-xl leading-relaxed font-medium text-center">
-            {round.question.text}
-          </p>
+      {/* Question card */}
+      <div className="flex-1 flex flex-col items-center justify-center space-y-6 py-4">
+        <div className="w-full relative animate-pop-in">
+          {/* Speech bubble style */}
+          <div className="bg-surface-2 border-2 border-pop-yellow/30 rounded-3xl p-6 relative">
+            <div className="flex items-center gap-2 mb-3">
+              <Mascot kind="mic" size={16} tint="#FFD600" />
+              <span className="text-xs text-pop-yellow font-bold tracking-wide">お題</span>
+              <span className="text-xs text-zinc-600 ml-auto">{round.question.genre}</span>
+            </div>
+            <p className="text-white text-xl leading-relaxed font-medium text-center">
+              {round.question.text}
+            </p>
+          </div>
         </div>
 
-        {/* Progress */}
-        <p className="text-xs text-[var(--muted)]">
+        <p className="text-xs text-zinc-600">
           {round.answerCount}/{room?.memberIds.length ?? "?"}人が回答済み
         </p>
       </div>
 
-      {/* Answer Input */}
+      {/* Answer input */}
       {submitted ? (
-        <div className="space-y-4">
-          <div className="bg-[var(--surface)] border border-[var(--ok)]/40 rounded-2xl p-4 text-center">
-            <p className="text-[var(--ok)] text-sm font-medium">✓ 回答を送信しました</p>
-            <p className="text-[var(--muted)] text-xs mt-1">他の人の回答を待っています...</p>
+        <div className="space-y-3 animate-rise">
+          <div className="bg-pop-green/10 border border-pop-green/40 rounded-2xl p-4 text-center">
+            <Mascot kind="check" size={24} tint="#3DDC84" className="mx-auto mb-2" />
+            <p className="text-pop-green text-sm font-bold">回答を送信しました</p>
+            <p className="text-zinc-500 text-xs mt-1">他の人の回答を待っています...</p>
           </div>
           {isHost && (
             <button
               onClick={advanceToVoting}
-              className="w-full border border-[var(--accent)]/40 text-[var(--accent)] text-sm py-3 rounded-xl active:scale-[0.98] transition-transform"
+              className="w-full border border-pop-yellow/40 text-pop-yellow text-sm py-3 rounded-xl active:scale-[0.98] transition-transform"
             >
               投票フェーズに進む →
             </button>
@@ -146,7 +150,7 @@ export default function GamePage() {
       ) : (
         <div className="space-y-3">
           <textarea
-            className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-2xl px-4 py-3 text-[var(--text)] text-base placeholder:text-[var(--placeholder)] outline-none focus:border-[var(--accent)]/60 resize-none transition-colors"
+            className="w-full bg-surface border border-line rounded-2xl px-4 py-3 text-white text-base placeholder:text-zinc-600 outline-none focus:border-pop-yellow/60 resize-none transition-colors"
             placeholder="面白い回答を入力..."
             rows={3}
             maxLength={200}
@@ -156,9 +160,9 @@ export default function GamePage() {
           <button
             onClick={handleSubmit}
             disabled={!answer.trim() || submitting}
-            className="w-full bg-[var(--accent)] text-[var(--bg)] font-bold py-4 rounded-2xl text-base disabled:opacity-40 active:scale-[0.98] transition-all"
+            className="w-full bg-pop-yellow text-ink font-display py-4 rounded-2xl text-lg disabled:opacity-40 active:scale-[0.98] transition-all"
           >
-            {submitting ? "送信中..." : "回答する"}
+            {submitting ? "送信中..." : "回答する！"}
           </button>
         </div>
       )}

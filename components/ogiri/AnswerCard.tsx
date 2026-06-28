@@ -1,12 +1,15 @@
 "use client";
 
+import Mascot from "@/components/Mascot";
 import type { AnswerDoc, VoteDoc, Reaction } from "@/lib/types";
 
-const REACTIONS: { key: Reaction; emoji: string; label: string; color: string }[] = [
-  { key: "funny", emoji: "😂", label: "面白い", color: "var(--gold)" },
-  { key: "smart", emoji: "🧠", label: "うまい", color: "#60a5fa" },
-  { key: "crazy", emoji: "🤯", label: "狂ってる", color: "#c084fc" },
+const REACTIONS: { key: Reaction; kind: "r_funny" | "r_smart" | "r_crazy"; label: string; color: string }[] = [
+  { key: "funny", kind: "r_funny", label: "面白い", color: "#FFD600" },
+  { key: "smart", kind: "r_smart", label: "うまい", color: "#00B4FF" },
+  { key: "crazy", kind: "r_crazy", label: "狂ってる", color: "#BF5FFF" },
 ];
+
+const LABELS = ["A", "B", "C", "D", "E"];
 
 interface Props {
   answer: AnswerDoc;
@@ -15,7 +18,7 @@ interface Props {
   myVote?: Reaction | null;
   canVote: boolean;
   isOwn: boolean;
-  revealed?: boolean; // true = show userId after game
+  revealed?: boolean;
   authorNickname?: string;
   onVote?: (answerId: string, reaction: Reaction) => void;
 }
@@ -39,28 +42,37 @@ export default function AnswerCard({
     {} as Record<Reaction, number>
   );
   const total = Object.values(tally).reduce((s, n) => s + n, 0);
+  const label = LABELS[index] ?? String(index + 1);
 
   return (
     <div
-      className={`rounded-2xl border p-4 space-y-3 transition-all ${
+      className={`rounded-2xl border p-4 space-y-3 transition-all animate-rise ${
         isOwn
-          ? "border-[var(--accent)]/40 bg-[var(--surface-2)]"
-          : "border-[var(--border)] bg-[var(--surface)]"
+          ? "border-pop-yellow/40 bg-surface-2"
+          : "border-line bg-surface"
       }`}
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-[var(--muted)]">
-          {revealed && authorNickname ? authorNickname : `回答 ${String.fromCharCode(64 + index + 1)}`}
-          {isOwn && " (あなた)"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-display font-bold text-ink"
+            style={{ backgroundColor: isOwn ? "#FFD600" : "#3f3f3f" }}
+          >
+            {label}
+          </span>
+          <span className="text-xs text-zinc-500">
+            {revealed && authorNickname ? authorNickname : "回答" + label}
+            {isOwn && " (あなた)"}
+          </span>
+        </div>
         {total > 0 && (
-          <span className="text-xs text-[var(--muted)]">{total}票</span>
+          <span className="text-xs text-zinc-500">{total}票</span>
         )}
       </div>
 
       {/* Answer text */}
-      <p className="text-[var(--text)] text-base leading-relaxed">{answer.text}</p>
+      <p className="text-white text-base leading-relaxed font-medium">{answer.text}</p>
 
       {/* Reactions */}
       <div className="flex gap-2">
@@ -72,17 +84,18 @@ export default function AnswerCard({
               key={r.key}
               disabled={!canVote || isOwn}
               onClick={() => onVote?.(answer.id, r.key)}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm border transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all active:scale-90 ${
                 active
-                  ? "border-[var(--accent)] bg-[var(--accent)]/10"
-                  : "border-[var(--border)] bg-transparent"
-              } ${canVote && !isOwn ? "hover:border-[var(--accent)]/60 active:scale-95" : ""} disabled:opacity-40 disabled:cursor-not-allowed`}
+                  ? "border-transparent"
+                  : "border-line bg-transparent"
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
+              style={active ? { backgroundColor: r.color + "22", borderColor: r.color + "80" } : {}}
             >
-              <span>{r.emoji}</span>
+              <Mascot kind={r.kind} size={18} className={active ? "animate-tap-pop" : ""} />
               {count > 0 && (
                 <span
-                  className="text-xs font-medium"
-                  style={{ color: active ? "var(--accent)" : r.color }}
+                  className="text-xs font-bold"
+                  style={{ color: active ? r.color : "#737373" }}
                 >
                   {count}
                 </span>

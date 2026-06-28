@@ -31,18 +31,18 @@ export default function InvitePage() {
   }, [code, router]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-8 space-y-6">
+    <div className="min-h-screen flex flex-col items-center justify-center px-8 space-y-6 bg-ink">
       {status === "joining" ? (
         <>
-          <div className="w-8 h-8 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
-          <p className="text-[var(--muted)] text-sm">ルームに参加中...</p>
+          <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
+          <p className="text-zinc-500 text-sm">ルームに参加中...</p>
         </>
       ) : (
         <div className="text-center space-y-4">
-          <p className="text-[var(--danger)] text-sm">{error}</p>
+          <p className="text-pop-pink text-sm">{error}</p>
           <button
             onClick={() => router.push("/rooms")}
-            className="text-[var(--accent)] text-sm underline"
+            className="text-pop-yellow text-sm underline"
           >
             ルーム一覧に戻る
           </button>
