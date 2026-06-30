@@ -15,8 +15,8 @@ export default function AdSlot({ id, size = "banner", className = "" }: AdSlotPr
     <div
       id={id}
       data-ad-slot={id}
-      className={`flex items-center justify-center border border-dashed border-zinc-800 rounded-xl text-zinc-700 text-[10px] tracking-widest ${className}`}
-      style={{ height: SIZE_HEIGHT[size] }}
+      className={`flex items-center justify-center border border-dashed rounded-xl text-text-faint text-[10px] tracking-widest ${className}`}
+      style={{ borderColor: "#E4DCCF", height: SIZE_HEIGHT[size] }}
     >
       広告
     </div>

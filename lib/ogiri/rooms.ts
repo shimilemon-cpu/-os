@@ -1,7 +1,8 @@
 import {
-  collection, doc, addDoc, getDoc, updateDoc,
+  collection, doc, getDoc, updateDoc,
   onSnapshot, Timestamp, arrayUnion, setDoc,
   query, where, orderBy, limit,
+  DocumentReference,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { RoomDoc, RoomMemberDoc, InviteCodeDoc } from "@/lib/types";
@@ -11,7 +12,7 @@ export function generateInviteCode(): string {
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 }
 
-export function generateRoomRef() {
+export function generateRoomRef(): DocumentReference {
   return doc(collection(db, "rooms"));
 }
 
@@ -21,16 +22,16 @@ export async function createRoom(
   name: string,
   mode: "realtime" | "async" = "realtime",
   judges: ("王道" | "辛口")[] = ["王道", "辛口"],
-  pregenRef?: ReturnType<typeof generateRoomRef>,
-  pregenCode?: string,
-): Promise<{ roomId: string; inviteCode: string }> {
-  const inviteCode = pregenCode ?? generateInviteCode();
-  const roomRef = pregenRef ?? doc(collection(db, "rooms"));
+  roomRef?: DocumentReference,
+  inviteCode?: string
+): Promise<string> {
+  const code = inviteCode ?? generateInviteCode();
+  const ref = roomRef ?? generateRoomRef();
 
-  await setDoc(roomRef, {
+  await setDoc(ref, {
     name,
     hostId,
-    inviteCode,
+    inviteCode: code,
     mode,
     status: "waiting",
     memberIds: [hostId],
@@ -39,11 +40,11 @@ export async function createRoom(
   });
 
   await Promise.all([
-    setDoc(doc(db, "inviteCodes", inviteCode), {
-      roomId: roomRef.id,
+    setDoc(doc(db, "inviteCodes", code), {
+      roomId: ref.id,
       createdAt: Timestamp.now(),
     } satisfies Omit<InviteCodeDoc, "id">),
-    setDoc(doc(db, "rooms", roomRef.id, "members", hostId), {
+    setDoc(doc(db, "rooms", ref.id, "members", hostId), {
       userId: hostId,
       nickname: hostNickname,
       isReady: false,
@@ -51,7 +52,7 @@ export async function createRoom(
     } satisfies Omit<RoomMemberDoc, "id">),
   ]);
 
-  return { roomId: roomRef.id, inviteCode };
+  return ref.id;
 }
 
 export async function joinRoomByCode(

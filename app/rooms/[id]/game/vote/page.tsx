@@ -9,7 +9,6 @@ import {
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, RoomDoc, Reaction } from "@/lib/types";
-import AnswerCard from "@/components/ogiri/AnswerCard";
 import Timer from "@/components/ogiri/Timer";
 
 const VOTE_SECONDS = 45;
@@ -100,56 +99,87 @@ export default function VotePage() {
   if (!session || !round || answers.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-ink">
-        <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-pop-red border-t-transparent animate-spin" />
       </div>
     );
   }
 
+  const myVotedId = Object.keys(myVotesMap)[0] ?? null;
+
   return (
-    <div className="min-h-screen flex flex-col px-4 pt-8 pb-8">
+    <div className="min-h-screen flex flex-col px-5 pt-6 pb-8 bg-ink">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <div className="bg-surface border border-line rounded-full px-3 py-1.5 inline-block">
-            <p className="text-xs text-zinc-400">
-              Round <span className="text-pop-yellow font-bold">{roundParam}</span>/{session.totalRounds}
-            </p>
-          </div>
-          <p className="text-sm text-white font-bold mt-2">投票タイム 😂🧠🤯</p>
+        <div className="flex-1">
+          <p className="text-text-muted text-[11px] font-bold tracking-wide" style={{ color: "#E5402F" }}>
+            投票中 —
+          </p>
+          <p className="font-display text-text text-lg font-bold">いちばん笑った回答に</p>
         </div>
         <Timer deadline={voteDeadline} totalSeconds={VOTE_SECONDS} onExpire={isHost ? advanceToResult : undefined} />
       </div>
 
-      {/* Question */}
-      <div className="bg-surface border border-line rounded-xl px-4 py-3 mb-5">
-        <p className="text-zinc-500 text-xs mb-1">お題</p>
-        <p className="text-white text-sm leading-relaxed">{round.question.text}</p>
+      {/* お題 */}
+      <div className="bg-surface rounded-2xl px-4 py-3.5 mb-4" style={{ border: "1px solid rgba(0,0,0,.08)" }}>
+        <p className="text-text-muted text-[11px] font-bold mb-1">お題</p>
+        <p className="font-display text-text font-bold text-base leading-snug">{round.question.text}</p>
       </div>
 
-      {/* Answers */}
+      <p className="text-text-sub text-[12px] font-bold mb-3">
+        いちばん笑った回答に <span style={{ color: "#E5402F" }}>座布団</span> を１枚。
+      </p>
+
+      {/* 回答一覧 */}
       <div className="flex-1 space-y-3 overflow-y-auto pb-4">
-        {answers.map((a, i) => (
-          <AnswerCard
-            key={a.id}
-            answer={a}
-            index={i}
-            votes={votes}
-            myVote={myVotesMap[a.id] ?? null}
-            canVote={true}
-            isOwn={a.userId === uid}
-            onVote={handleVote}
-          />
-        ))}
+        {answers.map((a, i) => {
+          const isSelected = myVotesMap[a.id] != null;
+          const isOwn = a.userId === uid;
+          return (
+            <div
+              key={a.id}
+              className="bg-surface rounded-[18px] p-4"
+              style={{ border: isSelected ? "2px solid #E5402F" : "1px solid rgba(0,0,0,.08)" }}
+            >
+              <p className="text-[18px] font-black leading-snug text-text mb-3">{a.text}</p>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-text-muted">回答 {String.fromCharCode(65 + i)}</span>
+                {isOwn ? (
+                  <span className="text-[12px] text-text-faint font-medium">自分の回答</span>
+                ) : isSelected ? (
+                  <span
+                    className="inline-flex items-center gap-2 text-[13px] font-black text-[#FBF7EC] px-4 py-2 rounded-full"
+                    style={{ background: "#E5402F" }}
+                  >
+                    <svg width="15" height="13" viewBox="0 0 30 24"><path d="M5 6h20l3 6-3 6H5L2 12z" fill="#FBF7EC"/></svg>
+                    座布団を渡した
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => handleVote(a.id, "funny")}
+                    disabled={myVotedId != null}
+                    className="inline-flex items-center gap-2 text-[13px] font-black px-4 py-2 rounded-full disabled:opacity-40 active:scale-95 transition-all"
+                    style={{ color: "#E5402F", background: "#FCE7E3" }}
+                  >
+                    <svg width="15" height="13" viewBox="0 0 30 24"><path d="M5 6h20l3 6-3 6H5L2 12z" fill="#E5402F"/></svg>
+                    座布団
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {isHost && (
+      <div className="pt-3" style={{ background: "linear-gradient(180deg,rgba(251,247,236,0),#FBF7EC 40%)" }}>
         <button
           onClick={advanceToResult}
-          className="mt-4 w-full border border-pop-yellow/40 text-pop-yellow text-sm py-3 rounded-xl active:scale-[0.98] transition-transform"
+          disabled={!isHost}
+          className="w-full font-display font-bold py-4 rounded-2xl text-lg text-[#FBF7EC] disabled:opacity-40 active:scale-[0.98] transition-all"
+          style={{ background: "#1A1714" }}
         >
-          結果を見る →
+          投票を確定する
         </button>
-      )}
+      </div>
     </div>
   );
 }

@@ -7,18 +7,17 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { subscribeUserRooms } from "@/lib/ogiri/rooms";
 import type { RoomDoc } from "@/lib/types";
-import Mascot from "@/components/Mascot";
 import AdSlot from "@/components/AdSlot";
 
 const STATUS_LABEL: Record<RoomDoc["status"], string> = {
-  waiting: "待機中",
-  active: "ゲーム中",
+  waiting: "受付中",
+  active: "回答中",
   finished: "終了",
 };
 const STATUS_COLOR: Record<RoomDoc["status"], string> = {
-  waiting: "#3DDC84",
-  active: "#FFD600",
-  finished: "#525252",
+  waiting: "#2BA35F",
+  active: "#E5402F",
+  finished: "#B6AC97",
 };
 
 export default function RoomsPage() {
@@ -44,109 +43,121 @@ export default function RoomsPage() {
   const finishedRooms = rooms.filter((r) => r.status === "finished");
 
   return (
-    <div className="min-h-screen pb-24 px-4 pt-12">
-      {/* Brand */}
-      <div className="text-center mb-10">
-        <div className="flex justify-center gap-2 mb-3">
-          <Mascot kind="char_yellow" size={36} className="animate-floaty" style={{ "--r": "-6deg" } as React.CSSProperties} />
-          <Mascot kind="char_pink" size={36} className="animate-floaty" style={{ "--r": "4deg", animationDelay: "0.6s" } as React.CSSProperties} />
-          <Mascot kind="char_teal" size={36} className="animate-floaty" style={{ "--r": "-3deg", animationDelay: "1.1s" } as React.CSSProperties} />
+    <div className="min-h-screen pb-24 bg-ink">
+      {/* App bar */}
+      <div className="px-5 pt-12 pb-3 flex items-center gap-3">
+        <svg className="w-10 h-11 flex-none">
+          <use href="#c-daruma" width="100%" height="100%"/>
+        </svg>
+        <div className="flex-1">
+          <h1 className="font-display text-text text-xl font-bold leading-tight">寄合所</h1>
+          <p className="text-text-muted text-[11px] mt-0.5">いま笑いが生まれる場所</p>
         </div>
-        <h1 className="font-display text-pop-yellow text-2xl">大喜利Pocket</h1>
-        <p className="text-zinc-600 text-xs mt-1">AIがあなたたちの笑いを覚える</p>
       </div>
 
-      {/* Main CTAs */}
-      <div className="space-y-3 mb-8">
-        <Link
-          href="/rooms/new"
-          className="flex items-center justify-between w-full bg-pop-yellow text-ink px-5 py-4 rounded-2xl active:scale-[0.98] transition-all animate-pulse-glow"
-        >
-          <div>
-            <p className="font-display text-lg">ルームを作る</p>
-            <p className="text-xs opacity-70 mt-0.5">友達を招待して始める</p>
-          </div>
-          <Mascot kind="plus" size={28} tint="#0d0d0d" />
-        </Link>
-
+      {/* あいことば入力 */}
+      <div className="mx-5 mb-3">
         <button
           onClick={() => setShowJoin((v) => !v)}
-          className="flex items-center justify-between w-full bg-surface border border-line px-5 py-4 rounded-2xl active:scale-[0.98] transition-all"
+          className="w-full flex items-center gap-3 rounded-2xl border border-dashed border-[#E0A93B] px-4 py-3"
+          style={{ background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)" }}
         >
-          <div className="text-left">
-            <p className="font-bold text-white text-base">招待コードで参加</p>
-            <p className="text-xs text-zinc-500 mt-0.5">友達のルームに入る</p>
+          <svg className="w-9 h-6 flex-none">
+            <use href="#c-koban" width="100%" height="100%"/>
+          </svg>
+          <div className="flex-1 text-left">
+            <p className="text-[11px] text-[#9A6410] font-bold">あいことばで入る</p>
+            <p className="text-sm text-text-muted">4〜6文字の合言葉を入力…</p>
           </div>
-          <Mascot kind="link" size={22} tint="#737373" />
+          <span className="text-xs font-black text-[#FBF7EC] bg-pop-red px-3 py-1.5 rounded-full">入る</span>
         </button>
 
         {showJoin && (
-          <div className="animate-rise">
+          <div className="mt-2 animate-rise">
             <JoinByCode onJoined={(id) => router.push(`/rooms/${id}`)} />
           </div>
         )}
       </div>
 
-      <AdSlot id="rooms-banner" className="mb-6" />
+      <AdSlot id="rooms-banner" className="mx-5 mb-3" />
 
-      {/* Active rooms */}
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-6 h-6 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
-        </div>
-      ) : activeRooms.length > 0 ? (
-        <div className="mb-6">
-          <h2 className="text-zinc-500 text-xs tracking-widest uppercase mb-3">参加中のルーム</h2>
-          <ul className="space-y-2">
+      {/* Room list */}
+      <div className="px-5 space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="w-6 h-6 rounded-full border-2 border-pop-red border-t-transparent animate-spin" />
+          </div>
+        ) : activeRooms.length > 0 ? (
+          <>
+            <p className="text-text-muted text-xs font-bold tracking-widest uppercase">参加中の部屋</p>
             {activeRooms.map((room) => (
               <RoomCard key={room.id} room={room} />
             ))}
-          </ul>
-        </div>
-      ) : !loading ? (
-        <div className="text-center py-10">
-          <Mascot kind="mic" size={40} tint="#262626" className="mx-auto mb-3" />
-          <p className="text-zinc-600 text-sm">まだルームがありません</p>
-        </div>
-      ) : null}
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <svg className="w-16 h-18 mx-auto mb-3 opacity-30">
+              <use href="#c-daruma" width="100%" height="100%"/>
+            </svg>
+            <p className="text-text-muted text-sm">まだ部屋がありません</p>
+          </div>
+        )}
 
-      {/* Finished rooms */}
-      {finishedRooms.length > 0 && (
-        <div>
-          <h2 className="text-zinc-600 text-xs tracking-widest uppercase mb-3">過去のルーム</h2>
-          <ul className="space-y-2">
+        {finishedRooms.length > 0 && (
+          <>
+            <p className="text-text-faint text-xs font-bold tracking-widest uppercase pt-2">過去の部屋</p>
             {finishedRooms.slice(0, 3).map((room) => (
               <RoomCard key={room.id} room={room} />
             ))}
-          </ul>
-        </div>
-      )}
+          </>
+        )}
+      </div>
+
+      {/* FAB */}
+      <Link
+        href="/rooms/new"
+        className="fixed right-5 bottom-8 flex items-center gap-2 text-[#FBF7EC] font-black text-sm px-5 py-3.5 rounded-full shadow-lg active:scale-95 transition-all"
+        style={{ background: "#E5402F", boxShadow: "0 14px 26px -10px rgba(229,64,47,.7)" }}
+      >
+        <span className="text-lg leading-none">＋</span>部屋を立てる
+      </Link>
     </div>
   );
 }
 
 function RoomCard({ room }: { room: RoomDoc }) {
+  const charSymbols = ["#c-daruma", "#c-cat", "#c-tai", "#c-fuku", "#c-mask"];
+  const symbol = charSymbols[Math.abs(room.id.charCodeAt(0)) % charSymbols.length];
+  const bgColors = ["#EAF7EF", "#FDEFE0", "#FFF3D6", "#E8F4FD", "#FCE8E3"];
+  const bgColor = bgColors[Math.abs(room.id.charCodeAt(0)) % bgColors.length];
+
   return (
-    <li>
-      <Link
-        href={`/rooms/${room.id}`}
-        className="flex items-center justify-between bg-surface border border-line rounded-2xl px-4 py-3.5 active:scale-[0.98] transition-transform animate-rise"
-      >
-        <div className="space-y-1">
-          <p className="text-white font-medium">{room.name}</p>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1 text-xs text-zinc-500">
-              <Mascot kind="person" size={11} tint="#737373" />
-              {room.memberIds.length}人
-            </span>
-            <span className="text-xs font-bold" style={{ color: STATUS_COLOR[room.status] }}>
-              ● {STATUS_LABEL[room.status]}
-            </span>
-          </div>
+    <Link
+      href={`/rooms/${room.id}`}
+      className="flex items-center gap-3 bg-surface border border-line rounded-[18px] px-4 py-3.5 active:scale-[0.98] transition-transform animate-rise"
+      style={{ borderColor: "rgba(0,0,0,.07)" }}
+    >
+      <div className="w-14 h-14 rounded-2xl flex-none grid place-items-center" style={{ background: bgColor }}>
+        <svg className="w-10 h-11">
+          <use href={symbol} width="100%" height="100%"/>
+        </svg>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="font-bold text-text text-[15px]">{room.name}</p>
+          <span
+            className="text-[10px] font-black px-2 py-0.5 rounded-full flex-none"
+            style={{ color: STATUS_COLOR[room.status], background: `${STATUS_COLOR[room.status]}18` }}
+          >
+            {STATUS_LABEL[room.status]}
+          </span>
         </div>
-        <Mascot kind="bars" size={18} tint="#525252" />
-      </Link>
-    </li>
+        <p className="text-text-muted text-[11px] mt-1">{room.memberIds.length}人参加</p>
+      </div>
+      <svg width="7" height="12" viewBox="0 0 7 12" fill="none">
+        <path d="M1 1l5 5-5 5" stroke="#B6AC97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </Link>
   );
 }
 
@@ -156,7 +167,7 @@ function JoinByCode({ onJoined }: { onJoined: (roomId: string) => void }) {
   const [loading, setLoading] = useState(false);
 
   const join = async () => {
-    if (code.length < 6) return;
+    if (code.length < 4) return;
     setLoading(true);
     setError("");
     try {
@@ -183,11 +194,11 @@ function JoinByCode({ onJoined }: { onJoined: (roomId: string) => void }) {
   };
 
   return (
-    <div className="bg-surface-2 border border-line rounded-2xl p-4 space-y-3">
+    <div className="bg-surface border rounded-2xl p-4 space-y-3" style={{ borderColor: "rgba(0,0,0,.08)" }}>
       <div className="flex gap-2">
         <input
-          className="flex-1 bg-surface border border-line rounded-xl px-4 py-2.5 text-white text-sm uppercase tracking-widest placeholder:text-zinc-600 outline-none focus:border-pop-yellow/60 transition-colors"
-          placeholder="ABC123"
+          className="flex-1 bg-surface-2 border border-line rounded-xl px-4 py-2.5 text-text text-sm uppercase tracking-widest placeholder:text-text-faint outline-none focus:border-[#E0A93B] transition-colors"
+          placeholder="あいことば"
           maxLength={6}
           value={code}
           autoFocus
@@ -196,13 +207,14 @@ function JoinByCode({ onJoined }: { onJoined: (roomId: string) => void }) {
         />
         <button
           onClick={join}
-          disabled={code.length < 6 || loading}
-          className="bg-pop-yellow text-ink text-sm font-bold px-5 rounded-xl disabled:opacity-40 active:scale-95 transition-transform"
+          disabled={code.length < 4 || loading}
+          className="text-[#FBF7EC] text-sm font-black px-5 rounded-xl disabled:opacity-40 active:scale-95 transition-transform"
+          style={{ background: "#E5402F" }}
         >
-          {loading ? "..." : "参加"}
+          {loading ? "…" : "入る"}
         </button>
       </div>
-      {error && <p className="text-xs text-pop-pink">{error}</p>}
+      {error && <p className="text-xs text-pop-red">{error}</p>}
     </div>
   );
 }

@@ -10,7 +10,6 @@ import {
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, RoomDoc } from "@/lib/types";
 import Timer from "@/components/ogiri/Timer";
-import Mascot from "@/components/Mascot";
 
 const ANSWER_SECONDS = 90;
 const VOTE_SECONDS = 45;
@@ -92,80 +91,90 @@ export default function GamePage() {
   if (!session || !round) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-ink">
-        <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-pop-red border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-4 pt-8 pb-8">
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="bg-surface border border-line rounded-full px-3 py-1.5">
-          <p className="text-xs text-zinc-400">
-            Round <span className="text-pop-yellow font-bold">{session.currentRound}</span>/{session.totalRounds}
-          </p>
+    <div className="min-h-screen flex flex-col px-5 pt-6 pb-8 bg-ink">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex-1">
+          <p className="text-text-muted text-[11px]">{room?.name}・第{session.currentRound}問</p>
+          <p className="font-display text-text text-lg font-bold">回答を考える</p>
         </div>
         <Timer deadline={round.answerDeadline} totalSeconds={ANSWER_SECONDS} onExpire={isHost ? advanceToVoting : undefined} />
       </div>
 
-      {/* Question card */}
-      <div className="flex-1 flex flex-col items-center justify-center space-y-6 py-4">
-        <div className="w-full relative animate-pop-in">
-          {/* Speech bubble style */}
-          <div className="bg-surface-2 border-2 border-pop-yellow/30 rounded-3xl p-6 relative">
-            <div className="flex items-center gap-2 mb-3">
-              <Mascot kind="mic" size={16} tint="#FFD600" />
-              <span className="text-xs text-pop-yellow font-bold tracking-wide">お題</span>
-              <span className="text-xs text-zinc-600 ml-auto">{round.question.genre}</span>
-            </div>
-            <p className="text-white text-xl leading-relaxed font-medium text-center">
-              {round.question.text}
-            </p>
-          </div>
-        </div>
-
-        <p className="text-xs text-zinc-600">
-          {round.answerCount}/{room?.memberIds.length ?? "?"}人が回答済み
+      {/* お題カード */}
+      <div
+        className="rounded-[22px] p-6 mb-5 relative overflow-hidden flex-none animate-pop-in"
+        style={{ background: "linear-gradient(140deg,#2BA35F,#1F8A4F)" }}
+      >
+        <svg className="absolute right-[-10px] bottom-[-14px] w-24 opacity-90">
+          <use href="#c-cat" width="100%" height="100%"/>
+        </svg>
+        <p className="text-[12px] font-black tracking-wide mb-2" style={{ color: "#CFF3DD" }}>
+          ＼ 第{session.currentRound}問のお題 ／
+        </p>
+        <p className="font-display font-bold text-[22px] leading-[1.5] text-white max-w-[80%]">
+          {round.question.text}
         </p>
       </div>
 
-      {/* Answer input */}
-      {submitted ? (
-        <div className="space-y-3 animate-rise">
-          <div className="bg-pop-green/10 border border-pop-green/40 rounded-2xl p-4 text-center">
-            <Mascot kind="check" size={24} tint="#3DDC84" className="mx-auto mb-2" />
-            <p className="text-pop-green text-sm font-bold">回答を送信しました</p>
-            <p className="text-zinc-500 text-xs mt-1">他の人の回答を待っています...</p>
+      {/* 回答数 */}
+      <p className="text-text-muted text-xs mb-4">
+        {round.answerCount}/{room?.memberIds.length ?? "?"}人が回答済み
+      </p>
+
+      {/* 回答入力 */}
+      <div className="flex-1 flex flex-col">
+        {submitted ? (
+          <div className="space-y-3 animate-rise">
+            <div className="bg-surface rounded-2xl p-5 text-center" style={{ border: "2px solid #2BA35F" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2BA35F" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2">
+                <path d="M5 13l5 5L19 6"/>
+              </svg>
+              <p className="font-bold text-sm" style={{ color: "#2BA35F" }}>回答を投じました</p>
+              <p className="text-text-muted text-xs mt-1">他の人の回答を待っています…</p>
+            </div>
+            {isHost && (
+              <button
+                onClick={advanceToVoting}
+                className="w-full text-sm py-3 rounded-xl active:scale-[0.98] transition-transform font-bold text-text-sub"
+                style={{ border: "1px solid rgba(0,0,0,.1)" }}
+              >
+                投票フェーズに進む →
+              </button>
+            )}
           </div>
-          {isHost && (
+        ) : (
+          <div className="space-y-3 flex-1 flex flex-col">
+            <p className="text-xs font-black text-text-muted">あなたの回答</p>
+            <textarea
+              className="flex-1 bg-surface rounded-[18px] px-4 py-4 text-text text-[17px] font-semibold leading-relaxed placeholder:text-text-faint outline-none resize-none transition-colors"
+              style={{ border: "1.5px solid #E0A93B", minHeight: "120px" }}
+              placeholder="面白い回答を入力…"
+              maxLength={40}
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+            />
+            <div className="flex justify-between items-center text-xs text-text-muted">
+              <span>記名なしで投稿されます</span>
+              <span>{answer.length} / 40</span>
+            </div>
             <button
-              onClick={advanceToVoting}
-              className="w-full border border-pop-yellow/40 text-pop-yellow text-sm py-3 rounded-xl active:scale-[0.98] transition-transform"
+              onClick={handleSubmit}
+              disabled={!answer.trim() || submitting}
+              className="w-full font-display font-bold py-4 rounded-2xl text-lg disabled:opacity-40 active:scale-[0.98] transition-all text-[#FBF7EC]"
+              style={{ background: "#E5402F" }}
             >
-              投票フェーズに進む →
+              {submitting ? "送信中…" : "回答を投じる"}
             </button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <textarea
-            className="w-full bg-surface border border-line rounded-2xl px-4 py-3 text-white text-base placeholder:text-zinc-600 outline-none focus:border-pop-yellow/60 resize-none transition-colors"
-            placeholder="面白い回答を入力..."
-            rows={3}
-            maxLength={200}
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-          />
-          <button
-            onClick={handleSubmit}
-            disabled={!answer.trim() || submitting}
-            className="w-full bg-pop-yellow text-ink font-display py-4 rounded-2xl text-lg disabled:opacity-40 active:scale-[0.98] transition-all"
-          >
-            {submitting ? "送信中..." : "回答する！"}
-          </button>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

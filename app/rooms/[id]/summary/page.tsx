@@ -9,8 +9,10 @@ import { db } from "@/lib/firebase/client";
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import { tallyVotes } from "@/lib/ogiri/sessions";
 import type { RoomDoc, AnswerDoc, VoteDoc, AiAnalysisResult } from "@/lib/types";
-import Mascot from "@/components/Mascot";
 import AdSlot from "@/components/AdSlot";
+
+const RANK_LABELS = ["横綱", "大関", "関脇", "小結", "前頭"];
+const RANK_COLORS = ["#E5402F", "#2BA35F", "#E0A93B", "#F0922B", "#7A6F5C"];
 
 interface RoundSummary {
   round: number;
@@ -77,7 +79,6 @@ export default function SummaryPage() {
           });
         }
 
-        // メンバーのニックネームを取得
         const membersSnap = await getDocs(collection(db, "rooms", roomId, "members"));
         for (const d of membersSnap.docs) {
           nicknameMap[d.id] = (d.data().nickname as string) ?? d.id;
@@ -90,7 +91,6 @@ export default function SummaryPage() {
         setRoundSummaries(summaries);
         setPlayerScores(scores);
 
-        // 志向AI分析（全員分を並列実行）
         const analysisTasks = scores.map(async (p) => {
           const userAnswers = answersByUser[p.userId] ?? [];
           if (userAnswers.length === 0) {
@@ -121,108 +121,146 @@ export default function SummaryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-ink">
-        <div className="space-y-3 text-center">
-          <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin mx-auto" />
-          <p className="text-zinc-500 text-sm">結果を集計中...</p>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-ink">
+        <svg className="w-16 h-[70px] animate-spinslow" style={{ animationDuration: "3s" }}>
+          <use href="#c-daruma" width="100%" height="100%"/>
+        </svg>
+        <p className="text-text-muted text-sm font-bold">結果を集計中…</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-24 px-4 pt-12">
-      <div className="text-center mb-8 animate-pop-in">
-        <h1 className="font-display text-pop-yellow text-3xl mb-1">最終結果</h1>
-        <p className="text-zinc-500 text-sm">{room?.name}</p>
+    <div className="min-h-screen pb-24 px-5 pt-8 bg-ink">
+
+      {/* Header */}
+      <div className="text-center mb-6 animate-pop-in">
+        <p className="text-text-muted text-[11px] font-bold tracking-wide mb-1">{room?.name}</p>
+        <h1 className="font-display text-text text-3xl font-bold">千秋楽</h1>
+        <p className="text-text-muted text-xs mt-1">本日はご来場まことにありがとうございました</p>
       </div>
 
       {/* Champion card */}
       {champion && (
-        <div className="bg-pop-yellow/10 border-2 border-pop-yellow/60 rounded-3xl p-6 mb-6 text-center space-y-3 animate-pop-in">
-          <Mascot kind="trophy" size={48} tint="#FFD600" className="mx-auto animate-crown-bob" />
-          <p className="font-display text-pop-yellow text-xl">今日の優勝</p>
-          <p className="text-white text-base">{champion.userId === uid ? "🎉 あなた！" : champion.nickname}</p>
-          <p className="text-zinc-400 text-sm">{champion.total}票獲得</p>
+        <div
+          className="relative rounded-[24px] px-5 py-6 mb-5 text-center overflow-hidden animate-pop-in text-[#FBF7EC]"
+          style={{ background: "linear-gradient(150deg,#E5402F,#F0922B)" }}
+        >
+          <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 20% 0%,rgba(255,255,255,.25),transparent 50%)" }}/>
+          <div className="relative">
+            <p className="font-display font-bold text-[15px] tracking-[0.3em] mb-1" style={{ color: "#FFE9B0" }}>本日の横綱</p>
+            <svg className="w-20 h-[88px] mx-auto my-2 block">
+              <use href="#c-daruma" width="100%" height="100%"/>
+            </svg>
+            <p className="font-display font-bold text-xl leading-snug mt-2">
+              {champion.userId === uid ? "🎉 あなた！" : champion.nickname}
+            </p>
+            <div
+              className="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-full font-bold text-sm"
+              style={{ background: "rgba(0,0,0,.22)" }}
+            >
+              <svg width="16" height="14" viewBox="0 0 30 24"><path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/></svg>
+              座布団 {champion.total}枚
+            </div>
+          </div>
         </div>
       )}
 
-      <AdSlot id="summary-banner" className="mb-6" />
+      <AdSlot id="summary-banner" className="mb-5" />
 
-      {/* Score ranking */}
-      <div className="space-y-2 mb-8">
-        <p className="text-xs text-zinc-500 tracking-wide">スコアランキング</p>
-        {playerScores.map((p, i) => (
-          <div
-            key={p.userId}
-            className={`flex items-center justify-between rounded-xl border px-4 py-3 animate-rise ${
-              p.userId === uid
-                ? "border-pop-yellow/40 bg-pop-yellow/5"
-                : "border-line bg-surface"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-zinc-500 text-sm w-5 font-bold">{i + 1}</span>
-              <span className="text-white text-sm">
-                {p.userId === uid ? `${p.nickname}（あなた）` : p.nickname}
+      {/* Score ranking / 番付 */}
+      <div className="space-y-2.5 mb-8">
+        <p className="text-xs text-text-muted font-bold">番付表</p>
+        {playerScores.map((p, i) => {
+          const rankLabel = RANK_LABELS[i] ?? "前頭";
+          const rankColor = RANK_COLORS[i] ?? RANK_COLORS[4];
+          const isMe = p.userId === uid;
+          return (
+            <div
+              key={p.userId}
+              className="flex items-center gap-3 rounded-[15px] px-4 py-3 animate-rise"
+              style={{
+                background: isMe ? "#EBE2CF" : "#ffffff",
+                border: isMe ? "1.5px solid #E0A93B" : "1px solid rgba(0,0,0,.07)",
+              }}
+            >
+              <span className="font-display font-bold text-sm w-10 flex-none" style={{ color: rankColor }}>
+                {rankLabel}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm text-text truncate">
+                  {isMe ? `${p.nickname}（あなた）` : p.nickname}
+                </p>
+              </div>
+              <span className="font-bold text-sm flex-none" style={{ color: "#E5402F" }}>
+                {p.total}枚
               </span>
             </div>
-            <span className="text-pop-yellow font-bold text-sm">{p.total}票</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* 志向AI診断 */}
       {analyses.length > 0 && (
         <div className="space-y-3 mb-8">
-          <div className="flex items-center gap-2">
-            <Mascot kind="sparkle" size={14} tint="#BF5FFF" />
-            <p className="text-xs text-zinc-500 tracking-wide">あなたの志向AI診断</p>
-          </div>
-          {analyses.map((a) => (
-            <div
-              key={a.userId}
-              className={`rounded-2xl border p-4 space-y-1.5 animate-rise ${
-                a.userId === uid
-                  ? "border-pop-purple/40 bg-pop-purple/5"
-                  : "border-line bg-surface"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-white font-medium">
-                  {a.userId === uid ? `${a.nickname}（あなた）` : a.nickname}
-                </p>
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{ color: "#BF5FFF", background: "rgba(191,95,255,0.15)" }}
-                >
-                  {a.tendency}
-                </span>
+          <p className="text-xs text-text-muted font-bold">AI 志向診断</p>
+          {analyses.map((a) => {
+            const isMe = a.userId === uid;
+            return (
+              <div
+                key={a.userId}
+                className="rounded-2xl p-4 space-y-1.5 animate-rise"
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid rgba(0,0,0,.07)",
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-text font-bold">
+                    {isMe ? `${a.nickname}（あなた）` : a.nickname}
+                  </p>
+                  <span
+                    className="text-xs font-bold px-2.5 py-0.5 rounded-full"
+                    style={{ color: "#7A6F5C", background: "#EBE2CF" }}
+                  >
+                    {a.tendency}
+                  </span>
+                </div>
+                <p className="text-text-muted text-sm leading-relaxed">{a.comment}</p>
               </div>
-              <p className="text-zinc-400 text-sm leading-relaxed">{a.comment}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* Round highlights */}
       <div className="space-y-3 mb-8">
-        <p className="text-xs text-zinc-500 tracking-wide">各ラウンドのMVP</p>
+        <p className="text-xs text-text-muted font-bold">各ラウンドのMVP</p>
         {roundSummaries.map((s) => (
-          <div key={s.round} className="bg-surface border border-line rounded-xl p-4 space-y-2">
+          <div
+            key={s.round}
+            className="bg-surface rounded-[15px] p-4 space-y-2"
+            style={{ border: "1px solid rgba(0,0,0,.07)" }}
+          >
             <div className="flex items-center gap-2">
-              <span className="text-xs text-pop-yellow font-bold bg-pop-yellow/10 rounded-full px-2 py-0.5">
-                R{s.round}
+              <span
+                className="text-xs font-bold px-2.5 py-0.5 rounded-full"
+                style={{ color: "#E5402F", background: "#FCE7E3" }}
+              >
+                第{s.round}問
               </span>
-              <p className="text-zinc-500 text-xs truncate">「{s.question}」</p>
+              <p className="text-text-muted text-xs truncate">「{s.question}」</p>
             </div>
             {s.mvp ? (
-              <div className="flex items-start gap-2">
-                <Mascot kind="crown" size={14} tint="#FFD600" className="mt-0.5 shrink-0" />
-                <p className="text-white text-sm">{s.mvp.text}</p>
+              <div className="flex items-center gap-2">
+                <svg width="14" height="12" viewBox="0 0 30 24" className="flex-none">
+                  <path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/>
+                </svg>
+                <p className="text-text text-sm font-bold">{s.mvp.text}</p>
+                <span className="text-text-muted text-xs ml-auto">{s.mvp.total}枚</span>
               </div>
             ) : (
-              <p className="text-xs text-zinc-600">データなし</p>
+              <p className="text-xs text-text-faint">データなし</p>
             )}
           </div>
         ))}
@@ -230,40 +268,35 @@ export default function SummaryPage() {
 
       {/* Actions */}
       <div className="space-y-3">
-        {/* 注意書き */}
-        <div className="bg-surface border border-zinc-800 rounded-2xl p-4 space-y-1.5 mb-1">
-          <p className="text-xs text-zinc-500 font-bold">シェアする前にひと言</p>
-          <p className="text-xs text-zinc-600 leading-relaxed">
+        <div
+          className="bg-surface rounded-[18px] p-4 space-y-1.5"
+          style={{ border: "1px solid rgba(0,0,0,.07)" }}
+        >
+          <p className="text-xs text-text-muted font-bold">シェアする前にひと言</p>
+          <p className="text-xs text-text-muted leading-relaxed">
             あなたはプロの芸人ではありません。良い評価を得ても、SNSで自慢したり芸人さんをいじったりするのはやめましょう。笑いは仲間内で楽しむものです 🎤
           </p>
         </div>
 
-        <Link
-          href={`/rooms/${roomId}/analysis?sid=${sessionId}`}
-          className="flex items-center justify-center gap-2 w-full bg-surface border border-line text-white text-sm font-medium py-3.5 rounded-2xl active:scale-[0.98] transition-transform"
-        >
-          <Mascot kind="bars" size={16} tint="#FFFFFF" />
-          笑い分析を見る
-        </Link>
         <button
           onClick={() => {
-            const text = `大喜利Pocket「${room?.name ?? ""}」\n🏆 ${champion?.total ?? 0}票でゲーム終了！\n#大喜利Pocket`;
+            const text = `大喜利Pocket「${room?.name ?? ""}」\n🏆 ${champion?.total ?? 0}枚で千秋楽！\n#大喜利Pocket`;
             if (navigator.share) {
               navigator.share({ text });
             } else {
               navigator.clipboard.writeText(text);
             }
           }}
-          className="flex items-center justify-center gap-2 w-full border border-pop-yellow/40 text-pop-yellow text-sm font-medium py-3.5 rounded-2xl active:scale-[0.98] transition-transform"
+          className="flex items-center justify-center gap-2 w-full font-bold py-4 rounded-2xl text-sm text-[#FBF7EC] active:scale-[0.98] transition-all"
+          style={{ background: "#2BA35F", boxShadow: "0 14px 26px -10px rgba(43,163,95,.5)" }}
         >
-          <Mascot kind="link" size={16} tint="#FFD600" />
           結果をシェア
         </button>
         <Link
           href="/rooms"
-          className="block text-center text-zinc-500 text-sm py-2"
+          className="block text-center text-text-muted text-sm py-2 font-bold"
         >
-          ホームに戻る
+          寄合所に戻る
         </Link>
       </div>
     </div>

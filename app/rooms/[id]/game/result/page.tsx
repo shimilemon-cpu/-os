@@ -10,8 +10,6 @@ import {
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom, finishGame } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, RoomDoc } from "@/lib/types";
-import AnswerCard from "@/components/ogiri/AnswerCard";
-import Mascot from "@/components/Mascot";
 import AdSlot from "@/components/AdSlot";
 import InterstitialAd from "@/components/InterstitialAd";
 
@@ -26,10 +24,8 @@ function prefetchQuestion(): Promise<QuestionData> {
 }
 
 const ANSWER_SECONDS = 90;
-const PERSONA_CONFIG: Record<string, { emoji: string; mascot: "j_king" | "j_sharp"; color: string }> = {
-  王道: { emoji: "👑", mascot: "j_king", color: "#FFD600" },
-  辛口: { emoji: "🔪", mascot: "j_sharp", color: "#FF4D6D" },
-};
+const RANK_LABELS = ["横綱", "大関", "関脇", "前頭"];
+const RANK_COLORS = ["#E5402F", "#2BA35F", "#E0A93B", "#7A6F5C"];
 
 export default function ResultPage() {
   const { id: roomId } = useParams<{ id: string }>();
@@ -68,7 +64,6 @@ export default function ResultPage() {
     return () => { u1(); u2(); u3(); u4(); u5(); u6(); };
   }, [roomId, sessionId, roundParam, router]);
 
-  // 結果表示中に次ラウンドのお題を先読みしておく
   useEffect(() => {
     if (!isHost || !session) return;
     if (session.currentRound >= session.totalRounds) return;
@@ -121,90 +116,102 @@ export default function ResultPage() {
   const reviewsLoaded = aiReviews.length >= answers.length * 3;
 
   return (
-    <div className="min-h-screen flex flex-col px-4 pt-8 pb-8">
+    <div className="min-h-screen flex flex-col px-5 pt-6 pb-10 bg-ink">
       {showInterstitial && (
         <InterstitialAd
           onClose={() => { setShowInterstitial(false); doFinish(); }}
           skipAfter={5}
         />
       )}
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-5">
         <div>
-          <p className="text-xs text-zinc-500">ラウンド {roundParam} 結果</p>
-          <h1 className="font-display text-pop-yellow text-2xl">結果発表！</h1>
+          <p className="text-text-muted text-[11px]">ラウンド {roundParam} 結果</p>
+          <h1 className="font-display text-text text-2xl font-bold">大入満員御礼</h1>
         </div>
-        <span className="text-xs text-zinc-600 bg-surface border border-line rounded-full px-3 py-1">
-          {roundParam}/{session?.totalRounds}
+        <span
+          className="text-xs font-bold px-3 py-1 rounded-full"
+          style={{ background: "#E6F5EC", color: "#2BA35F" }}
+        >
+          大入満員御礼
         </span>
       </div>
 
-      {/* MVP card */}
+      {/* 横綱カード */}
       {mvp && (
-        <div className="relative bg-pop-yellow/10 border-2 border-pop-yellow/60 rounded-3xl p-5 mb-6 animate-pop-in">
-          <div className="absolute -top-3 left-4">
-            <Mascot kind="crown" size={24} tint="#FFD600" className="animate-crown-bob" />
-          </div>
-          <p className="text-xs text-pop-yellow font-bold tracking-wide mb-2 mt-1">MVP回答</p>
-          <p className="text-white text-base leading-relaxed font-medium">{mvp.text}</p>
-          <div className="flex gap-4 mt-3 text-xs text-zinc-500">
-            <span>😂 {tally[mvp.id]?.funny ?? 0}</span>
-            <span>🧠 {tally[mvp.id]?.smart ?? 0}</span>
-            <span>🤯 {tally[mvp.id]?.crazy ?? 0}</span>
-            <span className="ml-auto text-pop-yellow font-bold">{tally[mvp.id]?.total ?? 0}票</span>
+        <div
+          className="relative rounded-[24px] px-5 py-6 mb-5 text-center overflow-hidden animate-pop-in text-[#FBF7EC]"
+          style={{ background: "linear-gradient(150deg,#E5402F,#F0922B)" }}
+        >
+          <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 20% 0%,rgba(255,255,255,.25),transparent 50%)" }}/>
+          <div className="relative">
+            <p className="font-display font-bold text-[15px] tracking-[0.3em] mb-1" style={{ color: "#FFE9B0" }}>横　綱</p>
+            <svg className="w-20 h-22 mx-auto my-2 block">
+              <use href="#c-daruma" width="100%" height="100%"/>
+            </svg>
+            <p className="font-display font-bold text-xl leading-snug mt-2">{mvp.text}</p>
+            <div className="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-full font-bold text-sm" style={{ background: "rgba(0,0,0,.22)" }}>
+              <svg width="16" height="14" viewBox="0 0 30 24"><path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/></svg>
+              座布団 {tally[mvp.id]?.total ?? 0}枚
+            </div>
           </div>
         </div>
       )}
 
-      {/* All answers */}
-      <div className="space-y-3 mb-6">
-        <p className="text-xs text-zinc-500 tracking-wide">全回答</p>
-        {sorted.map((a) => (
-          <AnswerCard
-            key={a.id}
-            answer={a}
-            index={answers.indexOf(a)}
-            votes={votes}
-            myVote={null}
-            canVote={false}
-            isOwn={a.userId === uid}
-            revealed={true}
-            onVote={undefined}
-          />
-        ))}
+      {/* 番付リスト */}
+      <div className="space-y-2.5 mb-5">
+        {sorted.slice(1).map((a, i) => {
+          const rank = i + 1;
+          const label = RANK_LABELS[rank] ?? "前頭";
+          const color = RANK_COLORS[rank] ?? RANK_COLORS[3];
+          return (
+            <div
+              key={a.id}
+              className="flex items-center gap-3 bg-surface rounded-[15px] px-4 py-3"
+              style={{ border: "1px solid rgba(0,0,0,.07)" }}
+            >
+              <span className="font-display font-bold text-sm w-9 flex-none" style={{ color }}>{label}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm text-text">{a.text}</p>
+              </div>
+              <span className="font-bold text-sm flex-none" style={{ color: "#E5402F" }}>
+                {tally[a.id]?.total ?? 0}枚
+              </span>
+            </div>
+          );
+        })}
       </div>
 
-      {/* AI Reviews */}
-      <div className="space-y-3 mb-8">
-        <p className="text-xs text-zinc-500 tracking-wide">AI審査員の講評</p>
+      {/* AI講評 */}
+      <div className="space-y-3 mb-6">
+        <p className="text-xs font-bold text-text-muted">AI審査員の講評</p>
         {!reviewsLoaded && (
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <div className="w-4 h-4 rounded-full border border-zinc-600 border-t-transparent animate-spin" />
-            AI審査員が採点中...
+          <div className="flex items-center gap-2 text-xs text-text-muted">
+            <div className="w-4 h-4 rounded-full border border-line border-t-transparent animate-spin" style={{ borderTopColor: "#E5402F" }} />
+            AI審査員が採点中…
           </div>
         )}
         {["王道", "辛口"].map((persona) => {
-          const cfg = PERSONA_CONFIG[persona];
           const personaReviews = aiReviews.filter((r) => r.persona === persona);
           if (personaReviews.length === 0) return null;
           const topReview = personaReviews.sort((a, b) => b.score - a.score)[0];
           const topAnswer = answers.find((a) => a.id === topReview.answerId);
+          const color = persona === "王道" ? "#F4C422" : "#E5402F";
           return (
             <div
               key={persona}
-              className="bg-surface border border-line rounded-2xl p-4 space-y-2 animate-flip-in"
+              className="bg-surface rounded-2xl p-4 space-y-2 animate-flip-in"
+              style={{ border: "1px solid rgba(0,0,0,.07)" }}
             >
-              <div className="flex items-center gap-2">
-                <Mascot kind={cfg.mascot} size={28} />
-                <p className="text-sm font-bold" style={{ color: cfg.color }}>
-                  {cfg.emoji} {persona}AI
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold" style={{ color }}>
+                  {persona === "王道" ? "👑" : "🔪"} {persona}AI
                 </p>
-                <span className="ml-auto text-xs font-bold" style={{ color: cfg.color }}>
-                  {topReview.score}点
-                </span>
+                <span className="text-sm font-bold" style={{ color }}>{topReview.score}点</span>
               </div>
-              <p className="text-zinc-500 text-xs">「{topAnswer?.text ?? ""}」</p>
-              <p className="text-white text-sm leading-relaxed">{topReview.comment}</p>
+              <p className="text-text-muted text-xs">「{topAnswer?.text ?? ""}」</p>
+              <p className="text-text text-sm leading-relaxed">{topReview.comment}</p>
             </div>
           );
         })}
@@ -212,19 +219,29 @@ export default function ResultPage() {
 
       <AdSlot id="result-banner" size="rect" className="mb-6" />
 
-      {isHost && (
-        <button
-          onClick={goNext}
-          className="w-full bg-pop-yellow text-ink font-display py-4 rounded-2xl text-lg active:scale-[0.98] transition-all"
-        >
-          {session && session.currentRound >= session.totalRounds
-            ? "最終結果を見る 🏆"
-            : `ラウンド ${(session?.currentRound ?? 0) + 1} へ →`}
-        </button>
-      )}
-      {!isHost && (
-        <p className="text-center text-zinc-500 text-sm">ホストの操作を待っています...</p>
-      )}
+      <div className="flex gap-3">
+        {isHost && (
+          <>
+            <button
+              className="w-14 h-14 flex-none bg-surface grid place-items-center rounded-[17px] active:scale-95 transition-transform"
+              style={{ border: "1px solid rgba(0,0,0,.1)" }}
+              onClick={() => {}}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1714" strokeWidth="2"><path d="M4 12a8 8 0 1 1 2.3 5.6" strokeLinecap="round"/><path d="M4 20v-5h5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            <button
+              onClick={goNext}
+              className="flex-1 font-display font-bold py-4 rounded-[17px] text-lg active:scale-[0.98] transition-all text-[#FBF7EC]"
+              style={{ background: "#2BA35F", boxShadow: "0 14px 26px -10px rgba(43,163,95,.6)" }}
+            >
+              {session && session.currentRound >= session.totalRounds ? "最終結果を見る" : "次のお題へ"}
+            </button>
+          </>
+        )}
+        {!isHost && (
+          <p className="w-full text-center text-text-muted text-sm py-4">ホストの操作を待っています…</p>
+        )}
+      </div>
     </div>
   );
 }
