@@ -7,7 +7,6 @@ import { auth } from "@/lib/firebase/client";
 import { subscribeRoom, subscribeMembers, setMemberReady, startGame } from "@/lib/ogiri/rooms";
 import { createSession, createRound, getActiveSession } from "@/lib/ogiri/sessions";
 import type { RoomDoc, RoomMemberDoc } from "@/lib/types";
-import Mascot from "@/components/Mascot";
 import AdSlot from "@/components/AdSlot";
 
 type QuestionData = { question: string; genre: string; difficulty: string };
@@ -21,7 +20,8 @@ function prefetchQuestion(): Promise<QuestionData> {
 }
 
 const ANSWER_SECONDS = 90;
-const CHAR_KINDS = ["char_yellow", "char_pink", "char_teal", "char_purple", "char_green"] as const;
+const CHAR_SYMBOLS = ["#c-daruma", "#c-cat", "#c-tai", "#c-fuku", "#c-mask"] as const;
+const CHAR_BG = ["#FCE8E3", "#EAF7EF", "#FDEFE0", "#FFF3D6", "#E8F0FC"] as const;
 
 export default function WaitingRoomPage() {
   const { id: roomId } = useParams<{ id: string }>();
@@ -88,85 +88,97 @@ export default function WaitingRoomPage() {
   const isHost = room?.hostId === uid;
   const me = members.find((m) => m.userId === uid);
 
-  // ロビー表示中にQ1を先読みしておく
   useEffect(() => {
     if (isHost && !prefetchRef.current) {
       prefetchRef.current = prefetchQuestion();
     }
   }, [isHost]);
+
   const allReady = members.length >= 2 && members.every((m) => m.isReady || m.userId === uid);
   const readyCount = members.filter((m) => m.isReady).length;
 
   if (!room) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-ink">
-        <div className="w-8 h-8 rounded-full border-2 border-pop-yellow border-t-transparent animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-pop-red border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-24 px-4 pt-12">
-      <h1 className="font-display text-pop-yellow text-2xl mb-1">{room.name}</h1>
-      <p className="text-zinc-500 text-xs mb-8">
-        {room.mode === "realtime" ? "⚡ リアルタイム" : "⏰ 非同期"} モード
-      </p>
+    <div className="min-h-screen pb-24 px-5 pt-10 bg-ink">
+      {/* ルーム名 */}
+      <div className="mb-6">
+        <p className="text-text-muted text-[11px] mb-1">
+          {room.mode === "realtime" ? "⚡ リアルタイム" : "⏰ 非同期"}モード
+        </p>
+        <h1 className="font-display text-text text-2xl font-bold">{room.name}</h1>
+      </div>
 
-      {/* 招待コード */}
-      <div className="bg-surface border border-line rounded-2xl p-5 mb-6">
-        <p className="text-xs text-zinc-500 mb-3">友達を招待</p>
+      {/* あいことば */}
+      <div className="bg-surface rounded-2xl p-5 mb-5" style={{ border: "1px solid rgba(0,0,0,.07)" }}>
+        <p className="text-xs text-text-muted font-bold mb-3">友達を招待</p>
         <div className="text-center mb-4">
-          <span className="font-display text-4xl tracking-[0.4em] text-white">
+          <span className="font-display text-4xl tracking-[0.4em] font-bold" style={{ color: "#E5402F" }}>
             {room.inviteCode}
           </span>
         </div>
         <button
           onClick={copyInvite}
-          className="w-full flex items-center justify-center gap-2 border border-pop-yellow/40 text-pop-yellow text-sm py-2.5 rounded-xl active:scale-95 transition-transform"
+          className="w-full flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl active:scale-95 transition-transform font-medium"
+          style={{ border: "1px solid rgba(0,0,0,.1)", color: copied ? "#2BA35F" : "#1A1714" }}
         >
-          <Mascot kind={copied ? "check" : "copy"} size={14} tint="#FFD600" />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            {copied ? <path d="M5 13l5 5L19 6"/> : <><rect x="4" y="4" width="11" height="11" rx="2.5"/><rect x="9" y="9" width="11" height="11" rx="2.5"/></>}
+          </svg>
           {copied ? "コピーしました！" : "招待リンクをコピー"}
         </button>
       </div>
 
       {/* メンバーリスト */}
-      <div className="space-y-2 mb-8">
-        <p className="text-xs text-zinc-500 tracking-wide">
+      <div className="space-y-2.5 mb-5">
+        <p className="text-xs text-text-muted font-bold">
           メンバー {members.length}/5 — {readyCount}人準備完了
         </p>
         {members.map((m, i) => (
           <div
             key={m.userId}
-            className="flex items-center justify-between bg-surface border border-line rounded-xl px-4 py-3 animate-rise"
+            className="flex items-center gap-3 bg-surface rounded-[15px] px-4 py-3 animate-rise"
+            style={{ border: "1px solid rgba(0,0,0,.07)" }}
           >
-            <div className="flex items-center gap-3">
-              <Mascot kind={CHAR_KINDS[i % CHAR_KINDS.length]} size={32} />
-              <div>
-                <p className="text-sm text-white">{m.nickname}</p>
-                {m.userId === room.hostId && (
-                  <span className="text-[10px] text-pop-yellow">ホスト</span>
-                )}
-              </div>
+            <div className="w-8 h-9 flex-none grid place-items-center rounded-xl" style={{ background: CHAR_BG[i % CHAR_BG.length] }}>
+              <svg className="w-7 h-8">
+                <use href={CHAR_SYMBOLS[i % CHAR_SYMBOLS.length]} width="100%" height="100%"/>
+              </svg>
             </div>
-            <span className={`text-xs font-bold ${m.isReady ? "text-pop-green" : "text-zinc-600"}`}>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-text">{m.nickname}</p>
+              {m.userId === room.hostId && (
+                <span className="text-[10px] text-pop-gold font-black">ホスト</span>
+              )}
+            </div>
+            <span
+              className="text-xs font-black"
+              style={{ color: m.isReady ? "#2BA35F" : "#B6AC97" }}
+            >
               {m.isReady ? "✓ 準備OK" : "待機中"}
             </span>
           </div>
         ))}
       </div>
 
-      <AdSlot id="lobby-banner" className="mb-6" />
+      <AdSlot id="lobby-banner" className="mb-5" />
 
       {/* アクションボタン */}
       <div className="space-y-3">
         {!isHost && (
           <button
             onClick={toggleReady}
-            className={`w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-[0.98] ${
-              me?.isReady
-                ? "bg-surface border border-line text-zinc-500"
-                : "bg-pop-green/20 border border-pop-green/60 text-pop-green animate-green-glow"
-            }`}
+            className="w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-[0.98]"
+            style={me?.isReady
+              ? { background: "#fff", border: "1px solid rgba(0,0,0,.1)", color: "#7A6F5C" }
+              : { background: "#E6F5EC", border: "2px solid #2BA35F", color: "#2BA35F" }
+            }
           >
             {me?.isReady ? "準備を取り消す" : "準備完了！"}
           </button>
@@ -176,15 +188,16 @@ export default function WaitingRoomPage() {
           <button
             onClick={handleStart}
             disabled={members.length < 2 || !allReady || starting}
-            className="w-full bg-pop-yellow text-ink font-bold py-4 rounded-2xl text-base disabled:opacity-40 active:scale-[0.98] transition-all animate-pulse-glow"
+            className="w-full font-display font-bold py-4 rounded-2xl text-lg disabled:opacity-40 active:scale-[0.98] transition-all text-[#FBF7EC]"
+            style={{ background: "#2BA35F", boxShadow: "0 14px 26px -10px rgba(43,163,95,.6)" }}
           >
             {starting
-              ? "お題を生成中..."
+              ? "お題を生成中…"
               : members.length < 2
               ? "あと1人招待してください"
               : !allReady
               ? `全員の準備を待っています (${readyCount}/${members.length})`
-              : "ゲームを開始！"}
+              : "大喜利、始め！"}
           </button>
         )}
       </div>

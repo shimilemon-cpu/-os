@@ -33,7 +33,7 @@ export default function Timer({ deadline, totalSeconds, onExpire }: Props) {
   const pct = Math.max(0, Math.min(100, (secs / total) * 100));
 
   const color =
-    secs > 30 ? "#3DDC84" : secs > 10 ? "#FFD600" : "#FF4D6D";
+    secs > 30 ? "#2BA35F" : secs > 10 ? "#F4C422" : "#E5402F";
 
   return (
     <div className="flex flex-col items-center gap-1.5">

@@ -1,12 +1,11 @@
 "use client";
 
-import Mascot from "@/components/Mascot";
 import type { AnswerDoc, VoteDoc, Reaction } from "@/lib/types";
 
-const REACTIONS: { key: Reaction; kind: "r_funny" | "r_smart" | "r_crazy"; label: string; color: string }[] = [
-  { key: "funny", kind: "r_funny", label: "面白い", color: "#FFD600" },
-  { key: "smart", kind: "r_smart", label: "うまい", color: "#00B4FF" },
-  { key: "crazy", kind: "r_crazy", label: "狂ってる", color: "#BF5FFF" },
+const REACTIONS: { key: Reaction; emoji: string; label: string; color: string; bg: string }[] = [
+  { key: "funny",  emoji: "😂", label: "面白い",   color: "#E5402F", bg: "#FCE7E3" },
+  { key: "smart",  emoji: "👏", label: "うまい",   color: "#2BA35F", bg: "#E6F5EC" },
+  { key: "crazy",  emoji: "🤯", label: "狂ってる", color: "#F0922B", bg: "#FEF0E3" },
 ];
 
 const LABELS = ["A", "B", "C", "D", "E"];
@@ -46,33 +45,36 @@ export default function AnswerCard({
 
   return (
     <div
-      className={`rounded-2xl border p-4 space-y-3 transition-all animate-rise ${
-        isOwn
-          ? "border-pop-yellow/40 bg-surface-2"
-          : "border-line bg-surface"
-      }`}
+      className="rounded-[18px] p-4 space-y-3 animate-rise"
+      style={{
+        background: isOwn ? "#EBE2CF" : "#ffffff",
+        border: isOwn ? "1.5px solid #E0A93B" : "1px solid rgba(0,0,0,.08)",
+      }}
     >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span
-            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-display font-bold text-ink"
-            style={{ backgroundColor: isOwn ? "#FFD600" : "#3f3f3f" }}
+            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-display font-bold"
+            style={{
+              background: isOwn ? "#E0A93B" : "#1A1714",
+              color: "#FBF7EC",
+            }}
           >
             {label}
           </span>
-          <span className="text-xs text-zinc-500">
+          <span className="text-xs text-text-muted">
             {revealed && authorNickname ? authorNickname : "回答" + label}
-            {isOwn && " (あなた)"}
+            {isOwn && "（あなた）"}
           </span>
         </div>
         {total > 0 && (
-          <span className="text-xs text-zinc-500">{total}票</span>
+          <span className="text-xs text-text-muted">{total}票</span>
         )}
       </div>
 
       {/* Answer text */}
-      <p className="text-white text-base leading-relaxed font-medium">{answer.text}</p>
+      <p className="text-text text-[18px] font-black leading-snug">{answer.text}</p>
 
       {/* Reactions */}
       <div className="flex gap-2">
@@ -84,21 +86,17 @@ export default function AnswerCard({
               key={r.key}
               disabled={!canVote || isOwn}
               onClick={() => onVote?.(answer.id, r.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all active:scale-90 ${
-                active
-                  ? "border-transparent"
-                  : "border-line bg-transparent"
-              } disabled:opacity-40 disabled:cursor-not-allowed`}
-              style={active ? { backgroundColor: r.color + "22", borderColor: r.color + "80" } : {}}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                background: active ? r.bg : "rgba(0,0,0,.05)",
+                color: active ? r.color : "#7A6F5C",
+                border: active ? `1.5px solid ${r.color}40` : "1.5px solid transparent",
+              }}
             >
-              <Mascot kind={r.kind} size={18} className={active ? "animate-tap-pop" : ""} />
+              <span>{r.emoji}</span>
+              <span>{r.label}</span>
               {count > 0 && (
-                <span
-                  className="text-xs font-bold"
-                  style={{ color: active ? r.color : "#737373" }}
-                >
-                  {count}
-                </span>
+                <span className="font-bold">{count}</span>
               )}
             </button>
           );
