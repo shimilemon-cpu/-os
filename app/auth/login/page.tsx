@@ -89,6 +89,7 @@ export default function LoginPage() {
       await handleUser(result.user);
     } catch (e: unknown) {
       const code = (e as { code?: string }).code ?? "";
+      console.error("[auth] signInWithPopup failed:", code, e);
 
       if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
         if (auth.currentUser) {
@@ -96,6 +97,12 @@ export default function LoginPage() {
         } else {
           setProcessing(false);
         }
+        return;
+      }
+
+      if (code === "auth/unauthorized-domain") {
+        setError("このドメインはFirebaseに未登録です。Firebase Console → Authentication → 承認済みドメインにVercelのURLを追加してください。");
+        setProcessing(false);
         return;
       }
 
