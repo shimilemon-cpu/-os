@@ -125,3 +125,30 @@ export interface HallOfFameDoc {
   reactions: Record<Reaction, number>;
   createdAt: Timestamp | null;
 }
+
+// ─── 問題バンク ────────────────────────────────────────────
+export interface QuestionBankDoc {
+  id: string;
+  text: string;
+  genre: Genre;
+  difficulty: Difficulty;
+  usedAt: Timestamp | null;
+  createdAt: Timestamp;
+}
+
+// ─── 縁側（コミュニティスペース） ──────────────────────────
+export interface EngawaPostDoc {
+  id: string;
+  question: { text: string; genre: Genre; difficulty: Difficulty };
+  publishedAt: Timestamp;
+  sessionId: string;
+  roundId: string;
+  answerCount: number;
+}
+
+export interface EngawaAnswerDoc {
+  id: string;
+  text: string;
+  userId: string | null;
+  createdAt: Timestamp;
+}

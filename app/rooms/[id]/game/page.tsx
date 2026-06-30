@@ -104,8 +104,17 @@ export default function GamePage() {
   }, [sessionId, session?.currentRound]);
 
   const advanceToVoting = useCallback(async () => {
-    if (!session || !isHost || advancingRef.current) return;
+    if (!session || advancingRef.current) return;
     if (round?.status !== "answering") return;
+    // In async mode any player can trigger deadline-based transitions; host can always advance manually
+    const isDeadlinePast = (() => {
+      const dl = round.answerDeadline;
+      if (!dl) return false;
+      const toDate = (dl as { toDate?: () => Date }).toDate;
+      const end = typeof toDate === "function" ? toDate().getTime() : 0;
+      return end > 0 && Date.now() >= end;
+    })();
+    if (!isHost && !isDeadlinePast) return;
     advancingRef.current = true;
     try {
       const voteDeadline = new Date(Date.now() + VOTE_SECONDS * 1000);
@@ -159,7 +168,7 @@ export default function GamePage() {
           <p className="font-gothic text-sub" style={{ fontSize: 11 }}>{room?.name}・第{session.currentRound}問</p>
           <p className="font-mincho font-bold text-[#1A1714]" style={{ fontSize: 17 }}>回答を考える</p>
         </div>
-        <TimerRing deadline={round.answerDeadline} totalSeconds={ANSWER_SECONDS} onExpire={isHost ? advanceToVoting : undefined} />
+        <TimerRing deadline={round.answerDeadline} totalSeconds={ANSWER_SECONDS} onExpire={advanceToVoting} />
       </div>
 
       {/* お題カード */}

@@ -9,6 +9,7 @@ import {
   updateRound, updateSession, createRound,
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom, finishGame } from "@/lib/ogiri/rooms";
+import { publishToEngawa } from "@/lib/ogiri/engawa";
 import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, RoomDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 import Icon from "@/components/Icon";
@@ -47,6 +48,7 @@ export default function ResultPage() {
   const [showInterstitial, setShowInterstitial] = useState(false);
   const advancingRef = useRef(false);
   const prefetchRef = useRef<Promise<QuestionData> | null>(null);
+  const publishedRef = useRef(false);
 
   useEffect(() => {
     const u1 = subscribeRoom(roomId, setRoom);
@@ -72,6 +74,13 @@ export default function ResultPage() {
     if (prefetchRef.current) return;
     prefetchRef.current = prefetchQuestion();
   }, [isHost, session]);
+
+  // Auto-publish to engawa once when result page mounts (any player can trigger)
+  useEffect(() => {
+    if (!round || !session || publishedRef.current) return;
+    publishedRef.current = true;
+    publishToEngawa(sessionId, roundParam, round.question).catch(console.error);
+  }, [round, session, sessionId, roundParam]);
 
   const doFinish = useCallback(async () => {
     if (advancingRef.current) return;

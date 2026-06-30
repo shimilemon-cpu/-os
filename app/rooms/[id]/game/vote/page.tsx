@@ -92,8 +92,17 @@ export default function VotePage() {
   })();
 
   const advanceToResult = useCallback(async () => {
-    if (!session || !isHost || advancingRef.current) return;
+    if (!session || advancingRef.current) return;
     if (round?.status !== "voting") return;
+    // Allow any player to advance when the vote deadline has passed
+    const isDeadlinePast = (() => {
+      const dl = round.voteDeadline;
+      if (!dl) return false;
+      const toDate = (dl as { toDate?: () => Date }).toDate;
+      const end = typeof toDate === "function" ? toDate().getTime() : 0;
+      return end > 0 && Date.now() >= end;
+    })();
+    if (!isHost && !isDeadlinePast) return;
     advancingRef.current = true;
     try {
       await updateRound(sessionId, roundParam, { status: "reviewing" });
@@ -147,7 +156,7 @@ export default function VotePage() {
       <div className="px-[20px] pt-[10px] pb-[14px]">
         <div className="flex items-center gap-2 mb-1">
           <p className="font-gothic font-extrabold text-red" style={{ fontSize: 11 }}>投票中</p>
-          <VoteTimer deadline={voteDeadline} totalSeconds={VOTE_SECONDS} onExpire={isHost ? advanceToResult : undefined} />
+          <VoteTimer deadline={voteDeadline} totalSeconds={VOTE_SECONDS} onExpire={advanceToResult} />
         </div>
         <p className="font-mincho font-bold text-[#1A1714]" style={{ fontSize: 17 }}>いちばん笑った回答に</p>
       </div>
