@@ -26,9 +26,12 @@ export default function InvitePage() {
     });
   }, [roomId, codeFromUrl]);
 
-  // ルーム作成直後（?code= あり）は LINE を自動起動
+  // ルーム作成直後（?code= あり）かつモバイルのみ LINE を自動起動
+  // デスクトップでは window.location.href が LINE URL に遷移してページが消えるため除外
   useEffect(() => {
     if (!codeFromUrl || lineOpenedRef.current) return;
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (!isMobile) return;
     lineOpenedRef.current = true;
     const link = `${window.location.origin}/invite/${codeFromUrl}`;
     const text = `大喜利Pocketで遊ぼう！\n招待コード：${codeFromUrl}\n↓タップして参加\n${link}`;
