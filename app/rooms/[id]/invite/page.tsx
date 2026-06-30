@@ -88,7 +88,7 @@ export default function InvitePage() {
       {/* 招待コード */}
       <div className="bg-surface border border-line rounded-3xl p-8 mb-6 text-center animate-rise">
         <p className="text-xs text-zinc-500 tracking-widest uppercase mb-4">招待コード</p>
-        <p className="font-display text-5xl tracking-[0.5em] text-pop-yellow mb-6">
+        <p className="font-display text-4xl tracking-[0.3em] text-pop-yellow mb-6">
           {inviteCode}
         </p>
         <p className="text-xs text-zinc-600 leading-relaxed">
