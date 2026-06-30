@@ -5,14 +5,65 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
 import {
   subscribeSession, subscribeRound, submitAnswer,
-  updateRound, updateSession, createRound,
+  updateRound, updateSession,
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, RoomDoc } from "@/lib/types";
-import Timer from "@/components/ogiri/Timer";
+import Engimono from "@/components/Engimono";
 
 const ANSWER_SECONDS = 90;
 const VOTE_SECONDS = 45;
+
+function TimerRing({ deadline, totalSeconds, onExpire }: { deadline: RoundDoc["answerDeadline"] | null; totalSeconds: number; onExpire?: () => void }) {
+  const [secs, setSecs] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!deadline) return;
+    const toDate = (deadline as { toDate?: () => Date }).toDate;
+    const end = typeof toDate === "function" ? toDate().getTime() : 0;
+    if (!end) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+      setSecs(remaining);
+      if (remaining === 0) onExpire?.();
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [deadline, onExpire]);
+
+  if (secs === null) return null;
+
+  const CIRC = 2 * Math.PI * 21;
+  const pct = Math.max(0, Math.min(1, secs / totalSeconds));
+  const offset = CIRC * (1 - pct);
+  const color = secs > 30 ? "#1A1714" : secs > 10 ? "#F4C422" : "#E5402F";
+
+  return (
+    <div className="relative" style={{ width: 50, height: 50, flexShrink: 0 }}>
+      <svg width="50" height="50" viewBox="0 0 50 50">
+        <circle cx="25" cy="25" r="21" fill="none" stroke="rgba(0,0,0,.08)" strokeWidth="5"/>
+        <circle
+          cx="25" cy="25" r="21"
+          fill="none"
+          stroke="#E5402F"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeDasharray={CIRC}
+          strokeDashoffset={offset}
+          transform="rotate(-90 25 25)"
+          style={{ transition: "stroke-dashoffset 0.5s linear" }}
+        />
+      </svg>
+      <span
+        className="absolute inset-0 flex items-center justify-center font-mincho font-extrabold"
+        style={{ fontSize: 14, color }}
+      >
+        {secs}
+      </span>
+    </div>
+  );
+}
 
 export default function GamePage() {
   const { id: roomId } = useParams<{ id: string }>();
@@ -60,7 +111,7 @@ export default function GamePage() {
       const voteDeadline = new Date(Date.now() + VOTE_SECONDS * 1000);
       await updateRound(sessionId, String(session.currentRound), {
         status: "voting",
-        // @ts-expect-error - dynamic field
+        // @ts-expect-error dynamic field
         voteDeadline: { seconds: Math.floor(voteDeadline.getTime() / 1000), nanoseconds: 0 },
       });
       await updateSession(sessionId, { status: "voting" });
@@ -90,85 +141,103 @@ export default function GamePage() {
 
   if (!session || !round) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-ink">
-        <div className="w-8 h-8 rounded-full border-2 border-pop-red border-t-transparent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-paper">
+        <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     );
   }
 
+  const total = room?.memberIds.length ?? 0;
+  const done = round.answerCount ?? 0;
+  const AVATAR_COLORS = ["#E5402F", "#2BA35F", "#F4C422", "#F0552E", "#5BA9D6"];
+
   return (
-    <div className="min-h-screen flex flex-col px-5 pt-6 pb-8 bg-ink">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+    <div className="min-h-screen flex flex-col bg-paper">
+      {/* AppBar */}
+      <div className="px-[20px] pt-[10px] pb-[14px] flex items-center justify-between">
         <div className="flex-1">
-          <p className="text-text-muted text-[11px]">{room?.name}・第{session.currentRound}問</p>
-          <p className="font-display text-text text-lg font-bold">回答を考える</p>
+          <p className="font-gothic text-sub" style={{ fontSize: 11 }}>{room?.name}・第{session.currentRound}問</p>
+          <p className="font-mincho font-bold text-[#1A1714]" style={{ fontSize: 17 }}>回答を考える</p>
         </div>
-        <Timer deadline={round.answerDeadline} totalSeconds={ANSWER_SECONDS} onExpire={isHost ? advanceToVoting : undefined} />
+        <TimerRing deadline={round.answerDeadline} totalSeconds={ANSWER_SECONDS} onExpire={isHost ? advanceToVoting : undefined} />
       </div>
 
       {/* お題カード */}
       <div
-        className="rounded-[22px] p-6 mb-5 relative overflow-hidden flex-none animate-pop-in"
-        style={{ background: "linear-gradient(140deg,#2BA35F,#1F8A4F)" }}
+        className="mx-[20px] mb-[18px] relative overflow-hidden"
+        style={{ borderRadius: 22, padding: "24px 22px", background: "linear-gradient(140deg,#2BA35F,#1F8A4F)" }}
       >
-        <svg className="absolute right-[-10px] bottom-[-14px] w-24 opacity-90">
-          <use href="#c-cat" width="100%" height="100%"/>
-        </svg>
-        <p className="text-[12px] font-black tracking-wide mb-2" style={{ color: "#CFF3DD" }}>
+        <Engimono name="cat" width={96} height={104} style={{ position: "absolute", right: -10, bottom: -14, opacity: 0.9 }} />
+        <p className="font-gothic font-extrabold text-[#CFF3DD] mb-2" style={{ fontSize: 12, letterSpacing: "0.1em" }}>
           ＼ 第{session.currentRound}問のお題 ／
         </p>
-        <p className="font-display font-bold text-[22px] leading-[1.5] text-white max-w-[80%]">
+        <p className="font-mincho font-extrabold text-white" style={{ fontSize: 25, lineHeight: 1.5, maxWidth: "80%" }}>
           {round.question.text}
         </p>
       </div>
 
       {/* 回答数 */}
-      <p className="text-text-muted text-xs mb-4">
-        {round.answerCount}/{room?.memberIds.length ?? "?"}人が回答済み
-      </p>
+      <div className="px-[20px] flex items-center gap-[10px] mb-[14px]">
+        <div className="flex" style={{ gap: 0 }}>
+          {Array.from({ length: total }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                width: 24, height: 24, borderRadius: "50%",
+                background: i < done ? AVATAR_COLORS[i % AVATAR_COLORS.length] : "#E4DCCF",
+                border: "2px solid #FBF7EC",
+                marginLeft: i > 0 ? -6 : 0,
+              }}
+            />
+          ))}
+        </div>
+        <p className="font-gothic text-sub" style={{ fontSize: 12 }}>{done} / {total} 人が回答済み</p>
+      </div>
 
-      {/* 回答入力 */}
-      <div className="flex-1 flex flex-col">
+      {/* 回答入力エリア */}
+      <div className="flex-1 px-[20px] pb-[20px] flex flex-col">
         {submitted ? (
           <div className="space-y-3 animate-rise">
-            <div className="bg-surface rounded-2xl p-5 text-center" style={{ border: "2px solid #2BA35F" }}>
+            <div className="bg-white text-center" style={{ borderRadius: 18, padding: 20, border: "2px solid #2BA35F" }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2BA35F" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2">
                 <path d="M5 13l5 5L19 6"/>
               </svg>
-              <p className="font-bold text-sm" style={{ color: "#2BA35F" }}>回答を投じました</p>
-              <p className="text-text-muted text-xs mt-1">他の人の回答を待っています…</p>
+              <p className="font-gothic font-bold text-[#2BA35F]" style={{ fontSize: 14 }}>回答を投じました</p>
+              <p className="font-gothic text-sub mt-1" style={{ fontSize: 12 }}>他の人の回答を待っています…</p>
             </div>
             {isHost && (
               <button
                 onClick={advanceToVoting}
-                className="w-full text-sm py-3 rounded-xl active:scale-[0.98] transition-transform font-bold text-text-sub"
-                style={{ border: "1px solid rgba(0,0,0,.1)" }}
+                className="w-full font-gothic font-bold text-sub active:scale-[0.98] transition-transform"
+                style={{ fontSize: 14, padding: "12px 0", borderRadius: 14, border: "1px solid rgba(0,0,0,.1)" }}
               >
                 投票フェーズに進む →
               </button>
             )}
           </div>
         ) : (
-          <div className="space-y-3 flex-1 flex flex-col">
-            <p className="text-xs font-black text-text-muted">あなたの回答</p>
+          <div className="flex-1 flex flex-col space-y-3">
+            <label className="font-gothic font-extrabold text-sub" style={{ fontSize: 12 }}>あなたの回答</label>
             <textarea
-              className="flex-1 bg-surface rounded-[18px] px-4 py-4 text-text text-[17px] font-semibold leading-relaxed placeholder:text-text-faint outline-none resize-none transition-colors"
-              style={{ border: "1.5px solid #E0A93B", minHeight: "120px" }}
+              className="flex-1 bg-white font-gothic font-semibold text-[#1A1714] outline-none resize-none"
+              style={{
+                borderRadius: 18, padding: "16px", fontSize: 17, lineHeight: 1.6,
+                border: "1.5px solid #E0A93B", minHeight: 120,
+              }}
               placeholder="面白い回答を入力…"
               maxLength={40}
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
             />
-            <div className="flex justify-between items-center text-xs text-text-muted">
+            <div className="flex justify-between items-center font-gothic text-sub" style={{ fontSize: 11 }}>
               <span>記名なしで投稿されます</span>
               <span>{answer.length} / 40</span>
             </div>
             <button
               onClick={handleSubmit}
               disabled={!answer.trim() || submitting}
-              className="w-full font-display font-bold py-4 rounded-2xl text-lg disabled:opacity-40 active:scale-[0.98] transition-all text-[#FBF7EC]"
-              style={{ background: "#E5402F" }}
+              className="w-full font-mincho font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-all"
+              style={{ fontSize: 18, padding: "16px 0", borderRadius: 18, background: "#E5402F", boxShadow: "0 14px 26px -10px rgba(229,64,47,0.6)" }}
             >
               {submitting ? "送信中…" : "回答を投じる"}
             </button>

@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── 背景・サーフェス (めでたポップ) ── */
-  --color-ink: #FBF7EC;         /* アプリ地色（クリーム） */
-  --color-parchment: #EFE6D2;   /* 外枠パーチメント */
-  --color-surface: #ffffff;      /* カード白 */
-  --color-surface-2: #EBE2CF;   /* セグメント・コントロール */
-  --color-line: #E4DCCF;         /* ボーダー */
+  /* ── spec §1 design tokens ── */
+  --color-paper: #FBF7EC;
+  --color-board: #EFE6D2;
+  --color-ink: #FBF7EC;         /* 後方互換（旧コード bg-ink = cream） */
+  --color-sub: #7A6F5C;
+  --color-sub2: #B6AC97;
+  --color-line: rgba(0,0,0,0.07);
+  --color-red: #E5402F;
+  --color-vermilion: #EE4F3A;
+  --color-orange: #F0552E;
+  --color-green: #2BA35F;
+  --color-greenDk: #1F8A4F;
+  --color-gold: #F4C422;
+  --color-goldLine: #E0A93B;
+  --color-blue: #5BA9D6;
+  --color-navy: #2C3E63;
+  --color-cream: #FFEED6;
+  --color-blush: #F4A0A8;
+  --color-catline: #E7DDC7;
 
-  /* ── テキスト ── */
-  --color-text: #1A1714;         /* 本文 */
-  --color-text-sub: #52493A;     /* サブテキスト */
-  --color-text-muted: #7A6F5C;   /* ミュート */
-  --color-text-faint: #B6AC97;   /* 極薄 */
-
-  /* ── 縁起物ポップ差し色 ── */
-  --color-pop-red: #E5402F;      /* プライマリ赤 */
-  --color-pop-green: #2BA35F;    /* 緑 */
-  --color-pop-gold: #F4C422;     /* 金 */
-  --color-pop-orange: #F0922B;   /* 橙 */
-
-  /* 後方互換 */
+  /* ── 後方互換カラー ── */
+  --color-parchment: #EFE6D2;
+  --color-surface: #ffffff;
+  --color-surface-2: #EBE2CF;
+  --color-text: #1A1714;
+  --color-text-sub: #52493A;
+  --color-text-muted: #7A6F5C;
+  --color-text-faint: #B6AC97;
+  --color-pop-red: #E5402F;
+  --color-pop-green: #2BA35F;
+  --color-pop-gold: #F4C422;
+  --color-pop-orange: #F0922B;
   --color-pop-yellow: #F4C422;
   --color-pop-amber: #F4A52C;
   --color-pop-pink: #E5402F;
@@ -28,9 +40,22 @@
   --color-pop-purple: #BF5FFF;
   --color-pop-teal: #3DDC84;
 
-  /* ── タイポ（next/font が変数を注入する） ── */
+  /* ── タイポ ── */
   --font-display: var(--font-mincho, "Shippori Mincho B1", serif);
   --font-body: var(--font-kaku, "Zen Kaku Gothic New", system-ui, sans-serif);
+  --font-mincho: "Shippori Mincho B1", serif;
+  --font-gothic: var(--font-kaku, "Zen Kaku Gothic New", sans-serif);
+  --font-maru: var(--font-maru-nf, "Zen Maru Gothic", sans-serif);
+
+  /* ── border radius ── */
+  --radius-card: 18px;
+  --radius-btn: 18px;
+  --radius-pill: 999px;
+  --radius-phone: 42px;
+
+  /* ── shadows ── */
+  --shadow-phone: 0 30px 70px -30px rgba(40,30,10,0.5);
+  --shadow-cta: 0 14px 26px -10px rgba(229,64,47,0.6);
 
   /* ── アニメーション ── */
   --animate-floaty: floaty 4s ease-in-out infinite;
