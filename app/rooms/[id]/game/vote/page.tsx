@@ -9,9 +9,47 @@ import {
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, RoomDoc, Reaction } from "@/lib/types";
-import Timer from "@/components/ogiri/Timer";
 
 const VOTE_SECONDS = 45;
+
+function ZabutonIcon({ color }: { color: string }) {
+  return (
+    <svg width="15" height="13" viewBox="0 0 30 24" aria-hidden="true">
+      <path d="M5 6h20l3 6-3 6H5L2 12z" fill={color}/>
+    </svg>
+  );
+}
+
+function VoteTimer({ deadline, totalSeconds, onExpire }: { deadline: RoundDoc["voteDeadline"] | null; totalSeconds: number; onExpire?: () => void }) {
+  const [secs, setSecs] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!deadline) return;
+    const toDate = (deadline as { toDate?: () => Date }).toDate;
+    const end = typeof toDate === "function" ? toDate().getTime() : 0;
+    if (!end) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+      setSecs(remaining);
+      if (remaining === 0) onExpire?.();
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [deadline, onExpire]);
+
+  if (secs === null) return null;
+
+  const color = secs > 20 ? "#E5402F" : secs > 10 ? "#F4C422" : "#E5402F";
+  const m = Math.floor(secs / 60).toString().padStart(2, "0");
+  const s = (secs % 60).toString().padStart(2, "0");
+
+  return (
+    <span className="font-mincho font-extrabold tabular-nums" style={{ fontSize: 14, color }}>
+      {m}:{s}
+    </span>
+  );
+}
 
 export default function VotePage() {
   const { id: roomId } = useParams<{ id: string }>();
@@ -65,8 +103,7 @@ export default function VotePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId,
-          roundId: roundParam,
+          sessionId, roundId: roundParam,
           question: round?.question.text ?? "",
           answers: answerPayload,
           judges: room?.judges ?? ["王道", "辛口"],
@@ -81,7 +118,6 @@ export default function VotePage() {
     const alreadyVoted = votes.some((v) => v.answerId === answerId && v.voterId === uid);
     if (alreadyVoted) return;
     await submitVote(sessionId, roundParam, answerId, uid, reaction);
-
     if (isHost && session && room) {
       const totalExpected = (room.memberIds.length - 1) * answers.length;
       const myVotes = votes.filter((v) => v.voterId === uid).length + 1;
@@ -95,73 +131,75 @@ export default function VotePage() {
   for (const v of votes) {
     if (v.voterId === uid) myVotesMap[v.answerId] = v.reaction;
   }
+  const myVotedId = Object.keys(myVotesMap)[0] ?? null;
 
   if (!session || !round || answers.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-ink">
-        <div className="w-8 h-8 rounded-full border-2 border-pop-red border-t-transparent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-paper">
+        <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     );
   }
 
-  const myVotedId = Object.keys(myVotesMap)[0] ?? null;
-
   return (
-    <div className="min-h-screen flex flex-col px-5 pt-6 pb-8 bg-ink">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-[11px] font-bold tracking-wide" style={{ color: "#E5402F" }}>投票中</p>
-            <Timer deadline={voteDeadline} totalSeconds={VOTE_SECONDS} onExpire={isHost ? advanceToResult : undefined} variant="text" />
-          </div>
-          <p className="font-display text-text text-lg font-bold">いちばん笑った回答に</p>
+    <div className="min-h-screen flex flex-col bg-paper">
+      {/* AppBar */}
+      <div className="px-[20px] pt-[10px] pb-[14px]">
+        <div className="flex items-center gap-2 mb-1">
+          <p className="font-gothic font-extrabold text-red" style={{ fontSize: 11 }}>投票中</p>
+          <VoteTimer deadline={voteDeadline} totalSeconds={VOTE_SECONDS} onExpire={isHost ? advanceToResult : undefined} />
         </div>
+        <p className="font-mincho font-bold text-[#1A1714]" style={{ fontSize: 17 }}>いちばん笑った回答に</p>
       </div>
 
-      {/* お題 */}
-      <div className="bg-surface rounded-2xl px-4 py-3.5 mb-4" style={{ border: "1px solid rgba(0,0,0,.08)" }}>
-        <p className="text-text-muted text-[11px] font-bold mb-1">お題</p>
-        <p className="font-display text-text font-bold text-base leading-snug">{round.question.text}</p>
+      {/* お題カード（小） */}
+      <div
+        className="mx-[20px] bg-white mb-[14px]"
+        style={{ borderRadius: 16, padding: "13px 15px", border: "1px solid rgba(0,0,0,.07)" }}
+      >
+        <p className="font-gothic text-sub mb-1" style={{ fontSize: 11 }}>お題</p>
+        <p className="font-mincho font-bold text-[#1A1714]" style={{ fontSize: 16, lineHeight: 1.4 }}>
+          {round.question.text}
+        </p>
+        <p className="font-gothic font-bold text-[#52493A] mt-[12px]" style={{ fontSize: 12 }}>
+          いちばん笑った回答に <span style={{ color: "#E5402F" }}>座布団</span> を１枚。
+        </p>
       </div>
 
-      <p className="text-text-sub text-[12px] font-bold mb-3">
-        いちばん笑った回答に <span style={{ color: "#E5402F" }}>座布団</span> を１枚。
-      </p>
-
-      {/* 回答一覧 */}
-      <div className="flex-1 space-y-3 overflow-y-auto pb-4">
+      {/* 回答リスト */}
+      <div className="flex-1 px-[20px] pb-[14px] flex flex-col gap-[11px] overflow-y-auto">
         {answers.map((a, i) => {
           const isSelected = myVotesMap[a.id] != null;
           const isOwn = a.userId === uid;
           return (
             <div
               key={a.id}
-              className="bg-surface rounded-[18px] p-4"
-              style={{ border: isSelected ? "2px solid #E5402F" : "1px solid rgba(0,0,0,.08)" }}
+              className="bg-white"
+              style={{
+                borderRadius: 18, padding: "15px 16px",
+                border: isSelected ? "2px solid #E5402F" : "1px solid rgba(0,0,0,.07)",
+              }}
             >
-              <p className="text-[18px] font-black leading-snug text-text mb-3">{a.text}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-text-muted">回答 {String.fromCharCode(65 + i)}</span>
+              <p className="font-gothic font-extrabold text-[#1A1714]" style={{ fontSize: 18, lineHeight: 1.5 }}>{a.text}</p>
+              <div className="flex items-center justify-between mt-[12px]">
+                <span className="font-gothic text-sub" style={{ fontSize: 11 }}>回答 {String.fromCharCode(65 + i)}</span>
                 {isOwn ? (
-                  <span className="text-[12px] text-text-faint font-medium">自分の回答</span>
+                  <span className="font-gothic text-sub2" style={{ fontSize: 12 }}>自分の回答</span>
                 ) : isSelected ? (
                   <span
-                    className="inline-flex items-center gap-2 text-[13px] font-black text-[#FBF7EC] px-4 py-2 rounded-full"
-                    style={{ background: "#E5402F" }}
+                    className="inline-flex items-center gap-[7px] font-gothic font-extrabold text-paper"
+                    style={{ fontSize: 13, padding: "8px 15px", borderRadius: 999, background: "#E5402F" }}
                   >
-                    <svg width="15" height="13" viewBox="0 0 30 24"><path d="M5 6h20l3 6-3 6H5L2 12z" fill="#FBF7EC"/></svg>
-                    座布団を渡した
+                    <ZabutonIcon color="#FBF7EC" />座布団を渡した
                   </span>
                 ) : (
                   <button
                     onClick={() => handleVote(a.id, "funny")}
                     disabled={myVotedId != null}
-                    className="inline-flex items-center gap-2 text-[13px] font-black px-4 py-2 rounded-full disabled:opacity-40 active:scale-95 transition-all"
-                    style={{ color: "#E5402F", background: "#FCE7E3" }}
+                    className="inline-flex items-center gap-[7px] font-gothic font-extrabold disabled:opacity-40 active:scale-95 transition-all"
+                    style={{ fontSize: 13, padding: "8px 15px", borderRadius: 999, color: "#E5402F", background: "#FCE7E3" }}
                   >
-                    <svg width="15" height="13" viewBox="0 0 30 24"><path d="M5 6h20l3 6-3 6H5L2 12z" fill="#E5402F"/></svg>
-                    座布団
+                    <ZabutonIcon color="#E5402F" />座布団
                   </button>
                 )}
               </div>
@@ -170,12 +208,16 @@ export default function VotePage() {
         })}
       </div>
 
-      <div className="pt-3" style={{ background: "linear-gradient(180deg,rgba(251,247,236,0),#FBF7EC 40%)" }}>
+      {/* Footer */}
+      <div
+        className="px-[20px] pb-[26px]"
+        style={{ background: "linear-gradient(180deg,rgba(251,247,236,0),#FBF7EC 40%)" }}
+      >
         <button
           onClick={advanceToResult}
           disabled={!isHost}
-          className="w-full font-display font-bold py-4 rounded-2xl text-lg text-[#FBF7EC] disabled:opacity-40 active:scale-[0.98] transition-all"
-          style={{ background: "#1A1714" }}
+          className="w-full font-mincho font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-all"
+          style={{ fontSize: 18, padding: "16px 0", borderRadius: 18, background: "#1A1714" }}
         >
           投票を確定する
         </button>
