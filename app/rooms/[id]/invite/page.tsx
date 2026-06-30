@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getRoom } from "@/lib/ogiri/rooms";
@@ -14,9 +14,10 @@ export default function InvitePage() {
   const [inviteCode, setInviteCode] = useState(codeFromUrl ?? "");
   const [roomName, setRoomName] = useState("");
   const [copied, setCopied] = useState(false);
+  const lineOpenedRef = useRef(false);
 
   useEffect(() => {
-    if (codeFromUrl) return; // URL にコードがあれば Firestore 不要
+    if (codeFromUrl) return;
     getRoom(roomId).then((r) => {
       if (r) {
         setInviteCode(r.inviteCode);
@@ -24,6 +25,15 @@ export default function InvitePage() {
       }
     });
   }, [roomId, codeFromUrl]);
+
+  // ルーム作成直後（?code= あり）は LINE を自動起動
+  useEffect(() => {
+    if (!codeFromUrl || lineOpenedRef.current) return;
+    lineOpenedRef.current = true;
+    const link = `${window.location.origin}/invite/${codeFromUrl}`;
+    const text = `大喜利Pocketで遊ぼう！\n招待コード：${codeFromUrl}\n↓タップして参加\n${link}`;
+    window.location.href = `https://line.me/R/msg/text/?${encodeURIComponent(text)}`;
+  }, [codeFromUrl]);
 
   const inviteLink = inviteCode
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/invite/${inviteCode}`

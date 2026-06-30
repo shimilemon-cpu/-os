@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
-import { createRoom } from "@/lib/ogiri/rooms";
+import { createRoom, generateInviteCode, generateRoomRef } from "@/lib/ogiri/rooms";
 
 type Judge = "王道" | "辛口";
 type Mode = "realtime" | "async";
@@ -23,36 +23,23 @@ export default function NewRoomPage() {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<Mode>("realtime");
   const [judge, setJudge] = useState<Judge>("王道");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const create = async () => {
+  const create = () => {
     if (!name.trim()) return;
-    setLoading(true);
-    setError("");
-    // window.open はユーザー操作の同期コンテキストで呼ばないと iOS Safari にブロックされる
-    const lineWindow = window.open("", "_blank");
-    try {
-      const user = auth.currentUser;
-      if (!user) throw new Error("未ログイン");
-      const { roomId, inviteCode } = await createRoom(
-        user.uid,
-        user.displayName ?? "ゲスト",
-        name.trim(),
-        mode,
-        [judge],
-      );
-      const inviteLink = `${window.location.origin}/invite/${inviteCode}`;
-      const shareText = `大喜利Pocketで遊ぼう！\n招待コード：${inviteCode}\n↓タップして参加\n${inviteLink}`;
-      if (lineWindow) {
-        lineWindow.location.href = `https://line.me/R/msg/text/?${encodeURIComponent(shareText)}`;
-      }
-      router.push(`/rooms/${roomId}/invite?code=${inviteCode}`);
-    } catch (e) {
-      lineWindow?.close();
-      setError(e instanceof Error ? e.message : "作成に失敗しました");
-      setLoading(false);
-    }
+    const user = auth.currentUser;
+    if (!user) { setError("未ログイン"); return; }
+
+    // 招待コードとルームIDをクライアントで即生成 → 画面遷移を先に行う
+    const inviteCode = generateInviteCode();
+    const roomRef = generateRoomRef();
+    const roomId = roomRef.id;
+
+    router.push(`/rooms/${roomId}/invite?code=${inviteCode}`);
+
+    // Firestoreへの書き込みは裏で実行
+    createRoom(user.uid, user.displayName ?? "ゲスト", name.trim(), mode, [judge], roomRef, inviteCode)
+      .catch((e) => console.error("createRoom failed:", e));
   };
 
   return (
@@ -148,15 +135,10 @@ export default function NewRoomPage() {
 
         <button
           onClick={create}
-          disabled={!name.trim() || loading}
+          disabled={!name.trim()}
           className="w-full bg-pop-yellow text-ink font-bold py-4 rounded-2xl text-base disabled:opacity-40 active:scale-[0.98] transition-all"
         >
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="w-4 h-4 rounded-full border-2 border-ink border-t-transparent animate-spin" />
-              作成中...
-            </span>
-          ) : "ルームを作成してロビーへ →"}
+          ルームを作成してロビーへ →
         </button>
       </div>
     </div>

@@ -6,9 +6,13 @@ import {
 import { db } from "@/lib/firebase/client";
 import type { RoomDoc, RoomMemberDoc, InviteCodeDoc } from "@/lib/types";
 
-function generateInviteCode(): string {
+export function generateInviteCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
+export function generateRoomRef() {
+  return doc(collection(db, "rooms"));
 }
 
 export async function createRoom(
@@ -16,11 +20,14 @@ export async function createRoom(
   hostNickname: string,
   name: string,
   mode: "realtime" | "async" = "realtime",
-  judges: ("王道" | "辛口")[] = ["王道", "辛口"]
+  judges: ("王道" | "辛口")[] = ["王道", "辛口"],
+  pregenRef?: ReturnType<typeof generateRoomRef>,
+  pregenCode?: string,
 ): Promise<{ roomId: string; inviteCode: string }> {
-  const inviteCode = generateInviteCode();
+  const inviteCode = pregenCode ?? generateInviteCode();
+  const roomRef = pregenRef ?? doc(collection(db, "rooms"));
 
-  const roomRef = await addDoc(collection(db, "rooms"), {
+  await setDoc(roomRef, {
     name,
     hostId,
     inviteCode,
