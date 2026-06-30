@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { getQuestionFromBank, markQuestionUsed } from "@/lib/ogiri/questions";
+import type { Genre, Difficulty } from "@/lib/types";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -12,8 +14,19 @@ export async function POST(request: Request) {
   }
 
   const { genre, difficulty, groupStyle } = await request.json().catch(() => ({}));
-  const g = GENRES.includes(genre) ? genre : GENRES[Math.floor(Math.random() * GENRES.length)];
-  const d = DIFFICULTIES.includes(difficulty) ? difficulty : "中級";
+  const g: Genre = GENRES.includes(genre) ? genre : GENRES[Math.floor(Math.random() * GENRES.length)];
+  const d: Difficulty = DIFFICULTIES.includes(difficulty) ? difficulty : "中級";
+
+  // Check question bank first
+  try {
+    const banked = await getQuestionFromBank(g, d);
+    if (banked) {
+      await markQuestionUsed(banked.id);
+      return NextResponse.json({ question: banked.text, genre: banked.genre, difficulty: banked.difficulty });
+    }
+  } catch {
+    // Bank unavailable — fall through to Claude generation
+  }
 
   const styleHint = groupStyle
     ? `このグループの傾向: ${groupStyle}\nその傾向に合わせたお題を出してください。`
