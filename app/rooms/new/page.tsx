@@ -30,6 +30,8 @@ export default function NewRoomPage() {
     if (!name.trim()) return;
     setLoading(true);
     setError("");
+    // window.open はユーザー操作の同期コンテキストで呼ばないと iOS Safari にブロックされる
+    const lineWindow = window.open("", "_blank");
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("未ログイン");
@@ -40,8 +42,14 @@ export default function NewRoomPage() {
         mode,
         [judge],
       );
+      const inviteLink = `${window.location.origin}/invite/${inviteCode}`;
+      const shareText = `大喜利Pocketで遊ぼう！\n招待コード：${inviteCode}\n↓タップして参加\n${inviteLink}`;
+      if (lineWindow) {
+        lineWindow.location.href = `https://line.me/R/msg/text/?${encodeURIComponent(shareText)}`;
+      }
       router.push(`/rooms/${roomId}/invite?code=${inviteCode}`);
     } catch (e) {
+      lineWindow?.close();
       setError(e instanceof Error ? e.message : "作成に失敗しました");
       setLoading(false);
     }
