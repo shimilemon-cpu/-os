@@ -123,10 +123,26 @@ export default function GamePage() {
         </p>
       </div>
 
-      {/* 回答数 */}
-      <p className="text-text-muted text-xs mb-4">
-        {round.answerCount}/{room?.memberIds.length ?? "?"}人が回答済み
-      </p>
+      {/* 回答数ドット */}
+      {(() => {
+        const total = room?.memberIds.length ?? 0;
+        const done = round.answerCount ?? 0;
+        const dotColors = ["#E5402F", "#2BA35F", "#F4C422", "#F0922B", "#7A6F5C"];
+        return (
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex gap-1.5">
+              {Array.from({ length: total }).map((_, i) => (
+                <span
+                  key={i}
+                  className="w-3 h-3 rounded-full"
+                  style={{ background: i < done ? dotColors[i % dotColors.length] : "#E4DCCF" }}
+                />
+              ))}
+            </div>
+            <p className="text-text-muted text-xs">{done}/{total}人が回答済み</p>
+          </div>
+        );
+      })()}
 
       {/* 回答入力 */}
       <div className="flex-1 flex flex-col">

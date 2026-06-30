@@ -111,12 +111,12 @@ export default function VotePage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex-1">
-          <p className="text-text-muted text-[11px] font-bold tracking-wide" style={{ color: "#E5402F" }}>
-            投票中 —
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-[11px] font-bold tracking-wide" style={{ color: "#E5402F" }}>投票中</p>
+            <Timer deadline={voteDeadline} totalSeconds={VOTE_SECONDS} onExpire={isHost ? advanceToResult : undefined} variant="text" />
+          </div>
           <p className="font-display text-text text-lg font-bold">いちばん笑った回答に</p>
         </div>
-        <Timer deadline={voteDeadline} totalSeconds={VOTE_SECONDS} onExpire={isHost ? advanceToResult : undefined} />
       </div>
 
       {/* お題 */}
