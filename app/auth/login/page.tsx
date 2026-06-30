@@ -5,8 +5,9 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithRedirect, signInWithPopup, getRedirectResult, type User } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import { auth, db, googleProvider } from "@/lib/firebase/client";
+import Engimono from "@/components/Engimono";
 
 const REDIRECT_FLAG = "capsule_login_redirect_ts";
 
@@ -30,7 +31,7 @@ export default function LoginPage() {
       await setDoc(userRef, {
         nickname: user.displayName ?? "ゲスト",
         avatarUrl: user.photoURL ?? null,
-        createdAt: new Date(),
+        createdAt: Timestamp.now(),
       });
     }
     router.push("/rooms");
@@ -43,7 +44,7 @@ export default function LoginPage() {
           localStorage.removeItem(REDIRECT_FLAG);
           await handleUser(result.user);
         } else if (auth.currentUser) {
-          router.push("/");
+          router.push("/rooms");
         } else {
           const ts = localStorage.getItem(REDIRECT_FLAG);
           if (ts && Date.now() - Number(ts) < 5 * 60 * 1000) {
@@ -56,7 +57,7 @@ export default function LoginPage() {
         }
       })
       .catch((e) => {
-        console.error(e);
+        console.error("[auth] getRedirectResult error:", e);
         localStorage.removeItem(REDIRECT_FLAG);
         setError("ログインに失敗しました。もう一度お試しください。");
         setProcessing(false);
@@ -111,56 +112,50 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-8 bg-ink">
-      {/* 散らばる縁起物 */}
+    <div className="min-h-screen flex flex-col items-center justify-center px-8 bg-paper">
+      {/* 縁起物 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <svg className="absolute top-[6%] right-[8%] w-20 animate-floaty" style={{ "--r": "8deg" } as React.CSSProperties}>
-          <use href="#c-cat" width="100%" height="100%"/>
-        </svg>
-        <svg className="absolute top-[22%] left-[4%] w-14 animate-floaty" style={{ "--r": "-10deg", animationDelay: "0.8s" } as React.CSSProperties}>
-          <use href="#c-daruma" width="100%" height="100%"/>
-        </svg>
-        <svg className="absolute bottom-[18%] right-[6%] w-16 animate-floaty" style={{ "--r": "6deg", animationDelay: "0.4s" } as React.CSSProperties}>
-          <use href="#c-fuku" width="100%" height="100%"/>
-        </svg>
-        <svg className="absolute bottom-[28%] left-[10%] w-12 animate-floaty" style={{ "--r": "-14deg", animationDelay: "1.2s" } as React.CSSProperties}>
-          <use href="#c-mask" width="100%" height="100%"/>
-        </svg>
-        <svg className="absolute top-[46%] right-[14%] w-10 animate-spinslow" style={{ animationDelay: "0.5s" } as React.CSSProperties}>
-          <use href="#c-koban" width="100%" height="100%"/>
-        </svg>
+        <Engimono name="cat" width={80} height={87} style={{ position: "absolute", top: "6%", right: "8%", opacity: 0.7, transform: "rotate(8deg)" }} />
+        <Engimono name="daruma" width={56} height={62} style={{ position: "absolute", top: "22%", left: "4%", opacity: 0.55, transform: "rotate(-10deg)" }} />
+        <Engimono name="fuku" width={64} height={74} style={{ position: "absolute", bottom: "18%", right: "6%", opacity: 0.6, transform: "rotate(6deg)" }} />
+        <Engimono name="mask" width={48} height={50} style={{ position: "absolute", bottom: "28%", left: "10%", opacity: 0.5, transform: "rotate(-14deg)" }} />
+        <Engimono name="koban" width={40} height={26} style={{ position: "absolute", top: "46%", right: "14%", opacity: 0.45 }} />
       </div>
 
-      <div className="relative w-full max-w-sm space-y-10">
-        {/* Hero */}
-        <div className="text-center space-y-3 animate-pop-in">
-          <svg className="w-28 h-28 mx-auto animate-floaty" style={{ "--r": "-4deg" } as React.CSSProperties}>
-            <use href="#c-daruma" width="100%" height="100%"/>
-          </svg>
-          <h1 className="font-display text-text text-4xl font-bold leading-tight">
-            大喜利<span className="text-pop-red">Pocket</span>
+      <div className="relative w-full max-w-sm flex flex-col items-center gap-[32px] animate-pop-in">
+        {/* ロゴ */}
+        <div className="text-center">
+          <Engimono name="daruma" width={90} height={100} style={{ margin: "0 auto 12px" }} />
+          <h1 className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 34, lineHeight: 1.2 }}>
+            大喜利<span style={{ color: "#E5402F" }}>Pocket</span>
           </h1>
-          <p className="text-text-muted text-sm">みんなで、ひと笑い。</p>
+          <p className="font-gothic text-sub mt-2" style={{ fontSize: 13 }}>みんなで、ひと笑い。</p>
         </div>
 
-        {/* Feature pills */}
+        {/* フィーチャーピル */}
         <div className="flex flex-wrap justify-center gap-2 animate-rise">
           {["🎤 みんなで大喜利", "🤖 AIが採点", "🎭 笑いが深まる"].map((t) => (
-            <span key={t} className="bg-surface border border-line text-text-sub text-xs px-3 py-1.5 rounded-full font-medium">
+            <span
+              key={t}
+              className="font-gothic font-bold"
+              style={{ fontSize: 12, padding: "5px 12px", borderRadius: 999, background: "#EBE2CF", color: "#52493A" }}
+            >
               {t}
             </span>
           ))}
         </div>
 
+        {/* ログインボタン */}
         {processing ? (
-          <div className="flex justify-center py-4">
-            <div className="w-8 h-8 rounded-full border-2 border-pop-red border-t-transparent animate-spin" />
+          <div className="py-4">
+            <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="w-full flex flex-col gap-3">
             <button
               onClick={signIn}
-              className="w-full flex items-center justify-center gap-3 bg-[#1A1714] text-[#FBF7EC] text-sm font-bold rounded-2xl py-4 active:scale-95 transition-transform shadow-lg"
+              className="w-full flex items-center justify-center gap-3 font-gothic font-extrabold text-paper active:scale-95 transition-transform"
+              style={{ fontSize: 15, padding: "16px 0", borderRadius: 18, background: "#1A1714", boxShadow: "0 14px 26px -10px rgba(0,0,0,.35)" }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -170,15 +165,14 @@ export default function LoginPage() {
               </svg>
               Googleでログイン
             </button>
-
-            <p className="text-center text-text-faint text-[10px] leading-relaxed">
+            <p className="text-center font-gothic text-sub" style={{ fontSize: 10, lineHeight: 1.6 }}>
               ログインすることで、利用規約とプライバシーポリシーに同意したことになります。
             </p>
           </div>
         )}
 
         {error && (
-          <p className="text-center text-pop-red text-xs whitespace-pre-line">{error}</p>
+          <p className="text-center font-gothic whitespace-pre-line" style={{ fontSize: 12, color: "#E5402F" }}>{error}</p>
         )}
       </div>
     </div>

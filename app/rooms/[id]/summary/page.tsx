@@ -9,10 +9,11 @@ import { db } from "@/lib/firebase/client";
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import { tallyVotes } from "@/lib/ogiri/sessions";
 import type { RoomDoc, AnswerDoc, VoteDoc, AiAnalysisResult } from "@/lib/types";
-import AdSlot from "@/components/AdSlot";
+import Engimono from "@/components/Engimono";
 
 const RANK_LABELS = ["横綱", "大関", "関脇", "小結", "前頭"];
 const RANK_COLORS = ["#E5402F", "#2BA35F", "#E0A93B", "#F0922B", "#7A6F5C"];
+const AVATAR_COLORS = ["#E5402F", "#2BA35F", "#F4C422", "#5BA9D6", "#B6AC97"];
 
 interface RoundSummary {
   round: number;
@@ -121,43 +122,38 @@ export default function SummaryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-ink">
-        <svg className="w-16 h-[70px] animate-spinslow" style={{ animationDuration: "3s" }}>
-          <use href="#c-daruma" width="100%" height="100%"/>
-        </svg>
-        <p className="text-text-muted text-sm font-bold">結果を集計中…</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-paper">
+        <Engimono name="daruma" width={64} height={70} style={{ animation: "spinslow 3s linear infinite" }} />
+        <p className="font-gothic font-bold text-sub" style={{ fontSize: 14 }}>結果を集計中…</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-24 px-5 pt-8 bg-ink">
-
-      {/* Header */}
-      <div className="text-center mb-6 animate-pop-in">
-        <p className="text-text-muted text-[11px] font-bold tracking-wide mb-1">{room?.name}</p>
-        <h1 className="font-display text-text text-3xl font-bold">千秋楽</h1>
-        <p className="text-text-muted text-xs mt-1">本日はご来場まことにありがとうございました</p>
+    <div className="min-h-screen flex flex-col bg-paper pb-[30px]">
+      {/* AppBar */}
+      <div className="px-[20px] pt-[10px] pb-[14px] text-center">
+        <p className="font-gothic text-sub mb-1" style={{ fontSize: 11 }}>{room?.name}</p>
+        <h1 className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 28 }}>千　秋　楽</h1>
+        <p className="font-gothic text-sub mt-1" style={{ fontSize: 11 }}>ご来場まことにありがとうございました</p>
       </div>
 
-      {/* Champion card */}
+      {/* 横綱カード */}
       {champion && (
         <div
-          className="relative rounded-[24px] px-5 py-6 mb-5 text-center overflow-hidden animate-pop-in text-[#FBF7EC]"
-          style={{ background: "linear-gradient(150deg,#E5402F,#F0922B)" }}
+          className="mx-[20px] mb-[14px] relative overflow-hidden text-center animate-pop-in"
+          style={{ borderRadius: 24, padding: "22px 20px 24px", background: "linear-gradient(150deg,#E5402F,#F0922B)" }}
         >
-          <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 20% 0%,rgba(255,255,255,.25),transparent 50%)" }}/>
+          <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 20% 0%,rgba(255,255,255,.25),transparent 50%)" }} />
           <div className="relative">
-            <p className="font-display font-bold text-[15px] tracking-[0.3em] mb-1" style={{ color: "#FFE9B0" }}>本日の横綱</p>
-            <svg className="w-20 h-[88px] mx-auto my-2 block">
-              <use href="#c-daruma" width="100%" height="100%"/>
-            </svg>
-            <p className="font-display font-bold text-xl leading-snug mt-2">
+            <p className="font-mincho font-extrabold" style={{ fontSize: 15, letterSpacing: "0.3em", color: "#FFE9B0" }}>本日の横綱</p>
+            <Engimono name="daruma" width={78} height={86} style={{ margin: "8px auto 4px", display: "block" }} />
+            <p className="font-mincho font-extrabold text-paper" style={{ fontSize: 20, lineHeight: 1.4 }}>
               {champion.userId === uid ? "🎉 あなた！" : champion.nickname}
             </p>
             <div
-              className="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-full font-bold text-sm"
-              style={{ background: "rgba(0,0,0,.22)" }}
+              className="inline-flex items-center gap-[7px] font-gothic font-extrabold text-paper mt-3"
+              style={{ fontSize: 14, padding: "7px 16px", borderRadius: 999, background: "rgba(0,0,0,.22)" }}
             >
               <svg width="16" height="14" viewBox="0 0 30 24"><path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/></svg>
               座布団 {champion.total}枚
@@ -166,138 +162,130 @@ export default function SummaryPage() {
         </div>
       )}
 
-      <AdSlot id="summary-banner" className="mb-5" />
-
-      {/* Score ranking / 番付 */}
-      <div className="space-y-2.5 mb-8">
-        <p className="text-xs text-text-muted font-bold">番付表</p>
-        {playerScores.map((p, i) => {
-          const rankLabel = RANK_LABELS[i] ?? "前頭";
-          const rankColor = RANK_COLORS[i] ?? RANK_COLORS[4];
-          const isMe = p.userId === uid;
-          return (
-            <div
-              key={p.userId}
-              className="flex items-center gap-3 rounded-[15px] px-4 py-3 animate-rise"
-              style={{
-                background: isMe ? "#EBE2CF" : "#ffffff",
-                border: isMe ? "1.5px solid #E0A93B" : "1px solid rgba(0,0,0,.07)",
-              }}
-            >
-              <span className="font-display font-bold text-sm w-10 flex-none" style={{ color: rankColor }}>
-                {rankLabel}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm text-text truncate">
-                  {isMe ? `${p.nickname}（あなた）` : p.nickname}
-                </p>
-              </div>
-              <span className="font-bold text-sm flex-none" style={{ color: "#E5402F" }}>
-                {p.total}枚
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* 志向AI診断 */}
-      {analyses.length > 0 && (
-        <div className="space-y-3 mb-8">
-          <p className="text-xs text-text-muted font-bold">AI 志向診断</p>
-          {analyses.map((a) => {
-            const isMe = a.userId === uid;
-            return (
-              <div
-                key={a.userId}
-                className="rounded-2xl p-4 space-y-1.5 animate-rise"
-                style={{
-                  background: "#ffffff",
-                  border: "1px solid rgba(0,0,0,.07)",
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-text font-bold">
-                    {isMe ? `${a.nickname}（あなた）` : a.nickname}
+      <div className="flex-1 px-[20px] flex flex-col gap-[18px]">
+        {/* 番付表 */}
+        <div>
+          <p className="font-gothic font-extrabold text-sub mb-[9px]" style={{ fontSize: 12 }}>番付表</p>
+          <div className="flex flex-col gap-[8px]">
+            {playerScores.map((p, i) => {
+              const isMe = p.userId === uid;
+              return (
+                <div
+                  key={p.userId}
+                  className="flex items-center gap-[12px] animate-rise"
+                  style={{
+                    borderRadius: 15, padding: "11px 14px",
+                    background: isMe ? "#EBE2CF" : "#ffffff",
+                    border: isMe ? "1.5px solid #E0A93B" : "1px solid rgba(0,0,0,.07)",
+                  }}
+                >
+                  <div
+                    className="rounded-full shrink-0"
+                    style={{ width: 32, height: 32, background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
+                  />
+                  <span className="font-mincho font-extrabold" style={{ fontSize: 13, width: 36, color: RANK_COLORS[i] ?? RANK_COLORS[4] }}>
+                    {RANK_LABELS[i] ?? "前頭"}
+                  </span>
+                  <p className="font-gothic font-extrabold text-[#1A1714] flex-1 truncate" style={{ fontSize: 14 }}>
+                    {isMe ? `${p.nickname}（あなた）` : p.nickname}
                   </p>
-                  <span
-                    className="text-xs font-bold px-2.5 py-0.5 rounded-full"
-                    style={{ color: "#7A6F5C", background: "#EBE2CF" }}
-                  >
-                    {a.tendency}
+                  <span className="font-gothic font-extrabold shrink-0" style={{ fontSize: 14, color: "#E5402F" }}>
+                    {p.total}枚
                   </span>
                 </div>
-                <p className="text-text-muted text-sm leading-relaxed">{a.comment}</p>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Round highlights */}
-      <div className="space-y-3 mb-8">
-        <p className="text-xs text-text-muted font-bold">各ラウンドのMVP</p>
-        {roundSummaries.map((s) => (
-          <div
-            key={s.round}
-            className="bg-surface rounded-[15px] p-4 space-y-2"
-            style={{ border: "1px solid rgba(0,0,0,.07)" }}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className="text-xs font-bold px-2.5 py-0.5 rounded-full"
-                style={{ color: "#E5402F", background: "#FCE7E3" }}
-              >
-                第{s.round}問
-              </span>
-              <p className="text-text-muted text-xs truncate">「{s.question}」</p>
-            </div>
-            {s.mvp ? (
-              <div className="flex items-center gap-2">
-                <svg width="14" height="12" viewBox="0 0 30 24" className="flex-none">
-                  <path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/>
-                </svg>
-                <p className="text-text text-sm font-bold">{s.mvp.text}</p>
-                <span className="text-text-muted text-xs ml-auto">{s.mvp.total}枚</span>
-              </div>
-            ) : (
-              <p className="text-xs text-text-faint">データなし</p>
-            )}
+              );
+            })}
           </div>
-        ))}
-      </div>
-
-      {/* Actions */}
-      <div className="space-y-3">
-        <div
-          className="bg-surface rounded-[18px] p-4 space-y-1.5"
-          style={{ border: "1px solid rgba(0,0,0,.07)" }}
-        >
-          <p className="text-xs text-text-muted font-bold">シェアする前にひと言</p>
-          <p className="text-xs text-text-muted leading-relaxed">
-            あなたはプロの芸人ではありません。良い評価を得ても、SNSで自慢したり芸人さんをいじったりするのはやめましょう。笑いは仲間内で楽しむものです 🎤
-          </p>
         </div>
 
-        <button
-          onClick={() => {
-            const text = `大喜利Pocket「${room?.name ?? ""}」\n🏆 ${champion?.total ?? 0}枚で千秋楽！\n#大喜利Pocket`;
-            if (navigator.share) {
-              navigator.share({ text });
-            } else {
-              navigator.clipboard.writeText(text);
-            }
-          }}
-          className="flex items-center justify-center gap-2 w-full font-bold py-4 rounded-2xl text-sm text-[#FBF7EC] active:scale-[0.98] transition-all"
-          style={{ background: "#2BA35F", boxShadow: "0 14px 26px -10px rgba(43,163,95,.5)" }}
-        >
-          結果をシェア
-        </button>
-        <Link
-          href="/rooms"
-          className="block text-center text-text-muted text-sm py-2 font-bold"
-        >
-          寄合所に戻る
-        </Link>
+        {/* AI 志向診断 */}
+        {analyses.length > 0 && (
+          <div>
+            <p className="font-gothic font-extrabold text-sub mb-[9px]" style={{ fontSize: 12 }}>AI 志向診断</p>
+            <div className="flex flex-col gap-[8px]">
+              {analyses.map((a) => {
+                const isMe = a.userId === uid;
+                return (
+                  <div
+                    key={a.userId}
+                    className="bg-white animate-rise"
+                    style={{ borderRadius: 16, padding: "14px 16px", border: "1px solid rgba(0,0,0,.07)" }}
+                  >
+                    <div className="flex items-center justify-between mb-[6px]">
+                      <p className="font-gothic font-extrabold text-[#1A1714]" style={{ fontSize: 14 }}>
+                        {isMe ? `${a.nickname}（あなた）` : a.nickname}
+                      </p>
+                      <span
+                        className="font-gothic font-extrabold"
+                        style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, color: "#7A6F5C", background: "#EBE2CF" }}
+                      >
+                        {a.tendency}
+                      </span>
+                    </div>
+                    <p className="font-gothic text-sub" style={{ fontSize: 13, lineHeight: 1.6 }}>{a.comment}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 各ラウンドMVP */}
+        <div>
+          <p className="font-gothic font-extrabold text-sub mb-[9px]" style={{ fontSize: 12 }}>各ラウンドのMVP</p>
+          <div className="flex flex-col gap-[8px]">
+            {roundSummaries.map((s) => (
+              <div
+                key={s.round}
+                className="bg-white"
+                style={{ borderRadius: 15, padding: "12px 14px", border: "1px solid rgba(0,0,0,.07)" }}
+              >
+                <div className="flex items-center gap-[8px] mb-[6px]">
+                  <span
+                    className="font-gothic font-extrabold"
+                    style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, color: "#E5402F", background: "#FCE7E3" }}
+                  >
+                    第{s.round}問
+                  </span>
+                  <p className="font-gothic text-sub truncate" style={{ fontSize: 11 }}>「{s.question}」</p>
+                </div>
+                {s.mvp ? (
+                  <div className="flex items-center gap-[8px]">
+                    <svg width="13" height="11" viewBox="0 0 30 24" className="shrink-0">
+                      <path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/>
+                    </svg>
+                    <p className="font-gothic font-extrabold text-[#1A1714] flex-1" style={{ fontSize: 14 }}>{s.mvp.text}</p>
+                    <span className="font-gothic text-sub shrink-0" style={{ fontSize: 11 }}>{s.mvp.total}枚</span>
+                  </div>
+                ) : (
+                  <p className="font-gothic text-sub" style={{ fontSize: 12 }}>データなし</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* アクション */}
+        <div className="flex flex-col gap-[10px] mt-2">
+          <button
+            onClick={() => {
+              const text = `大喜利Pocket「${room?.name ?? ""}」\n🏆 ${champion?.total ?? 0}枚で千秋楽！\n#大喜利Pocket`;
+              if (navigator.share) navigator.share({ text });
+              else navigator.clipboard.writeText(text);
+            }}
+            className="w-full font-mincho font-extrabold text-paper active:scale-[0.98] transition-all"
+            style={{ fontSize: 17, padding: "16px 0", borderRadius: 18, background: "#2BA35F", boxShadow: "0 14px 26px -10px rgba(43,163,95,.5)" }}
+          >
+            結果をシェア
+          </button>
+          <Link
+            href="/rooms"
+            className="block text-center font-gothic font-bold text-sub py-2"
+            style={{ fontSize: 14 }}
+          >
+            寄合所に戻る
+          </Link>
+        </div>
       </div>
     </div>
   );

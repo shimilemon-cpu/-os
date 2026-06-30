@@ -7,7 +7,7 @@ import { auth } from "@/lib/firebase/client";
 import { subscribeRoom, subscribeMembers, setMemberReady, startGame } from "@/lib/ogiri/rooms";
 import { createSession, createRound, getActiveSession } from "@/lib/ogiri/sessions";
 import type { RoomDoc, RoomMemberDoc } from "@/lib/types";
-import AdSlot from "@/components/AdSlot";
+import Engimono from "@/components/Engimono";
 
 type QuestionData = { question: string; genre: string; difficulty: string };
 
@@ -20,8 +20,8 @@ function prefetchQuestion(): Promise<QuestionData> {
 }
 
 const ANSWER_SECONDS = 90;
-const CHAR_SYMBOLS = ["#c-daruma", "#c-cat", "#c-tai", "#c-fuku", "#c-mask"] as const;
-const CHAR_BG = ["#FCE8E3", "#EAF7EF", "#FDEFE0", "#FFF3D6", "#E8F0FC"] as const;
+const CHARM_NAMES = ["daruma", "cat", "tai", "fuku", "mask"] as const;
+const CHARM_BG = ["#FCE8E3", "#EAF7EF", "#FDEFE0", "#FFF3D6", "#E8F0FC"] as const;
 
 export default function WaitingRoomPage() {
   const { id: roomId } = useParams<{ id: string }>();
@@ -99,36 +99,48 @@ export default function WaitingRoomPage() {
 
   if (!room) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-ink">
-        <div className="w-8 h-8 rounded-full border-2 border-pop-red border-t-transparent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-paper">
+        <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-24 px-5 pt-10 bg-ink">
-      {/* ルーム名 */}
-      <div className="mb-6">
-        <p className="text-text-muted text-[11px] mb-1">
-          {room.mode === "realtime" ? "⚡ リアルタイム" : "⏰ 非同期"}モード
-        </p>
-        <h1 className="font-display text-text text-2xl font-bold">{room.name}</h1>
+    <div className="min-h-screen flex flex-col bg-paper pb-[20px]">
+      {/* AppBar */}
+      <div className="px-[20px] pt-[10px] pb-[14px] flex items-center gap-[12px]">
+        <div className="flex-1">
+          <p className="font-gothic text-sub" style={{ fontSize: 11 }}>
+            {room.mode === "async" ? "⏰ 非同期モード" : "⚡ リアルタイム"}
+          </p>
+          <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 21 }}>{room.name}</p>
+        </div>
+        <Engimono name="mallet" width={40} height={40} style={{ opacity: 0.85 }} />
       </div>
 
-      {/* あいことば */}
-      <div className="bg-surface rounded-2xl p-5 mb-5" style={{ border: "1px solid rgba(0,0,0,.07)" }}>
-        <p className="text-xs text-text-muted font-bold mb-3">友達を招待</p>
-        <div className="text-center mb-4">
-          <span className="font-display text-4xl tracking-[0.4em] font-bold" style={{ color: "#E5402F" }}>
-            {room.inviteCode}
-          </span>
-        </div>
+      {/* あいことばカード */}
+      <div
+        className="mx-[20px] mb-[18px]"
+        style={{ borderRadius: 20, padding: "18px 20px", background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)", border: "1.5px dashed #E0A93B" }}
+      >
+        <p className="font-gothic font-bold text-[#9A6410] mb-2" style={{ fontSize: 11 }}>あいことばで招待</p>
+        <p
+          className="font-mincho font-extrabold text-center tracking-[0.4em] mb-3"
+          style={{ fontSize: 34, color: "#E5402F" }}
+        >
+          {room.inviteCode}
+        </p>
         <button
           onClick={copyInvite}
-          className="w-full flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl active:scale-95 transition-transform font-medium"
-          style={{ border: "1px solid rgba(0,0,0,.1)", color: copied ? "#2BA35F" : "#1A1714" }}
+          className="w-full flex items-center justify-center gap-2 font-gothic font-bold active:scale-95 transition-transform"
+          style={{
+            fontSize: 13, padding: "10px 0", borderRadius: 12,
+            border: "1px solid rgba(0,0,0,.1)",
+            color: copied ? "#2BA35F" : "#1A1714",
+            background: "rgba(255,255,255,.6)",
+          }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             {copied ? <path d="M5 13l5 5L19 6"/> : <><rect x="4" y="4" width="11" height="11" rx="2.5"/><rect x="9" y="9" width="11" height="11" rx="2.5"/></>}
           </svg>
           {copied ? "コピーしました！" : "招待リンクをコピー"}
@@ -136,30 +148,31 @@ export default function WaitingRoomPage() {
       </div>
 
       {/* メンバーリスト */}
-      <div className="space-y-2.5 mb-5">
-        <p className="text-xs text-text-muted font-bold">
+      <div className="px-[20px] flex flex-col gap-[9px] mb-[18px]">
+        <p className="font-gothic font-extrabold text-sub" style={{ fontSize: 12 }}>
           メンバー {members.length}/5 — {readyCount}人準備完了
         </p>
         {members.map((m, i) => (
           <div
             key={m.userId}
-            className="flex items-center gap-3 bg-surface rounded-[15px] px-4 py-3 animate-rise"
-            style={{ border: "1px solid rgba(0,0,0,.07)" }}
+            className="bg-white flex items-center gap-[12px] animate-rise"
+            style={{ borderRadius: 15, padding: "11px 14px", border: "1px solid rgba(0,0,0,.07)" }}
           >
-            <div className="w-8 h-9 flex-none grid place-items-center rounded-xl" style={{ background: CHAR_BG[i % CHAR_BG.length] }}>
-              <svg className="w-7 h-8">
-                <use href={CHAR_SYMBOLS[i % CHAR_SYMBOLS.length]} width="100%" height="100%"/>
-              </svg>
+            <div
+              className="shrink-0 grid place-items-center"
+              style={{ width: 38, height: 38, borderRadius: 13, background: CHARM_BG[i % CHARM_BG.length] }}
+            >
+              <Engimono name={CHARM_NAMES[i % CHARM_NAMES.length]} width={28} height={31} />
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-text">{m.nickname}</p>
+            <div className="flex-1 min-w-0">
+              <p className="font-gothic font-extrabold text-[#1A1714]" style={{ fontSize: 14 }}>{m.nickname}</p>
               {m.userId === room.hostId && (
-                <span className="text-[10px] text-pop-gold font-black">ホスト</span>
+                <span className="font-gothic font-extrabold" style={{ fontSize: 10, color: "#E0A93B" }}>ホスト</span>
               )}
             </div>
             <span
-              className="text-xs font-black"
-              style={{ color: m.isReady ? "#2BA35F" : "#B6AC97" }}
+              className="font-gothic font-extrabold shrink-0"
+              style={{ fontSize: 12, color: m.isReady ? "#2BA35F" : "#B6AC97" }}
             >
               {m.isReady ? "✓ 準備OK" : "待機中"}
             </span>
@@ -167,18 +180,18 @@ export default function WaitingRoomPage() {
         ))}
       </div>
 
-      <AdSlot id="lobby-banner" className="mb-5" />
-
       {/* アクションボタン */}
-      <div className="space-y-3">
+      <div className="px-[20px] flex flex-col gap-[10px] mt-auto">
         {!isHost && (
           <button
             onClick={toggleReady}
-            className="w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-[0.98]"
-            style={me?.isReady
-              ? { background: "#fff", border: "1px solid rgba(0,0,0,.1)", color: "#7A6F5C" }
-              : { background: "#E6F5EC", border: "2px solid #2BA35F", color: "#2BA35F" }
-            }
+            className="w-full font-mincho font-extrabold active:scale-[0.98] transition-all"
+            style={{
+              fontSize: 17, padding: "16px 0", borderRadius: 18,
+              ...(me?.isReady
+                ? { background: "#fff", border: "1px solid rgba(0,0,0,.1)", color: "#7A6F5C" }
+                : { background: "#E6F5EC", border: "2px solid #2BA35F", color: "#2BA35F" }),
+            }}
           >
             {me?.isReady ? "準備を取り消す" : "準備完了！"}
           </button>
@@ -188,8 +201,8 @@ export default function WaitingRoomPage() {
           <button
             onClick={handleStart}
             disabled={members.length < 2 || !allReady || starting}
-            className="w-full font-display font-bold py-4 rounded-2xl text-lg disabled:opacity-40 active:scale-[0.98] transition-all text-[#FBF7EC]"
-            style={{ background: "#2BA35F", boxShadow: "0 14px 26px -10px rgba(43,163,95,.6)" }}
+            className="w-full font-mincho font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-all"
+            style={{ fontSize: 18, padding: "16px 0", borderRadius: 18, background: "#2BA35F", boxShadow: "0 14px 26px -10px rgba(43,163,95,.6)" }}
           >
             {starting
               ? "お題を生成中…"
