@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "light-content",
+    statusBarStyle: "default",
     title: "大喜利Pocket",
   },
 };

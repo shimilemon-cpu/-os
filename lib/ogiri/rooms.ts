@@ -1,14 +1,19 @@
 import {
-  collection, doc, addDoc, getDoc, updateDoc,
+  collection, doc, getDoc, updateDoc,
   onSnapshot, Timestamp, arrayUnion, setDoc,
   query, where, orderBy, limit,
+  DocumentReference,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { RoomDoc, RoomMemberDoc, InviteCodeDoc } from "@/lib/types";
 
-function generateInviteCode(): string {
+export function generateInviteCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
+export function generateRoomRef(): DocumentReference {
+  return doc(collection(db, "rooms"));
 }
 
 export async function createRoom(
@@ -16,14 +21,17 @@ export async function createRoom(
   hostNickname: string,
   name: string,
   mode: "realtime" | "async" = "realtime",
-  judges: ("王道" | "辛口")[] = ["王道", "辛口"]
+  judges: ("王道" | "辛口")[] = ["王道", "辛口"],
+  roomRef?: DocumentReference,
+  inviteCode?: string
 ): Promise<string> {
-  const inviteCode = generateInviteCode();
+  const code = inviteCode ?? generateInviteCode();
+  const ref = roomRef ?? generateRoomRef();
 
-  const roomRef = await addDoc(collection(db, "rooms"), {
+  await setDoc(ref, {
     name,
     hostId,
-    inviteCode,
+    inviteCode: code,
     mode,
     status: "waiting",
     memberIds: [hostId],
@@ -31,13 +39,14 @@ export async function createRoom(
     createdAt: Timestamp.now(),
   });
 
-  // 招待コードとメンバー登録を並列実行
+  const roomRef2 = ref;
+
   await Promise.all([
-    setDoc(doc(db, "inviteCodes", inviteCode), {
-      roomId: roomRef.id,
+    setDoc(doc(db, "inviteCodes", code), {
+      roomId: roomRef2.id,
       createdAt: Timestamp.now(),
     } satisfies Omit<InviteCodeDoc, "id">),
-    setDoc(doc(db, "rooms", roomRef.id, "members", hostId), {
+    setDoc(doc(db, "rooms", roomRef2.id, "members", hostId), {
       userId: hostId,
       nickname: hostNickname,
       isReady: false,
@@ -45,7 +54,7 @@ export async function createRoom(
     } satisfies Omit<RoomMemberDoc, "id">),
   ]);
 
-  return roomRef.id;
+  return roomRef2.id;
 }
 
 export async function joinRoomByCode(
