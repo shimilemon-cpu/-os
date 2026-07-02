@@ -131,6 +131,10 @@
   from { transform: translateY(0); }
   to { transform: translateY(-50%); }
 }
+@keyframes railleft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
 
 * {
   box-sizing: border-box;
@@ -142,6 +146,30 @@ body {
   color: #1A1714;
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+}
+
+/* 麻の葉 pattern — 和柄の背景オーバーレイ */
+.bg-asanoha {
+  background-image:
+    radial-gradient(circle at 50% 0, rgba(224,169,59,.06) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 0 50%, rgba(224,169,59,.06) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 100% 50%, rgba(224,169,59,.06) 0 1.5px, transparent 2px),
+    linear-gradient(60deg, transparent 49%, rgba(224,169,59,.05) 49%, rgba(224,169,59,.05) 51%, transparent 51%),
+    linear-gradient(-60deg, transparent 49%, rgba(224,169,59,.05) 49%, rgba(224,169,59,.05) 51%, transparent 51%);
+  background-size: 32px 32px;
+}
+
+/* 青海波 pattern — waves */
+.bg-seigaiha {
+  background-image:
+    radial-gradient(circle at 50% 100%, transparent 12px, rgba(229,64,47,.06) 12px, rgba(229,64,47,.06) 13px, transparent 13.5px);
+  background-size: 30px 15px;
+  background-position: 0 0, 15px 0;
+}
+
+/* 暖簾 noren top decoration */
+.noren-shadow {
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,.15));
 }
 
 ::-webkit-scrollbar {

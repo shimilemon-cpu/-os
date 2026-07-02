@@ -153,26 +153,44 @@ export default function RoomsPage() {
   const displayed = tab === 2 ? finishedRooms : tab === 0 ? activeRooms : [];
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper pb-[78px]">
+    <div className="min-h-screen flex flex-col bg-paper bg-asanoha pb-[78px]">
+      {/* ハッシュタグレール（走馬灯） */}
+      <div className="w-full overflow-hidden" style={{ height: 22, background: "linear-gradient(90deg,#E5402F,#F0922B)" }}>
+        <div
+          className="whitespace-nowrap font-gothic font-extrabold text-paper"
+          style={{ fontSize: 11, letterSpacing: "0.24em", padding: "3px 0", animation: "railleft 20s linear infinite", display: "inline-block" }}
+        >
+          ＃笑門来福　＃本日も大入　＃珍回答歓迎　＃座布団一枚　＃笑門来福　＃本日も大入　＃珍回答歓迎　＃座布団一枚
+        </div>
+      </div>
+
       {/* AppBar */}
-      <div className="px-[20px] pt-[6px] pb-[16px] flex items-center gap-[12px]">
-        <Engimono name="daruma" width={40} height={44} />
+      <div className="px-[20px] pt-[10px] pb-[10px] flex items-center gap-[12px]">
+        <div className="relative">
+          <Engimono name="daruma" width={44} height={48} />
+          <span
+            className="absolute font-mincho font-extrabold"
+            style={{ top: -4, right: -4, fontSize: 8, padding: "1px 5px", borderRadius: 999, background: "#2BA35F", color: "#FBF7EC" }}
+          >
+            開演中
+          </span>
+        </div>
         <div className="flex-1">
-          <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 21 }}>寄合所</p>
-          <p className="font-gothic text-sub" style={{ fontSize: 11 }}>いま笑いが生まれる場所</p>
+          <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 22, lineHeight: 1.1 }}>寄合所</p>
+          <p className="font-gothic text-sub" style={{ fontSize: 10.5 }}>いま笑いが生まれる場所</p>
         </div>
         <button
           className="grid place-items-center bg-white"
-          style={{ width: 40, height: 40, borderRadius: 14, border: "1px solid rgba(0,0,0,.07)" }}
+          style={{ width: 38, height: 38, borderRadius: 13, border: "1px solid rgba(0,0,0,.07)" }}
           onClick={() => setShowJoin((v) => !v)}
           aria-label="あいことばで検索"
         >
-          <Icon name="search" size={18} color="#1A1714" strokeWidth={2.2} />
+          <Icon name="search" size={17} color="#1A1714" strokeWidth={2.2} />
         </button>
       </div>
 
       {/* Segmented control */}
-      <div className="mx-[20px] mb-[14px] flex gap-[4px] p-[4px]" style={{ background: "#EBE2CF", borderRadius: 14 }}>
+      <div className="mx-[20px] mb-[12px] flex gap-[4px] p-[4px]" style={{ background: "#EBE2CF", borderRadius: 14 }}>
         {["公開の間", "仲間内", "のれん履歴"].map((label, i) => (
           <button
             key={i}
@@ -215,8 +233,17 @@ export default function RoomsPage() {
         </div>
       )}
 
+      {/* セクションラベル */}
+      <div className="px-[20px] flex items-center gap-[8px] mt-[4px] mb-[8px]">
+        <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
+        <p className="font-mincho font-extrabold text-sub" style={{ fontSize: 11, letterSpacing: "0.16em" }}>
+          {tab === 0 ? "◆ 開演中の部屋" : tab === 1 ? "◆ 仲間内の部屋" : "◆ のれん履歴"}
+        </p>
+        <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
+      </div>
+
       {/* Room list */}
-      <div className="flex-1 px-[20px] pb-[14px] flex flex-col gap-[12px]">
+      <div className="flex-1 px-[20px] pb-[14px] flex flex-col gap-[10px]">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="w-6 h-6 rounded-full border-2 border-red border-t-transparent animate-spin" />
@@ -224,9 +251,20 @@ export default function RoomsPage() {
         ) : displayed.length > 0 ? (
           displayed.map((room) => <RoomCard key={room.id} room={room} />)
         ) : (
-          <div className="text-center py-12">
-            <Engimono name="daruma" width={64} height={70} className="mx-auto mb-3 opacity-30" />
-            <p className="font-gothic text-sub" style={{ fontSize: 14 }}>まだ部屋がありません</p>
+          <div
+            className="text-center py-8 mt-2 flex flex-col items-center"
+            style={{ borderRadius: 20, border: "1.5px dashed rgba(0,0,0,.12)", background: "rgba(255,255,255,.4)" }}
+          >
+            <Engimono name="daruma" width={54} height={60} className="mb-2" style={{ opacity: 0.35 }} />
+            <p className="font-mincho font-extrabold text-[#1A1714] mb-1" style={{ fontSize: 15 }}>まだ部屋がありません</p>
+            <p className="font-gothic text-sub mb-3" style={{ fontSize: 11 }}>右下のボタンから部屋を立てて<br/>友達を呼びましょう</p>
+            <Link
+              href="/rooms/new"
+              className="font-gothic font-extrabold text-paper"
+              style={{ fontSize: 12, padding: "8px 14px", borderRadius: 999, background: "#E5402F" }}
+            >
+              ＋ 部屋を立てる
+            </Link>
           </div>
         )}
       </div>

@@ -106,52 +106,65 @@ export default function WaitingRoomPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper pb-[20px]">
+    <div className="min-h-screen flex flex-col bg-paper bg-asanoha pb-[20px]">
       {/* AppBar */}
-      <div className="px-[20px] pt-[10px] pb-[14px] flex items-center gap-[12px]">
+      <div className="px-[20px] pt-[10px] pb-[10px] flex items-center gap-[12px]">
         <div className="flex-1">
-          <p className="font-gothic text-sub" style={{ fontSize: 11 }}>
-            {room.mode === "async" ? "⏰ 非同期モード" : "⚡ リアルタイム"}
-          </p>
-          <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 21 }}>{room.name}</p>
+          <div className="inline-flex items-center gap-[6px] mb-1">
+            <span
+              className="font-gothic font-extrabold"
+              style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, background: room.mode === "async" ? "#EBE2CF" : "#FCE7E3", color: room.mode === "async" ? "#7A6F5C" : "#E5402F" }}
+            >
+              {room.mode === "async" ? "⏰ 非同期" : "⚡ リアルタイム"}
+            </span>
+            <span className="font-gothic text-sub" style={{ fontSize: 10 }}>{members.length}/5人</span>
+          </div>
+          <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 22, lineHeight: 1.1 }}>{room.name}</p>
         </div>
-        <Engimono name="mallet" width={40} height={40} style={{ opacity: 0.85 }} />
+        <Engimono name="mallet" width={44} height={44} style={{ opacity: 0.9 }} />
       </div>
 
       {/* あいことばカード */}
-      <div
-        className="mx-[20px] mb-[18px]"
-        style={{ borderRadius: 20, padding: "18px 20px", background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)", border: "1.5px dashed #E0A93B" }}
-      >
-        <p className="font-gothic font-bold text-[#9A6410] mb-2" style={{ fontSize: 11 }}>あいことばで招待</p>
-        <p
-          className="font-mincho font-extrabold text-center tracking-[0.4em] mb-3"
-          style={{ fontSize: 34, color: "#E5402F" }}
+      <div className="mx-[20px] mb-[14px] relative">
+        <div
+          className="relative overflow-hidden"
+          style={{ borderRadius: 20, padding: "16px 18px 14px", background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)", border: "1.5px dashed #E0A93B" }}
         >
-          {room.inviteCode}
-        </p>
-        <button
-          onClick={copyInvite}
-          className="w-full flex items-center justify-center gap-2 font-gothic font-bold active:scale-95 transition-transform"
-          style={{
-            fontSize: 13, padding: "10px 0", borderRadius: 12,
-            border: "1px solid rgba(0,0,0,.1)",
-            color: copied ? "#2BA35F" : "#1A1714",
-            background: "rgba(255,255,255,.6)",
-          }}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            {copied ? <path d="M5 13l5 5L19 6"/> : <><rect x="4" y="4" width="11" height="11" rx="2.5"/><rect x="9" y="9" width="11" height="11" rx="2.5"/></>}
-          </svg>
-          {copied ? "コピーしました！" : "招待リンクをコピー"}
-        </button>
+          <Engimono name="koban" width={44} height={29} style={{ position: "absolute", top: 10, right: 12, opacity: 0.7 }} />
+          <p className="font-gothic font-extrabold text-[#9A6410]" style={{ fontSize: 10, letterSpacing: "0.14em" }}>＼ あいことばで招待 ／</p>
+          <p
+            className="font-mincho font-extrabold text-center tracking-[0.4em] mt-1 mb-2"
+            style={{ fontSize: 36, color: "#E5402F", textShadow: "0 2px 0 rgba(229,64,47,.15)" }}
+          >
+            {room.inviteCode}
+          </p>
+          <button
+            onClick={copyInvite}
+            className="w-full flex items-center justify-center gap-2 font-gothic font-bold active:scale-95 transition-transform"
+            style={{
+              fontSize: 12, padding: "9px 0", borderRadius: 10,
+              border: "1px solid rgba(0,0,0,.1)",
+              color: copied ? "#2BA35F" : "#1A1714",
+              background: "rgba(255,255,255,.7)",
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              {copied ? <path d="M5 13l5 5L19 6"/> : <><rect x="4" y="4" width="11" height="11" rx="2.5"/><rect x="9" y="9" width="11" height="11" rx="2.5"/></>}
+            </svg>
+            {copied ? "コピーしました！" : "招待リンクをコピー"}
+          </button>
+        </div>
       </div>
 
       {/* メンバーリスト */}
-      <div className="px-[20px] flex flex-col gap-[9px] mb-[18px]">
-        <p className="font-gothic font-extrabold text-sub" style={{ fontSize: 12 }}>
-          メンバー {members.length}/5 — {readyCount}人準備完了
-        </p>
+      <div className="px-[20px] flex flex-col gap-[7px] mb-[14px]">
+        <div className="flex items-center gap-[8px]">
+          <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
+          <p className="font-mincho font-extrabold text-sub" style={{ fontSize: 11, letterSpacing: "0.16em" }}>
+            ◆ メンバー {members.length}/5 ・ 準備完了 {readyCount}人
+          </p>
+          <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
+        </div>
         {members.map((m, i) => (
           <div
             key={m.userId}
