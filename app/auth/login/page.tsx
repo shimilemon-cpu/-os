@@ -1,8 +1,6 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signInAnonymously, updateProfile } from "firebase/auth";
 import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
@@ -14,6 +12,18 @@ const NICKNAME_KEY = "ogiri_nickname";
 const NAME_SUGGESTIONS = ["タロウ", "サクラ", "ゲンキ", "ヒカル", "モモ", "ケンタ"];
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-paper">
+        <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
+      </div>
+    }>
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/rooms";
