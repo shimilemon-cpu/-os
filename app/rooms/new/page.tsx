@@ -7,7 +7,7 @@ import { createRoom, generateInviteCode, generateRoomRef } from "@/lib/ogiri/roo
 import Icon from "@/components/Icon";
 import Engimono from "@/components/Engimono";
 
-const GENRES = ["定番", "あるある", "写真で一言", "ブラック"] as const;
+const GENRES = ["定番", "あるある", "日常", "ブラック"] as const;
 type Genre = typeof GENRES[number];
 
 export default function NewRoomPage() {

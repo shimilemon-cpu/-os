@@ -5,10 +5,9 @@ import { usePathname } from "next/navigation";
 import Icon from "@/components/Icon";
 
 const ITEMS = [
-  { href: "/rooms",     label: "寄合所", icon: "home"    as const },
-  { href: "/engawa",   label: "縁側",   icon: "grid"    as const },
-  { href: "/banzuke",  label: "番付",   icon: "banzuke" as const },
-  { href: "/mypage",   label: "自分",   icon: "person"  as const },
+  { href: "/rooms",   label: "寄合所", icon: "home"   as const },
+  { href: "/engawa",  label: "縁側",   icon: "grid"   as const },
+  { href: "/mypage",  label: "自分",   icon: "person" as const },
 ];
 
 export default function BottomNav() {
