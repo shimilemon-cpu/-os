@@ -25,6 +25,7 @@ export async function createRoom(
   roomRef?: DocumentReference,
   inviteCode?: string,
   topicMode: TopicMode = "omakase",
+  capacity: number = 5,
 ): Promise<string> {
   const code = inviteCode ?? generateInviteCode();
   const ref = roomRef ?? generateRoomRef();
@@ -36,6 +37,7 @@ export async function createRoom(
     mode,
     topicMode,
     status: "waiting",
+    capacity,
     memberIds: [hostId],
     judges,
     createdAt: Timestamp.now(),
@@ -71,7 +73,7 @@ export async function joinRoomByCode(
 
   const room = roomSnap.data() as RoomDoc;
   if (room.memberIds.includes(userId)) return roomId;
-  if (room.memberIds.length >= 5) throw new Error("定員オーバー（最大5人）");
+  if (room.memberIds.length >= (room.capacity ?? 5)) throw new Error("定員オーバー");
   if (room.status !== "waiting") throw new Error("ゲームはすでに開始されています");
 
   await updateDoc(doc(db, "rooms", roomId), { memberIds: arrayUnion(userId) });

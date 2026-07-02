@@ -213,7 +213,7 @@ export default function RoomsPage() {
         className="mx-[20px] mb-[12px] flex gap-[10px] items-center"
         style={{ background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)", border: "1.5px dashed #E0A93B", borderRadius: 16, padding: "12px 14px" }}
       >
-        <Engimono name="koban" width={34} height={22} />
+        <Engimono name="koban" width={22} height={34} />
         <button className="flex-1 text-left" onClick={() => setShowJoin((v) => !v)}>
           <p className="font-gothic font-bold text-[#9A6410]" style={{ fontSize: 11 }}>あいことばで入る</p>
           <p className="font-gothic text-sub" style={{ fontSize: 13 }}>4文字の合言葉を入力…</p>
@@ -267,6 +267,16 @@ export default function RoomsPage() {
             </Link>
           </div>
         )}
+      </div>
+
+      {/* AD placeholder */}
+      <div className="mx-[20px] mb-[14px]">
+        <div
+          className="flex items-center justify-center font-gothic text-sub"
+          style={{ height: 60, borderRadius: 12, border: "1.5px dashed rgba(0,0,0,.12)", fontSize: 12 }}
+        >
+          AD
+        </div>
       </div>
 
       {/* FAB */}

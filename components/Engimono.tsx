@@ -13,7 +13,7 @@ const VIEWBOXES: Record<EngimonoName, string> = {
   cat: "0 0 112 120",
   tai: "0 0 124 84",
   fuku: "0 0 100 116",
-  koban: "0 0 100 66",
+  koban: "0 0 66 100",
   mallet: "0 0 110 110",
   mask: "0 0 100 104",
 };
@@ -98,8 +98,8 @@ function Fuku() {
 function Koban() {
   return (
     <>
-      <ellipse cx="50" cy="33" rx="46" ry="27" fill="#F4C422"/>
-      <path d="M22,24 H78 M20,33 H80 M22,42 H78" stroke="#E0A93B" strokeWidth="3.4" strokeLinecap="round"/>
+      <ellipse cx="33" cy="50" rx="27" ry="46" fill="#F4C422"/>
+      <path d="M24,22 V78 M33,20 V80 M42,22 V78" stroke="#E0A93B" strokeWidth="3.4" strokeLinecap="round"/>
     </>
   );
 }

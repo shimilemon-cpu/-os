@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { doc, getDoc, getDocs, collection, query, where } from "firebase/firestore";
-import { signOut, onAuthStateChanged } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client";
 import type { UserDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
@@ -23,29 +23,26 @@ function LockIcon() {
 
 export default function MyPage() {
   const router = useRouter();
+  const cachedNickname = typeof window !== "undefined" ? localStorage.getItem("ogiri_nickname") : null;
   const [profile, setProfile] = useState<UserDoc | null>(null);
   const [stats, setStats] = useState({ rooms: 0, zabuton: 0, yokozuna: 0 });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) { router.push("/auth/login"); return; }
-      try {
-        const profileSnap = await getDoc(doc(db, "users", user.uid));
-        if (profileSnap.exists()) {
-          setProfile({ id: user.uid, ...profileSnap.data() } as UserDoc);
-        }
-        const roomsSnap = await getDocs(query(
-          collection(db, "rooms"),
-          where("memberIds", "array-contains", user.uid)
-        ));
-        setStats({ rooms: roomsSnap.size, zabuton: 238, yokozuna: 14 });
-      } finally {
-        setLoading(false);
+    const user = auth.currentUser;
+    if (!user) { router.push("/auth/login"); return; }
+
+    setLoading(true);
+    Promise.all([
+      getDoc(doc(db, "users", user.uid)),
+      getDocs(query(collection(db, "rooms"), where("memberIds", "array-contains", user.uid))),
+    ]).then(([profileSnap, roomsSnap]) => {
+      if (profileSnap.exists()) {
+        setProfile({ id: user.uid, ...profileSnap.data() } as UserDoc);
       }
-    });
-    return () => unsub();
+      setStats({ rooms: roomsSnap.size, zabuton: 238, yokozuna: 14 });
+    }).finally(() => setLoading(false));
   }, [router]);
 
   const handleSignOut = async () => {
@@ -53,16 +50,8 @@ export default function MyPage() {
     router.push("/auth/login");
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-paper">
-        <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
-      </div>
-    );
-  }
-
   const user = auth.currentUser;
-  const nickname = profile?.nickname ?? user?.displayName ?? "ゲスト";
+  const nickname = profile?.nickname ?? cachedNickname ?? user?.displayName ?? "ゲスト";
   const handle = `＠${(user?.displayName ?? "user").toLowerCase().replace(/\s/g, "_")}`;
 
   return (
@@ -96,9 +85,9 @@ export default function MyPage() {
         {/* Stats */}
         <div className="flex gap-[10px]">
           {[
-            { value: stats.zabuton, label: "獲得座布団", color: "#E5402F" },
-            { value: stats.yokozuna, label: "横綱の回数", color: "#2BA35F" },
-            { value: stats.rooms, label: "参加部屋", color: "#E0A93B" },
+            { value: loading ? "..." : stats.zabuton, label: "獲得座布団", color: "#E5402F" },
+            { value: loading ? "..." : stats.yokozuna, label: "横綱の回数", color: "#2BA35F" },
+            { value: loading ? "..." : stats.rooms, label: "参加部屋", color: "#E0A93B" },
           ].map(({ value, label, color }) => (
             <div
               key={label}
@@ -176,6 +165,14 @@ export default function MyPage() {
               {right}
             </div>
           ))}
+        </div>
+
+        {/* AD placeholder */}
+        <div
+          className="flex items-center justify-center font-gothic text-sub"
+          style={{ height: 60, borderRadius: 12, border: "1.5px dashed rgba(0,0,0,.12)", fontSize: 12 }}
+        >
+          AD
         </div>
       </div>
     </div>

@@ -151,7 +151,7 @@ export default function WaitingRoomPage() {
             >
               {room.mode === "async" ? "⏰ 非同期" : "⚡ リアルタイム"}
             </span>
-            <span className="font-gothic text-sub" style={{ fontSize: 10 }}>{members.length}/5人</span>
+            <span className="font-gothic text-sub" style={{ fontSize: 10 }}>{members.length}/{room.capacity ?? 5}人</span>
           </div>
           <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 22, lineHeight: 1.1 }}>{room.name}</p>
         </div>
@@ -164,7 +164,7 @@ export default function WaitingRoomPage() {
           className="relative overflow-hidden"
           style={{ borderRadius: 20, padding: "16px 18px 14px", background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)", border: "1.5px dashed #E0A93B" }}
         >
-          <Engimono name="koban" width={44} height={29} style={{ position: "absolute", top: 10, right: 12, opacity: 0.7 }} />
+          <Engimono name="koban" width={20} height={30} style={{ position: "absolute", top: 10, right: 12, opacity: 0.7 }} />
           <p className="font-gothic font-extrabold text-[#9A6410]" style={{ fontSize: 10, letterSpacing: "0.14em" }}>＼ あいことばで招待 ／</p>
           <p
             className="font-mincho font-extrabold text-center tracking-[0.4em] mt-1 mb-2"
@@ -195,7 +195,7 @@ export default function WaitingRoomPage() {
         <div className="flex items-center gap-[8px]">
           <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
           <p className="font-mincho font-extrabold text-sub" style={{ fontSize: 11, letterSpacing: "0.16em" }}>
-            ◆ メンバー {members.length}/5 ・ 準備完了 {readyCount}人
+            ◆ メンバー {members.length}/{room.capacity ?? 5} ・ 準備完了 {readyCount}人
           </p>
           <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
         </div>

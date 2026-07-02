@@ -211,7 +211,7 @@ export default function GamePage() {
       </div>
 
       {/* 回答入力エリア */}
-      <div className="flex-1 px-[20px] pb-[20px] flex flex-col">
+      <div className="flex-1 px-[20px] pb-[40px] flex flex-col">
         {submitted ? (
           <div className="space-y-3 animate-rise">
             <div className="bg-white text-center" style={{ borderRadius: 18, padding: 20, border: "2px solid #2BA35F" }}>

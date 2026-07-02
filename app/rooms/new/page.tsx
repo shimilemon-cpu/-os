@@ -10,6 +10,12 @@ import Engimono from "@/components/Engimono";
 const GENRES = ["定番", "あるある", "日常", "ブラック"] as const;
 type Genre = typeof GENRES[number];
 
+const HIRAGANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわ";
+
+function generateHiraganaCode(): string {
+  return Array.from({ length: 4 }, () => HIRAGANA[Math.floor(Math.random() * HIRAGANA.length)]).join("");
+}
+
 export default function NewRoomPage() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -19,20 +25,23 @@ export default function NewRoomPage() {
   const [timeLimit, setTimeLimit] = useState(90);
   const [useCode, setUseCode] = useState(true);
   const [error, setError] = useState("");
+  const [roomMode, setRoomMode] = useState<0 | 1>(0); // 0=realtime, 1=async
+  const [aikotoba, setAikotoba] = useState(generateHiraganaCode);
 
   const create = () => {
     if (!name.trim()) return;
     const user = auth.currentUser;
     if (!user) { setError("未ログイン"); return; }
 
-    const inviteCode = generateInviteCode();
+    const inviteCode = useCode ? aikotoba.toUpperCase() : generateInviteCode();
     const roomRef = generateRoomRef();
     const roomId = roomRef.id;
 
     router.push(`/rooms/${roomId}/invite?code=${inviteCode}`);
 
     const topicModes = ["omakase", "custom", "mochiyori"] as const;
-    createRoom(user.uid, user.displayName ?? "ゲスト", name.trim(), "realtime", ["王道", "辛口"], roomRef, inviteCode, topicModes[topicMode])
+    const mode = roomMode === 0 ? "realtime" : "async";
+    createRoom(user.uid, user.displayName ?? "ゲスト", name.trim(), mode, ["王道", "辛口"], roomRef, inviteCode, topicModes[topicMode], capacity)
       .catch((e) => console.error("createRoom failed:", e));
   };
 
@@ -88,6 +97,28 @@ export default function NewRoomPage() {
                   background: topicMode === i ? "#1A1714" : "transparent",
                   color: topicMode === i ? "#FBF7EC" : "#7A6F5C",
                   fontWeight: topicMode === i ? 700 : 600,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* モード */}
+        <div>
+          <label className="block font-gothic font-extrabold text-[#52493A] mb-[7px]" style={{ fontSize: 12 }}>モード</label>
+          <div className="flex gap-[4px] p-[4px]" style={{ background: "#EBE2CF", borderRadius: 14 }}>
+            {["リアルタイム", "非同期"].map((label, i) => (
+              <button
+                key={i}
+                onClick={() => setRoomMode(i as 0 | 1)}
+                className="flex-1 text-center font-gothic"
+                style={{
+                  fontSize: 13, padding: "8px 0", borderRadius: 11,
+                  background: roomMode === i ? "#1A1714" : "transparent",
+                  color: roomMode === i ? "#FBF7EC" : "#7A6F5C",
+                  fontWeight: roomMode === i ? 700 : 600,
                 }}
               >
                 {label}
@@ -167,14 +198,28 @@ export default function NewRoomPage() {
           className="flex items-center gap-[12px]"
           style={{ background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)", border: "1px solid #E0A93B", borderRadius: 16, padding: 14 }}
         >
-          <Engimono name="koban" width={38} height={24} />
+          <Engimono name="koban" width={24} height={38} />
           <div className="flex-1">
             <p className="font-gothic font-extrabold text-[#9A6410]" style={{ fontSize: 11 }}>あいことば</p>
-            <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 22, letterSpacing: "0.18em" }}>ふくねこ</p>
+            <input
+              className="w-full bg-transparent font-mincho font-extrabold text-[#1A1714] outline-none"
+              style={{ fontSize: 22, letterSpacing: "0.18em" }}
+              value={aikotoba}
+              onChange={(e) => setAikotoba(e.target.value)}
+              maxLength={8}
+            />
           </div>
           <button
+            onClick={() => setAikotoba(generateHiraganaCode())}
+            className="text-[#9A6410] shrink-0"
+            style={{ fontSize: 20, padding: "4px" }}
+            aria-label="あいことばを再生成"
+          >
+            🔄
+          </button>
+          <button
             onClick={() => setUseCode((v) => !v)}
-            className="relative"
+            className="relative shrink-0"
             style={{ width: 46, height: 27, borderRadius: 999, background: useCode ? "#2BA35F" : "#E4DCCF" }}
           >
             <span
@@ -188,7 +233,7 @@ export default function NewRoomPage() {
       </div>
 
       {/* Footer */}
-      <div className="px-[20px] pb-[26px]">
+      <div className="sticky bottom-0 px-[20px] pb-[100px] pt-[10px] bg-paper">
         <button
           onClick={create}
           disabled={!name.trim()}

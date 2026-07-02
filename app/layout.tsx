@@ -117,9 +117,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <circle cx="69" cy="55" r="5" fill="#F4A0A8"/>
             </symbol>
 
-            <symbol id="c-koban" viewBox="0 0 100 66">
-              <ellipse cx="50" cy="33" rx="46" ry="27" fill="#F4C422"/>
-              <path d="M22,24 H78 M20,33 H80 M22,42 H78" stroke="#E0A93B" strokeWidth="3.4" strokeLinecap="round"/>
+            <symbol id="c-koban" viewBox="0 0 66 100">
+              <ellipse cx="33" cy="50" rx="27" ry="46" fill="#F4C422"/>
+              <path d="M24,22 V78 M33,20 V80 M42,22 V78" stroke="#E0A93B" strokeWidth="3.4" strokeLinecap="round"/>
             </symbol>
 
             <symbol id="c-mallet" viewBox="0 0 110 110">

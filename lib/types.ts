@@ -22,7 +22,8 @@ export interface RoomDoc {
   mode: RoomMode;
   topicMode: TopicMode;
   status: RoomStatus;
-  memberIds: string[];       // max 5
+  capacity: number;          // default 5 for backward compat
+  memberIds: string[];       // max capacity
   judges?: AiPersona[];     // undefined → ["王道", "辛口"]
   createdAt: Timestamp | null;
 }

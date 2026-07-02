@@ -225,7 +225,7 @@ export default function VotePage() {
 
       {/* Footer */}
       <div
-        className="px-[20px] pb-[26px]"
+        className="px-[20px] pb-[40px]"
         style={{ background: "linear-gradient(180deg,rgba(251,247,236,0),#FBF7EC 40%)" }}
       >
         <button

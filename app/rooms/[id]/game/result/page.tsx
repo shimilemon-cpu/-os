@@ -339,7 +339,7 @@ export default function ResultPage() {
       </div>
 
       {/* Footer */}
-      <div className="flex gap-[10px] px-[20px] pb-[26px]">
+      <div className="flex gap-[10px] px-[20px] pb-[40px]">
         {isHost ? (
           <>
             <button

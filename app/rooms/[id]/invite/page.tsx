@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getRoom } from "@/lib/ogiri/rooms";
+import Engimono from "@/components/Engimono";
 
 export default function InvitePage() {
   const { id: roomId } = useParams<{ id: string }>();
@@ -66,42 +67,40 @@ export default function InvitePage() {
 
   if (!inviteCode) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-ink">
-        <div className="w-8 h-8 rounded-full border-2 border-pop-red border-t-transparent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-paper">
+        <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-5 pt-10 pb-12 bg-ink">
+    <div className="min-h-screen flex flex-col px-5 pt-10 pb-12 bg-paper">
       {/* 上部 */}
       <div className="text-center mb-8 animate-pop-in">
-        <svg className="w-20 h-22 mx-auto mb-3 animate-floaty" style={{ "--r": "-4deg" } as React.CSSProperties}>
-          <use href="#c-cat" width="100%" height="100%"/>
-        </svg>
-        <p className="text-text-muted text-sm mb-1">部屋を立てました</p>
+        <div className="mx-auto mb-3 w-20">
+          <Engimono name="cat" width={80} height={86} />
+        </div>
+        <p className="font-gothic text-sub text-sm mb-1">部屋を立てました</p>
         {roomName && (
-          <h1 className="font-display text-text text-2xl font-bold">{roomName}</h1>
+          <h1 className="font-mincho text-[#1A1714] text-2xl font-extrabold">{roomName}</h1>
         )}
       </div>
 
       {/* あいことばカード */}
-      <div className="bg-surface rounded-3xl p-7 mb-5 text-center animate-rise" style={{ border: "1px solid rgba(0,0,0,.07)" }}>
-        <p className="text-[11px] text-text-muted tracking-widest uppercase mb-3">あいことば</p>
+      <div className="bg-white rounded-3xl p-7 mb-5 text-center animate-rise" style={{ border: "1px solid rgba(0,0,0,.07)" }}>
+        <p className="font-gothic text-sub tracking-widest uppercase mb-3" style={{ fontSize: 11 }}>あいことば</p>
         <div
-          className="font-display text-4xl tracking-[0.3em] mb-5 font-bold"
+          className="font-mincho text-4xl tracking-[0.3em] mb-5 font-extrabold"
           style={{ color: "#E5402F" }}
         >
           {inviteCode}
         </div>
         <div
-          className="inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-xs"
-          style={{ background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)", border: "1px dashed #E0A93B" }}
+          className="inline-flex items-center gap-2 rounded-2xl px-4 py-3"
+          style={{ background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)", border: "1px dashed #E0A93B", fontSize: 12 }}
         >
-          <svg className="w-8 h-5 flex-none">
-            <use href="#c-koban" width="100%" height="100%"/>
-          </svg>
-          <span className="text-[#9A6410] font-bold">このことばを友達に教えると入れます</span>
+          <Engimono name="koban" width={24} height={36} />
+          <span className="font-gothic font-bold text-[#9A6410]">このことばを友達に教えると入れます</span>
         </div>
       </div>
 
@@ -109,7 +108,7 @@ export default function InvitePage() {
       <div className="space-y-3 mb-auto">
         <button
           onClick={shareViaLine}
-          className="w-full flex items-center justify-center gap-2 font-bold py-4 rounded-2xl text-sm active:scale-[0.98] transition-all text-white"
+          className="w-full flex items-center justify-center gap-2 font-gothic font-bold py-4 rounded-2xl text-sm active:scale-[0.98] transition-all text-white"
           style={{ background: "#06C755" }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -120,7 +119,7 @@ export default function InvitePage() {
 
         <button
           onClick={share}
-          className="w-full flex items-center justify-center gap-2 bg-surface py-3.5 rounded-2xl text-sm text-text active:scale-[0.98] transition-all font-medium"
+          className="w-full flex items-center justify-center gap-2 bg-white py-3.5 rounded-2xl font-gothic text-sm text-[#1A1714] active:scale-[0.98] transition-all font-medium"
           style={{ border: "1px solid rgba(0,0,0,.08)" }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -132,7 +131,7 @@ export default function InvitePage() {
 
         <button
           onClick={copyLink}
-          className="w-full flex items-center justify-center gap-2 bg-surface py-3.5 rounded-2xl text-sm active:scale-[0.98] transition-all font-medium"
+          className="w-full flex items-center justify-center gap-2 bg-white py-3.5 rounded-2xl font-gothic text-sm active:scale-[0.98] transition-all font-medium"
           style={{ border: "1px solid rgba(0,0,0,.08)", color: copied ? "#2BA35F" : "#1A1714" }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -145,14 +144,24 @@ export default function InvitePage() {
         </button>
       </div>
 
-      {/* ロビーへ */}
-      <Link
-        href={`/rooms/${roomId}`}
-        prefetch={true}
-        className="mt-8 w-full text-center text-text-muted text-sm py-3 active:text-text transition-colors block"
-      >
-        友達を待ちながらロビーへ進む →
-      </Link>
+      {/* 待合室 & ホームへ */}
+      <div className="mt-8 flex flex-col gap-3">
+        <Link
+          href={`/rooms/${roomId}`}
+          prefetch={true}
+          className="w-full text-center font-mincho font-extrabold text-paper py-3.5 rounded-2xl active:scale-[0.98] transition-all block"
+          style={{ background: "#E5402F", fontSize: 15 }}
+        >
+          待合室へ進む →
+        </Link>
+        <Link
+          href="/rooms"
+          prefetch={true}
+          className="w-full text-center font-gothic text-sub text-sm py-3 active:opacity-70 transition-opacity block"
+        >
+          寄合所に戻る
+        </Link>
+      </div>
     </div>
   );
 }
