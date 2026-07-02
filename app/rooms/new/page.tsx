@@ -31,7 +31,8 @@ export default function NewRoomPage() {
 
     router.push(`/rooms/${roomId}/invite?code=${inviteCode}`);
 
-    createRoom(user.uid, user.displayName ?? "ゲスト", name.trim(), "realtime", ["王道", "辛口"], roomRef, inviteCode)
+    const topicModes = ["omakase", "custom", "mochiyori"] as const;
+    createRoom(user.uid, user.displayName ?? "ゲスト", name.trim(), "realtime", ["王道", "辛口"], roomRef, inviteCode, topicModes[topicMode])
       .catch((e) => console.error("createRoom failed:", e));
   };
 

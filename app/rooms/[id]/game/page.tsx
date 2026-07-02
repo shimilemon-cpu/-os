@@ -10,6 +10,7 @@ import {
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, RoomDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
+import OdaiSheet from "@/components/OdaiSheet";
 
 const ANSWER_SECONDS = 90;
 const VOTE_SECONDS = 45;
@@ -172,18 +173,24 @@ export default function GamePage() {
       </div>
 
       {/* お題カード */}
-      <div
-        className="mx-[20px] mb-[18px] relative overflow-hidden"
-        style={{ borderRadius: 22, padding: "24px 22px", background: "linear-gradient(140deg,#2BA35F,#1F8A4F)" }}
-      >
-        <Engimono name="cat" width={96} height={104} style={{ position: "absolute", right: -10, bottom: -14, opacity: 0.9 }} />
-        <p className="font-gothic font-extrabold text-[#CFF3DD] mb-2" style={{ fontSize: 12, letterSpacing: "0.1em" }}>
-          ＼ 第{session.currentRound}問のお題 ／
-        </p>
-        <p className="font-mincho font-extrabold text-white" style={{ fontSize: 25, lineHeight: 1.5, maxWidth: "80%" }}>
-          {round.question.text}
-        </p>
-      </div>
+      {round.question.imageUrl ? (
+        <div className="mx-[20px] mb-[18px]">
+          <OdaiSheet imageUrl={round.question.imageUrl} text={round.question.text} roundNumber={session.currentRound} />
+        </div>
+      ) : (
+        <div
+          className="mx-[20px] mb-[18px] relative overflow-hidden"
+          style={{ borderRadius: 22, padding: "24px 22px", background: "linear-gradient(140deg,#2BA35F,#1F8A4F)" }}
+        >
+          <Engimono name="cat" width={96} height={104} style={{ position: "absolute", right: -10, bottom: -14, opacity: 0.9 }} />
+          <p className="font-gothic font-extrabold text-[#CFF3DD] mb-2" style={{ fontSize: 12, letterSpacing: "0.1em" }}>
+            ＼ 第{session.currentRound}問のお題 ／
+          </p>
+          <p className="font-mincho font-extrabold text-white" style={{ fontSize: 25, lineHeight: 1.5, maxWidth: "80%" }}>
+            {round.question.text}
+          </p>
+        </div>
+      )}
 
       {/* 回答数 */}
       <div className="px-[20px] flex items-center gap-[10px] mb-[14px]">

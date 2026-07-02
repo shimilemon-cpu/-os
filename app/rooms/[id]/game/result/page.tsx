@@ -13,7 +13,9 @@ import { publishToEngawa } from "@/lib/ogiri/engawa";
 import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, RoomDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 import Icon from "@/components/Icon";
+import OdaiSheet from "@/components/OdaiSheet";
 import InterstitialAd from "@/components/InterstitialAd";
+import { validatePhoto, uploadRoomPhoto } from "@/lib/ogiri/photos";
 
 type QuestionData = { question: string; genre: string; difficulty: string };
 
@@ -46,6 +48,13 @@ export default function ResultPage() {
   const uid = auth.currentUser?.uid ?? "";
   const isHost = room?.hostId === uid;
   const [showInterstitial, setShowInterstitial] = useState(false);
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
+  const [nextPhotoFile, setNextPhotoFile] = useState<File | null>(null);
+  const [nextPhotoPreview, setNextPhotoPreview] = useState<string | null>(null);
+  const [nextPhotoCaption, setNextPhotoCaption] = useState("");
+  const [nextPhotoError, setNextPhotoError] = useState("");
+  const [uploadingNext, setUploadingNext] = useState(false);
+  const nextFileInputRef = useRef<HTMLInputElement>(null);
   const advancingRef = useRef(false);
   const prefetchRef = useRef<Promise<QuestionData> | null>(null);
   const publishedRef = useRef(false);
@@ -69,15 +78,16 @@ export default function ResultPage() {
   }, [roomId, sessionId, roundParam, router]);
 
   useEffect(() => {
-    if (!isHost || !session) return;
+    if (!isHost || !session || room?.topicMode === "mochiyori") return;
     if (session.currentRound >= session.totalRounds) return;
     if (prefetchRef.current) return;
     prefetchRef.current = prefetchQuestion();
-  }, [isHost, session]);
+  }, [isHost, session, room?.topicMode]);
 
-  // Auto-publish to engawa once when result page mounts (any player can trigger)
+  // Auto-publish to engawa once — skip photo rounds (room-only)
   useEffect(() => {
     if (!round || !session || publishedRef.current) return;
+    if (round.question.imageUrl) return;
     publishedRef.current = true;
     publishToEngawa(sessionId, roundParam, round.question).catch(console.error);
   }, [round, session, sessionId, roundParam]);
@@ -93,6 +103,16 @@ export default function ResultPage() {
     }
   }, [sessionId, roomId]);
 
+  const handleNextPhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const err = validatePhoto(file);
+    if (err) { setNextPhotoError(err); return; }
+    setNextPhotoError("");
+    setNextPhotoFile(file);
+    setNextPhotoPreview(URL.createObjectURL(file));
+  };
+
   const goNext = useCallback(async () => {
     if (!session || !isHost || advancingRef.current) return;
     const nextRound = session.currentRound + 1;
@@ -100,21 +120,43 @@ export default function ResultPage() {
       setShowInterstitial(true);
       return;
     }
+    const isMochiyori = room?.topicMode === "mochiyori";
+    if (isMochiyori && !nextPhotoFile) {
+      setShowPhotoUpload(true);
+      return;
+    }
     advancingRef.current = true;
     try {
-      const data = await (prefetchRef.current ?? prefetchQuestion());
-      prefetchRef.current = null;
-      await createRound(sessionId, nextRound, {
-        text: data.question,
-        genre: data.genre as never,
-        difficulty: data.difficulty as never,
-      }, ANSWER_SECONDS);
+      if (isMochiyori && nextPhotoFile) {
+        setUploadingNext(true);
+        const imageUrl = await uploadRoomPhoto(roomId, nextRound, nextPhotoFile);
+        setUploadingNext(false);
+        await createRound(sessionId, nextRound, {
+          text: nextPhotoCaption || "この写真で一言",
+          genre: "その他" as never,
+          difficulty: "中級" as never,
+          imageUrl,
+        }, ANSWER_SECONDS);
+      } else {
+        const data = await (prefetchRef.current ?? prefetchQuestion());
+        prefetchRef.current = null;
+        await createRound(sessionId, nextRound, {
+          text: data.question,
+          genre: data.genre as never,
+          difficulty: data.difficulty as never,
+        }, ANSWER_SECONDS);
+      }
       await updateRound(sessionId, roundParam, { status: "done" });
       await updateSession(sessionId, { currentRound: nextRound, status: "answering" });
+      setShowPhotoUpload(false);
+      setNextPhotoFile(null);
+      setNextPhotoPreview(null);
+      setNextPhotoCaption("");
     } finally {
       advancingRef.current = false;
+      setUploadingNext(false);
     }
-  }, [session, isHost, sessionId, roundParam]);
+  }, [session, isHost, sessionId, roundParam, room?.topicMode, roomId, nextPhotoFile, nextPhotoCaption]);
 
   const tally = tallyVotes(votes);
   const sorted = [...answers].sort((a, b) => (tally[b.id]?.total ?? 0) - (tally[a.id]?.total ?? 0));
@@ -124,6 +166,89 @@ export default function ResultPage() {
     <div className="min-h-screen flex flex-col bg-paper">
       {showInterstitial && (
         <InterstitialAd onClose={() => { setShowInterstitial(false); doFinish(); }} skipAfter={5} />
+      )}
+
+      {/* 持ち寄り写真アップロード（次ラウンド用） */}
+      {showPhotoUpload && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(0,0,0,.5)" }}>
+          <div
+            className="w-full max-w-sm bg-paper animate-rise"
+            style={{ borderRadius: "24px 24px 0 0", padding: "20px 20px 30px", maxHeight: "80vh", overflowY: "auto" }}
+          >
+            <div className="flex items-center justify-between mb-[14px]">
+              <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 18 }}>
+                次のお題写真
+              </p>
+              <button
+                onClick={() => setShowPhotoUpload(false)}
+                className="font-gothic text-sub"
+                style={{ fontSize: 13 }}
+              >
+                キャンセル
+              </button>
+            </div>
+            <input
+              ref={nextFileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleNextPhotoSelect}
+            />
+            {nextPhotoPreview ? (
+              <div className="space-y-[10px]">
+                <OdaiSheet
+                  imageUrl={nextPhotoPreview}
+                  text={nextPhotoCaption || "この写真で一言"}
+                  roundNumber={session ? session.currentRound + 1 : undefined}
+                />
+                <input
+                  className="w-full bg-white font-gothic font-bold text-[#1A1714] outline-none"
+                  style={{ border: "1px solid rgba(0,0,0,.07)", borderRadius: 14, padding: "11px 14px", fontSize: 14 }}
+                  placeholder="お題テキスト（任意）"
+                  maxLength={30}
+                  value={nextPhotoCaption}
+                  onChange={(e) => setNextPhotoCaption(e.target.value)}
+                />
+                <div className="flex gap-[8px]">
+                  <button
+                    onClick={() => { setNextPhotoFile(null); setNextPhotoPreview(null); }}
+                    className="flex-1 font-gothic font-bold text-sub active:scale-[0.98] transition-transform"
+                    style={{ fontSize: 13, padding: "12px 0", borderRadius: 14, border: "1px solid rgba(0,0,0,.1)" }}
+                  >
+                    変更
+                  </button>
+                  <button
+                    onClick={goNext}
+                    disabled={uploadingNext}
+                    className="flex-1 font-mincho font-extrabold text-paper active:scale-[0.98] transition-all disabled:opacity-40"
+                    style={{ fontSize: 15, padding: "12px 0", borderRadius: 14, background: "#2BA35F" }}
+                  >
+                    {uploadingNext ? "アップロード中…" : "この写真で開始"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => nextFileInputRef.current?.click()}
+                className="w-full flex flex-col items-center gap-[8px] active:scale-[0.98] transition-transform"
+                style={{
+                  borderRadius: 18, padding: "28px 16px",
+                  border: "2px dashed #E0A93B",
+                  background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)",
+                }}
+              >
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E0A93B" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="3" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="M21 15l-5-5L5 21" />
+                </svg>
+                <p className="font-gothic font-extrabold text-[#9A6410]" style={{ fontSize: 13 }}>写真を選ぶ</p>
+                <p className="font-gothic text-sub" style={{ fontSize: 11 }}>カメラロールからお題写真をアップロード</p>
+              </button>
+            )}
+            {nextPhotoError && <p className="font-gothic text-red mt-1" style={{ fontSize: 11 }}>{nextPhotoError}</p>}
+          </div>
+        </div>
       )}
 
       {/* AppBar */}

@@ -12,12 +12,15 @@ export interface UserDoc {
 export type RoomMode = "realtime" | "async";
 export type RoomStatus = "waiting" | "active" | "finished";
 
+export type TopicMode = "omakase" | "custom" | "mochiyori";
+
 export interface RoomDoc {
   id: string;
   name: string;
   hostId: string;
   inviteCode: string;
   mode: RoomMode;
+  topicMode: TopicMode;
   status: RoomStatus;
   memberIds: string[];       // max 5
   judges?: AiPersona[];     // undefined → ["王道", "辛口"]
@@ -61,6 +64,7 @@ export interface RoundDoc {
     text: string;
     genre: Genre;
     difficulty: Difficulty;
+    imageUrl?: string | null;
   };
   status: RoundStatus;
   answerCount: number;

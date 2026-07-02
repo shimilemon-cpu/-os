@@ -167,6 +167,12 @@ export default function VotePage() {
         style={{ borderRadius: 16, padding: "13px 15px", border: "1px solid rgba(0,0,0,.07)" }}
       >
         <p className="font-gothic text-sub mb-1" style={{ fontSize: 11 }}>お題</p>
+        {round.question.imageUrl && (
+          <div className="mb-2" style={{ borderRadius: 10, overflow: "hidden" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={round.question.imageUrl} alt="お題の写真" className="w-full" style={{ maxHeight: 140, objectFit: "cover" }} />
+          </div>
+        )}
         <p className="font-mincho font-bold text-[#1A1714]" style={{ fontSize: 16, lineHeight: 1.4 }}>
           {round.question.text}
         </p>

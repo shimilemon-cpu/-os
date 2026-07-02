@@ -6,8 +6,10 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { subscribeRoom, subscribeMembers, setMemberReady, startGame } from "@/lib/ogiri/rooms";
 import { createSession, createRound, getActiveSession } from "@/lib/ogiri/sessions";
+import { validatePhoto, uploadRoomPhoto } from "@/lib/ogiri/photos";
 import type { RoomDoc, RoomMemberDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
+import OdaiSheet from "@/components/OdaiSheet";
 
 type QuestionData = { question: string; genre: string; difficulty: string };
 
@@ -33,6 +35,12 @@ export default function WaitingRoomPage() {
   const [starting, setStarting] = useState(false);
   const [uid, setUid] = useState(auth.currentUser?.uid ?? "");
   const prefetchRef = useRef<Promise<QuestionData> | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoCaption, setPhotoCaption] = useState("");
+  const [photoError, setPhotoError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => setUid(user?.uid ?? ""));
@@ -51,6 +59,17 @@ export default function WaitingRoomPage() {
     return () => { unsub1(); unsub2(); };
   }, [roomId, router]);
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const err = validatePhoto(file);
+    if (err) { setPhotoError(err); return; }
+    setPhotoError("");
+    setPhotoFile(file);
+    const url = URL.createObjectURL(file);
+    setPhotoPreview(url);
+  };
+
   const copyInvite = async () => {
     if (!room) return;
     const link = `${window.location.origin}/invite/${room.inviteCode}`;
@@ -66,24 +85,39 @@ export default function WaitingRoomPage() {
 
   const handleStart = useCallback(async () => {
     if (!room) return;
+    const isMochiyori = room.topicMode === "mochiyori";
+    if (isMochiyori && !photoFile) return;
     setStarting(true);
     try {
       const sessionId = await createSession(roomId, 5);
-      const data = await (prefetchRef.current ?? prefetchQuestion());
-      await createRound(sessionId, 1, {
-        text: data.question,
-        genre: data.genre as never,
-        difficulty: data.difficulty as never,
-      }, ANSWER_SECONDS);
+      if (isMochiyori && photoFile) {
+        setUploading(true);
+        const imageUrl = await uploadRoomPhoto(roomId, 1, photoFile);
+        setUploading(false);
+        await createRound(sessionId, 1, {
+          text: photoCaption || "この写真で一言",
+          genre: "その他" as never,
+          difficulty: "中級" as never,
+          imageUrl,
+        }, ANSWER_SECONDS);
+      } else {
+        const data = await (prefetchRef.current ?? prefetchQuestion());
+        await createRound(sessionId, 1, {
+          text: data.question,
+          genre: data.genre as never,
+          difficulty: data.difficulty as never,
+        }, ANSWER_SECONDS);
+        prefetchRef.current = null;
+      }
       await startGame(roomId);
-      prefetchRef.current = null;
       router.push(`/rooms/${roomId}/game?sid=${sessionId}`);
     } catch (e) {
       console.error(e);
       prefetchRef.current = null;
       setStarting(false);
+      setUploading(false);
     }
-  }, [room, roomId, router]);
+  }, [room, roomId, router, photoFile, photoCaption]);
 
   const isHost = room?.hostId === uid;
   const me = members.find((m) => m.userId === uid);
@@ -193,6 +227,70 @@ export default function WaitingRoomPage() {
         ))}
       </div>
 
+      {/* 持ち寄りお題アップロード */}
+      {room.topicMode === "mochiyori" && isHost && (
+        <div className="mx-[20px] mb-[14px]">
+          <div className="flex items-center gap-[8px] mb-[8px]">
+            <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
+            <p className="font-mincho font-extrabold text-sub" style={{ fontSize: 11, letterSpacing: "0.16em" }}>
+              ◆ お題の写真を選ぶ
+            </p>
+            <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoSelect}
+          />
+          {photoPreview ? (
+            <div className="space-y-[10px] animate-rise">
+              <OdaiSheet imageUrl={photoPreview} text={photoCaption || "この写真で一言"} roundNumber={1} />
+              <input
+                className="w-full bg-white font-gothic font-bold text-[#1A1714] outline-none"
+                style={{ border: "1px solid rgba(0,0,0,.07)", borderRadius: 14, padding: "11px 14px", fontSize: 14 }}
+                placeholder="お題テキスト（任意）例：この写真で一言"
+                maxLength={30}
+                value={photoCaption}
+                onChange={(e) => setPhotoCaption(e.target.value)}
+              />
+              <button
+                onClick={() => { setPhotoFile(null); setPhotoPreview(null); setPhotoCaption(""); }}
+                className="w-full font-gothic font-bold text-sub active:scale-[0.98] transition-transform"
+                style={{ fontSize: 12, padding: "8px 0", borderRadius: 12, border: "1px solid rgba(0,0,0,.1)" }}
+              >
+                写真を変更
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full flex flex-col items-center gap-[8px] active:scale-[0.98] transition-transform"
+              style={{
+                borderRadius: 18,
+                padding: "24px 16px",
+                border: "2px dashed #E0A93B",
+                background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)",
+              }}
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E0A93B" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="3" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+              <p className="font-gothic font-extrabold text-[#9A6410]" style={{ fontSize: 13 }}>
+                写真を選ぶ
+              </p>
+              <p className="font-gothic text-sub" style={{ fontSize: 11 }}>
+                カメラロールからお題の写真をアップロード
+              </p>
+            </button>
+          )}
+          {photoError && <p className="font-gothic text-red mt-1" style={{ fontSize: 11 }}>{photoError}</p>}
+        </div>
+      )}
+
       {/* アクションボタン */}
       <div className="px-[20px] flex flex-col gap-[10px] mt-auto">
         {!isHost && (
@@ -213,14 +311,18 @@ export default function WaitingRoomPage() {
         {isHost && (
           <button
             onClick={handleStart}
-            disabled={members.length < 2 || !allReady || starting}
+            disabled={members.length < 2 || !allReady || starting || (room.topicMode === "mochiyori" && !photoFile)}
             className="w-full font-mincho font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-all"
             style={{ fontSize: 18, padding: "16px 0", borderRadius: 18, background: "#2BA35F", boxShadow: "0 14px 26px -10px rgba(43,163,95,.6)" }}
           >
-            {starting
+            {uploading
+              ? "写真をアップロード中…"
+              : starting
               ? "お題を生成中…"
               : members.length < 2
               ? "あと1人招待してください"
+              : room.topicMode === "mochiyori" && !photoFile
+              ? "お題の写真を選んでください"
               : !allReady
               ? `全員の準備を待っています (${readyCount}/${members.length})`
               : "大喜利、始め！"}
