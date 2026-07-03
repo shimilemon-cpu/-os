@@ -94,7 +94,7 @@ export default function RoomsPage() {
 
   const activeRooms = rooms.filter((r) => r.status !== "finished");
   const finishedRooms = rooms.filter((r) => r.status === "finished");
-  const displayed = tab === 2 ? finishedRooms : tab === 0 ? activeRooms : [];
+  const displayed = tab === 0 ? activeRooms : finishedRooms;
 
   return (
     <div className="min-h-screen flex flex-col bg-paper bg-asanoha pb-[78px]">
@@ -135,7 +135,7 @@ export default function RoomsPage() {
 
       {/* Segmented control */}
       <div className="mx-[20px] mb-[12px] flex gap-[4px] p-[4px]" style={{ background: "#EBE2CF", borderRadius: 14 }}>
-        {["公開の間", "仲間内", "のれん履歴"].map((label, i) => (
+        {["開演中", "のれん履歴"].map((label, i) => (
           <button
             key={i}
             onClick={() => setTab(i)}
@@ -156,7 +156,7 @@ export default function RoomsPage() {
       <div className="px-[20px] flex items-center gap-[8px] mt-[4px] mb-[8px]">
         <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
         <p className="font-mincho font-extrabold text-sub" style={{ fontSize: 11, letterSpacing: "0.16em" }}>
-          {tab === 0 ? "◆ 開演中の部屋" : tab === 1 ? "◆ 仲間内の部屋" : "◆ のれん履歴"}
+          {tab === 0 ? "◆ 開演中の部屋" : "◆ のれん履歴"}
         </p>
         <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
       </div>
