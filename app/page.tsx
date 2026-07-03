@@ -10,6 +10,11 @@ export default function LandingPage() {
   const router = useRouter();
 
   useEffect(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("ogiri_nickname") : null;
+    if (saved) {
+      router.replace("/auth/login");
+      return;
+    }
     const unsub = onAuthStateChanged(auth, (user) => {
       if (user) router.replace("/rooms");
     });

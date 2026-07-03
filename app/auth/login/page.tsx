@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signInAnonymously, updateProfile } from "firebase/auth";
-import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
+import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/client";
 import Engimono from "@/components/Engimono";
 import Noren from "@/components/Noren";
@@ -28,42 +28,46 @@ function LoginInner() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/rooms";
 
-  const [nickname, setNickname] = useState("");
+  const saved = typeof window !== "undefined" ? localStorage.getItem(NICKNAME_KEY) : null;
+  const [nickname, setNickname] = useState(() => {
+    return saved ?? NAME_SUGGESTIONS[Math.floor(Math.random() * NAME_SUGGESTIONS.length)];
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const didAutoStart = useRef(false);
 
-  useEffect(() => {
-    const saved = typeof window !== "undefined" ? localStorage.getItem(NICKNAME_KEY) : null;
-    if (saved) setNickname(saved);
-    auth.authStateReady().then(() => {
-      if (auth.currentUser) router.replace(next);
-    });
-  }, [router, next]);
-
-  const start = async () => {
-    const name = nickname.trim();
+  const quickStart = async (name: string) => {
     if (!name || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
       const cred = auth.currentUser ? { user: auth.currentUser } : await signInAnonymously(auth);
       const user = cred.user;
-      await updateProfile(user, { displayName: name });
-      const userRef = doc(db, "users", user.uid);
-      const snap = await getDoc(userRef);
-      if (!snap.exists()) {
-        await setDoc(userRef, { nickname: name, avatarUrl: null, createdAt: Timestamp.now() });
-      } else {
-        await setDoc(userRef, { nickname: name }, { merge: true });
-      }
       localStorage.setItem(NICKNAME_KEY, name);
       router.replace(next);
+      updateProfile(user, { displayName: name }).catch(console.error);
+      const userRef = doc(db, "users", user.uid);
+      setDoc(userRef, { nickname: name, avatarUrl: null, createdAt: Timestamp.now() }, { merge: true }).catch(console.error);
     } catch (e) {
       console.error("[auth] anonymous sign-in failed:", e);
       setError("入室に失敗しました。もう一度お試しください。");
       setSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (didAutoStart.current) return;
+    if (saved) {
+      didAutoStart.current = true;
+      auth.authStateReady().then(() => {
+        if (auth.currentUser) {
+          router.replace(next);
+        } else {
+          quickStart(saved);
+        }
+      });
+    }
+  }, []);
 
   const pickSuggestion = (name: string) => {
     setNickname(name);
@@ -138,7 +142,7 @@ function LoginInner() {
               value={nickname}
               autoFocus
               onChange={(e) => setNickname(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && start()}
+              onKeyDown={(e) => e.key === "Enter" && quickStart(nickname.trim())}
             />
             <div className="flex justify-between items-center mt-1.5 font-gothic text-sub" style={{ fontSize: 10 }}>
               <span>ひらがな・カタカナ・漢字OK</span>
@@ -168,7 +172,7 @@ function LoginInner() {
 
           {/* CTA */}
           <button
-            onClick={start}
+            onClick={() => quickStart(nickname.trim())}
             disabled={!nickname.trim() || submitting}
             className="w-full font-mincho font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-transform relative"
             style={{
