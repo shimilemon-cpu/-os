@@ -7,7 +7,6 @@ const mincho = Shippori_Mincho_B1({
   weight: ["500", "700", "800"],
   subsets: ["latin"],
   display: "swap",
-  preload: false,
   variable: "--font-mincho",
 });
 
@@ -15,7 +14,6 @@ const kaku = Zen_Kaku_Gothic_New({
   weight: ["400", "500", "700", "900"],
   subsets: ["latin"],
   display: "swap",
-  preload: false,
   variable: "--font-kaku",
 });
 

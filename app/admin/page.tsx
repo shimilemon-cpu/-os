@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { collection, getDocs, query, orderBy, limit, doc, deleteDoc } from "firebase/firestore";
-import { ref, deleteObject } from "firebase/storage";
-import { auth, db, storage } from "@/lib/firebase/client";
+import { auth, db, getStorageLazy } from "@/lib/firebase/client";
 import type { RoomDoc } from "@/lib/types";
 
 interface PhotoItem {
@@ -75,6 +74,8 @@ export default function AdminPage() {
     if (!confirm("この写真を削除しますか？削除すると元に戻せません。")) return;
     setDeleting(photo.imageUrl);
     try {
+      const storage = await getStorageLazy();
+      const { ref, deleteObject } = await import("firebase/storage");
       try {
         const storageRef = ref(storage, photo.imageUrl);
         await deleteObject(storageRef);

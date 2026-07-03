@@ -1,5 +1,4 @@
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "@/lib/firebase/client";
+import { getStorageLazy } from "@/lib/firebase/client";
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
@@ -28,7 +27,6 @@ function stripExif(file: File): Promise<Blob> {
           break;
         }
         const segLen = view.getUint16(offset + 2);
-        // Skip APP1 (Exif) and APP2 (ICC profile if overly large)
         if (marker === 0xFFE1) {
           offset += 2 + segLen;
           continue;
@@ -56,6 +54,8 @@ export async function uploadRoomPhoto(
   const stripped = await stripExif(file);
   const ext = file.name.split(".").pop() ?? "jpg";
   const path = `rooms/${roomId}/odai/${roundIndex}_${Date.now()}.${ext}`;
+  const storage = await getStorageLazy();
+  const { ref, uploadBytes, getDownloadURL } = await import("firebase/storage");
   const storageRef = ref(storage, path);
   await uploadBytes(storageRef, stripped, { contentType: file.type });
   return getDownloadURL(storageRef);
