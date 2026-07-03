@@ -77,74 +77,6 @@ function RoomCard({ room }: { room: RoomDoc }) {
   );
 }
 
-function JoinByCode({ onJoined }: { onJoined: (id: string) => void }) {
-  const [code, setCode] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const join = async () => {
-    if (code.length < 2) return;
-    setLoading(true);
-    setError("");
-    try {
-      const user = auth.currentUser;
-      if (!user) throw new Error("未ログイン");
-      const { joinRoomByCode } = await import("@/lib/ogiri/rooms");
-      const { getDoc, doc, setDoc, Timestamp } = await import("firebase/firestore");
-      const { db } = await import("@/lib/firebase/client");
-      const roomId = await joinRoomByCode(code, user.uid, user.displayName ?? "ゲスト");
-      const snap = await getDoc(doc(db, "users", user.uid));
-      if (!snap.exists()) {
-        await setDoc(doc(db, "users", user.uid), { nickname: user.displayName ?? "ゲスト", avatarUrl: user.photoURL ?? null, createdAt: Timestamp.now() });
-      }
-      onJoined(roomId);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "参加に失敗しました");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div
-      className="bg-white animate-rise"
-      style={{ borderRadius: 18, border: "1px solid rgba(0,0,0,.07)", padding: "14px" }}
-    >
-      <div className="flex gap-[13px] items-center">
-        <div
-          className="shrink-0 grid place-items-center"
-          style={{ width: 54, height: 54, borderRadius: 16, background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)" }}
-        >
-          <Engimono name="koban" width={22} height={34} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-gothic font-extrabold text-[#9A6410] mb-1.5" style={{ fontSize: 12 }}>あいことばで入る</p>
-          <div className="flex gap-2">
-            <input
-              className="flex-1 min-w-0 rounded-[10px] px-3 py-2 font-gothic font-bold text-[#1A1714] text-sm tracking-widest outline-none"
-              style={{ background: "#FBF7EC", border: "1.5px solid #E0A93B" }}
-              placeholder="ひらがな4文字"
-              maxLength={8}
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && join()}
-            />
-            <button
-              onClick={join}
-              disabled={code.length < 2 || loading}
-              className="font-gothic font-extrabold text-paper disabled:opacity-40 shrink-0"
-              style={{ fontSize: 12, padding: "0 14px", borderRadius: 10, background: "#E5402F" }}
-            >
-              {loading ? "…" : "入室"}
-            </button>
-          </div>
-        </div>
-      </div>
-      {error && <p className="font-gothic text-red mt-2" style={{ fontSize: 11 }}>{error}</p>}
-    </div>
-  );
-}
-
 export default function RoomsPage() {
   const router = useRouter();
   const [rooms, setRooms] = useState<RoomDoc[]>([]);
@@ -231,8 +163,29 @@ export default function RoomsPage() {
 
       {/* Room list */}
       <div className="flex-1 px-[20px] pb-[14px] flex flex-col gap-[10px]">
-        {/* あいことば入力（部屋一覧の先頭に統合） */}
-        <JoinByCode onJoined={(id) => router.push(`/rooms/${id}`)} />
+        {/* あいことばで入室カード */}
+        <Link
+          href="/rooms/join"
+          className="bg-white flex gap-[13px] items-center active:scale-[0.98] transition-transform"
+          style={{ borderRadius: 18, border: "1.5px dashed #E0A93B", padding: "14px", background: "linear-gradient(100deg,#FFFDF5,#FFF9E8)" }}
+        >
+          <div
+            className="shrink-0 grid place-items-center"
+            style={{ width: 54, height: 54, borderRadius: 16, background: "linear-gradient(135deg,#FFF7E0,#FCEAC6)" }}
+          >
+            <Engimono name="koban" width={22} height={34} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-gothic font-extrabold text-[#1A1714]" style={{ fontSize: 15 }}>あいことばで入室</p>
+            <p className="font-gothic text-[#9A6410]" style={{ fontSize: 12 }}>合言葉を持っている方はこちら</p>
+          </div>
+          <span
+            className="font-gothic font-extrabold shrink-0"
+            style={{ fontSize: 12, padding: "8px 13px", borderRadius: 999, background: "#E5402F", color: "#FBF7EC" }}
+          >
+            入室
+          </span>
+        </Link>
 
         {loading ? (
           <div className="flex justify-center py-12">
