@@ -1,6 +1,6 @@
 import {
   collection, doc, addDoc, updateDoc, onSnapshot,
-  Timestamp, query, where, getDocs, orderBy, limit, setDoc,
+  Timestamp, query, where, getDocs, orderBy, limit, setDoc, increment,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, Reaction } from "@/lib/types";
@@ -74,19 +74,15 @@ export async function submitAnswer(
   userId: string,
   text: string
 ): Promise<void> {
-  const answersSnap = await getDocs(
-    collection(db, "sessions", sessionId, "rounds", roundId, "answers")
-  );
   const answerRef = doc(collection(db, "sessions", sessionId, "rounds", roundId, "answers"));
+  const roundRef = doc(db, "sessions", sessionId, "rounds", roundId);
   await setDoc(answerRef, {
     userId,
-    displayOrder: answersSnap.size,
+    displayOrder: 0,
     text,
     submittedAt: Timestamp.now(),
   } satisfies Omit<AnswerDoc, "id">);
-  await updateDoc(doc(db, "sessions", sessionId, "rounds", roundId), {
-    answerCount: answersSnap.size + 1,
-  });
+  await updateDoc(roundRef, { answerCount: increment(1) });
 }
 
 export function subscribeAnswers(sessionId: string, roundId: string, cb: (a: AnswerDoc[]) => void) {

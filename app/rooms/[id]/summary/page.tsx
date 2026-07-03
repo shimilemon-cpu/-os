@@ -42,21 +42,27 @@ export default function SummaryPage() {
     if (!sessionId) return;
     const load = async () => {
       try {
-        const roundsSnap = await getDocs(collection(db, "sessions", sessionId, "rounds"));
+        const [roundsSnap, membersSnap] = await Promise.all([
+          getDocs(collection(db, "sessions", sessionId, "rounds")),
+          getDocs(collection(db, "rooms", roomId, "members")),
+        ]);
         const summaries: RoundSummary[] = [];
         const scoreMap: Record<string, number> = {};
         const nicknameMap: Record<string, string> = {};
         const answersByUser: Record<string, string[]> = {};
 
-        for (const roundDoc of roundsSnap.docs) {
-          const roundData = roundDoc.data();
-          const answersSnap = await getDocs(
-            collection(db, "sessions", sessionId, "rounds", roundDoc.id, "answers")
-          );
-          const votesSnap = await getDocs(
-            collection(db, "sessions", sessionId, "rounds", roundDoc.id, "votes")
-          );
+        const roundResults = await Promise.all(
+          roundsSnap.docs.map(async (roundDoc) => {
+            const [answersSnap, votesSnap] = await Promise.all([
+              getDocs(collection(db, "sessions", sessionId, "rounds", roundDoc.id, "answers")),
+              getDocs(collection(db, "sessions", sessionId, "rounds", roundDoc.id, "votes")),
+            ]);
+            return { roundDoc, answersSnap, votesSnap };
+          })
+        );
 
+        for (const { roundDoc, answersSnap, votesSnap } of roundResults) {
+          const roundData = roundDoc.data();
           const answers = answersSnap.docs.map((d) => ({ id: d.id, ...d.data() } as AnswerDoc));
           const votes = votesSnap.docs.map((d) => d.data() as VoteDoc);
           const tally = tallyVotes(votes);
@@ -79,8 +85,6 @@ export default function SummaryPage() {
               : null,
           });
         }
-
-        const membersSnap = await getDocs(collection(db, "rooms", roomId, "members"));
         for (const d of membersSnap.docs) {
           nicknameMap[d.id] = (d.data().nickname as string) ?? d.id;
         }

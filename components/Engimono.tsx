@@ -141,7 +141,9 @@ const SHAPES: Record<EngimonoName, () => React.ReactElement> = {
   mask: Mask,
 };
 
-export default function Engimono({ name, width, height, className, style }: Props) {
+import { memo } from "react";
+
+export default memo(function Engimono({ name, width, height, className, style }: Props) {
   const Shape = SHAPES[name];
   return (
     <svg
@@ -155,4 +157,4 @@ export default function Engimono({ name, width, height, className, style }: Prop
       <Shape />
     </svg>
   );
-}
+});
