@@ -23,6 +23,7 @@ export default function NewRoomPage() {
   const [selectedGenre, setSelectedGenre] = useState<Genre>("定番");
   const [capacity, setCapacity] = useState(8);
   const [timeLimit, setTimeLimit] = useState(90);
+  const [asyncHours, setAsyncHours] = useState(4);
   const [useCode, setUseCode] = useState(true);
   const [error, setError] = useState("");
   const [roomMode, setRoomMode] = useState<0 | 1>(0); // 0=realtime, 1=async
@@ -33,7 +34,7 @@ export default function NewRoomPage() {
     const user = auth.currentUser;
     if (!user) { setError("未ログイン"); return; }
 
-    const inviteCode = useCode ? aikotoba.toUpperCase() : generateInviteCode();
+    const inviteCode = useCode ? aikotoba : generateInviteCode();
     const roomRef = generateRoomRef();
     const roomId = roomRef.id;
 
@@ -175,21 +176,47 @@ export default function NewRoomPage() {
 
           {/* 制限時間 */}
           <div className="flex-1 bg-white" style={{ border: "1px solid rgba(0,0,0,.07)", borderRadius: 14, padding: "12px 14px" }}>
-            <p className="font-gothic text-sub mb-2" style={{ fontSize: 11 }}>回答の制限時間</p>
-            <p className="font-mincho font-extrabold text-[#1A1714] mb-2" style={{ fontSize: 20 }}>{timeLimit} 秒</p>
-            <div className="relative" style={{ height: 5, background: "#EBE2CF", borderRadius: 9 }}>
-              <div style={{ width: `${sliderPct}%`, height: "100%", background: "#E5402F", borderRadius: 9 }} />
-              <div
-                className="absolute top-1/2 bg-white"
-                style={{ left: `${sliderPct}%`, transform: "translate(-50%,-50%)", width: 14, height: 14, borderRadius: "50%", border: "3px solid #E5402F" }}
-              />
-              <input
-                type="range" min={30} max={180} step={15}
-                value={timeLimit}
-                onChange={(e) => setTimeLimit(Number(e.target.value))}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full"
-              />
-            </div>
+            <p className="font-gothic text-sub mb-2" style={{ fontSize: 11 }}>
+              {roomMode === 0 ? "回答の制限時間" : "回答の締切"}
+            </p>
+            {roomMode === 0 ? (
+              <>
+                <p className="font-mincho font-extrabold text-[#1A1714] mb-2" style={{ fontSize: 20 }}>{timeLimit} 秒</p>
+                <div className="relative" style={{ height: 5, background: "#EBE2CF", borderRadius: 9 }}>
+                  <div style={{ width: `${sliderPct}%`, height: "100%", background: "#E5402F", borderRadius: 9 }} />
+                  <div
+                    className="absolute top-1/2 bg-white"
+                    style={{ left: `${sliderPct}%`, transform: "translate(-50%,-50%)", width: 14, height: 14, borderRadius: "50%", border: "3px solid #E5402F" }}
+                  />
+                  <input
+                    type="range" min={30} max={180} step={15}
+                    value={timeLimit}
+                    onChange={(e) => setTimeLimit(Number(e.target.value))}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="font-mincho font-extrabold text-[#1A1714] mb-2" style={{ fontSize: 20 }}>{asyncHours} 時間</p>
+                <div className="flex flex-wrap gap-[6px]">
+                  {[2, 4, 6, 8, 12, 24].map((h) => (
+                    <button
+                      key={h}
+                      onClick={() => setAsyncHours(h)}
+                      className="font-gothic font-bold"
+                      style={{
+                        fontSize: 12, padding: "5px 10px", borderRadius: 999,
+                        background: asyncHours === h ? "#E5402F" : "#EBE2CF",
+                        color: asyncHours === h ? "#FBF7EC" : "#52493A",
+                      }}
+                    >
+                      {h}h
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 

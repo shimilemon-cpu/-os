@@ -83,7 +83,7 @@ function JoinByCode({ onJoined }: { onJoined: (id: string) => void }) {
   const [loading, setLoading] = useState(false);
 
   const join = async () => {
-    if (code.length < 4) return;
+    if (code.length < 2) return;
     setLoading(true);
     setError("");
     try {
@@ -106,28 +106,41 @@ function JoinByCode({ onJoined }: { onJoined: (id: string) => void }) {
   };
 
   return (
-    <div className="bg-white rounded-[16px] p-4 space-y-2 animate-rise" style={{ border: "1px solid rgba(0,0,0,.07)" }}>
-      <div className="flex gap-2">
-        <input
-          className="flex-1 rounded-[12px] px-4 py-2.5 font-gothic text-[#1A1714] text-sm uppercase tracking-widest outline-none"
-          style={{ background: "#EBE2CF", border: "1px solid rgba(0,0,0,.07)" }}
-          placeholder="あいことば"
-          maxLength={6}
-          value={code}
-          autoFocus
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          onKeyDown={(e) => e.key === "Enter" && join()}
-        />
-        <button
-          onClick={join}
-          disabled={code.length < 4 || loading}
-          className="font-gothic font-extrabold text-paper disabled:opacity-40"
-          style={{ fontSize: 13, padding: "0 16px", borderRadius: 12, background: "#E5402F" }}
+    <div
+      className="bg-white animate-rise"
+      style={{ borderRadius: 18, border: "1px solid rgba(0,0,0,.07)", padding: "14px" }}
+    >
+      <div className="flex gap-[13px] items-center">
+        <div
+          className="shrink-0 grid place-items-center"
+          style={{ width: 54, height: 54, borderRadius: 16, background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)" }}
         >
-          {loading ? "…" : "入る"}
-        </button>
+          <Engimono name="koban" width={22} height={34} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-gothic font-extrabold text-[#9A6410] mb-1.5" style={{ fontSize: 12 }}>あいことばで入る</p>
+          <div className="flex gap-2">
+            <input
+              className="flex-1 min-w-0 rounded-[10px] px-3 py-2 font-gothic font-bold text-[#1A1714] text-sm tracking-widest outline-none"
+              style={{ background: "#FBF7EC", border: "1.5px solid #E0A93B" }}
+              placeholder="ひらがな4文字"
+              maxLength={8}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && join()}
+            />
+            <button
+              onClick={join}
+              disabled={code.length < 2 || loading}
+              className="font-gothic font-extrabold text-paper disabled:opacity-40 shrink-0"
+              style={{ fontSize: 12, padding: "0 14px", borderRadius: 10, background: "#E5402F" }}
+            >
+              {loading ? "…" : "入室"}
+            </button>
+          </div>
+        </div>
       </div>
-      {error && <p className="text-red text-xs font-gothic">{error}</p>}
+      {error && <p className="font-gothic text-red mt-2" style={{ fontSize: 11 }}>{error}</p>}
     </div>
   );
 }
@@ -136,7 +149,6 @@ export default function RoomsPage() {
   const router = useRouter();
   const [rooms, setRooms] = useState<RoomDoc[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showJoin, setShowJoin] = useState(false);
   const [tab, setTab] = useState(0);
 
   useEffect(() => {
@@ -179,14 +191,14 @@ export default function RoomsPage() {
           <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 22, lineHeight: 1.1 }}>寄合所</p>
           <p className="font-gothic text-sub" style={{ fontSize: 10.5 }}>いま笑いが生まれる場所</p>
         </div>
-        <button
+        <Link
+          href="/rooms/new"
           className="grid place-items-center bg-white"
           style={{ width: 38, height: 38, borderRadius: 13, border: "1px solid rgba(0,0,0,.07)" }}
-          onClick={() => setShowJoin((v) => !v)}
-          aria-label="あいことばで検索"
+          aria-label="部屋を立てる"
         >
-          <Icon name="search" size={17} color="#1A1714" strokeWidth={2.2} />
-        </button>
+          <Icon name="plus" size={17} color="#1A1714" strokeWidth={2.2} />
+        </Link>
       </div>
 
       {/* Segmented control */}
@@ -208,31 +220,6 @@ export default function RoomsPage() {
         ))}
       </div>
 
-      {/* Aikotoba card */}
-      <div
-        className="mx-[20px] mb-[12px] flex gap-[10px] items-center"
-        style={{ background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)", border: "1.5px dashed #E0A93B", borderRadius: 16, padding: "12px 14px" }}
-      >
-        <Engimono name="koban" width={22} height={34} />
-        <button className="flex-1 text-left" onClick={() => setShowJoin((v) => !v)}>
-          <p className="font-gothic font-bold text-[#9A6410]" style={{ fontSize: 11 }}>あいことばで入る</p>
-          <p className="font-gothic text-sub" style={{ fontSize: 13 }}>4文字の合言葉を入力…</p>
-        </button>
-        <button
-          onClick={() => setShowJoin((v) => !v)}
-          className="font-gothic font-extrabold text-paper"
-          style={{ fontSize: 12, padding: "7px 12px", borderRadius: 999, background: "#E5402F" }}
-        >
-          入る
-        </button>
-      </div>
-
-      {showJoin && (
-        <div className="mx-[20px] mb-[12px] animate-rise">
-          <JoinByCode onJoined={(id) => router.push(`/rooms/${id}`)} />
-        </div>
-      )}
-
       {/* セクションラベル */}
       <div className="px-[20px] flex items-center gap-[8px] mt-[4px] mb-[8px]">
         <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
@@ -244,6 +231,9 @@ export default function RoomsPage() {
 
       {/* Room list */}
       <div className="flex-1 px-[20px] pb-[14px] flex flex-col gap-[10px]">
+        {/* あいことば入力（部屋一覧の先頭に統合） */}
+        <JoinByCode onJoined={(id) => router.push(`/rooms/${id}`)} />
+
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="w-6 h-6 rounded-full border-2 border-red border-t-transparent animate-spin" />
