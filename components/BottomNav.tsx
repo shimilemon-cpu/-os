@@ -6,7 +6,7 @@ import Icon from "@/components/Icon";
 
 const ITEMS = [
   { href: "/rooms",   label: "寄合所", icon: "home"   as const },
-  { href: "/engawa",  label: "縁側",   icon: "grid"   as const },
+  { href: "/engawa",  label: "お題",   icon: "grid"   as const },
   { href: "/mypage",  label: "自分",   icon: "person" as const },
 ];
 

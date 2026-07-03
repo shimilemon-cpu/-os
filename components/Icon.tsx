@@ -1,4 +1,4 @@
-type IconName = "home" | "grid" | "banzuke" | "person" | "search" | "back" | "refresh" | "plus";
+type IconName = "home" | "grid" | "banzuke" | "person" | "search" | "back" | "refresh" | "plus" | "dots" | "chevron" | "pencil";
 
 interface Props {
   name: IconName;
@@ -12,10 +12,12 @@ export default function Icon({ name, size, color = "currentColor", strokeWidth, 
   const defaultSizes: Record<IconName, number> = {
     home: 23, grid: 23, banzuke: 23, person: 23,
     search: 18, back: 18, refresh: 22, plus: 18,
+    dots: 18, chevron: 16, pencil: 12,
   };
   const defaultStrokes: Record<IconName, number> = {
     home: 2.1, grid: 2.1, banzuke: 2.1, person: 2.1,
     search: 2.2, back: 2.4, refresh: 2.1, plus: 2.2,
+    dots: 0, chevron: 2, pencil: 1.5,
   };
   const s = size ?? defaultSizes[name];
   const sw = strokeWidth ?? defaultStrokes[name];
@@ -61,6 +63,19 @@ export default function Icon({ name, size, color = "currentColor", strokeWidth, 
     ),
     plus: (
       <path d="M12 5v14M5 12h14"/>
+    ),
+    dots: (
+      <>
+        <circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/>
+      </>
+    ),
+    chevron: (
+      <path d="M9 5l5 7-5 7"/>
+    ),
+    pencil: (
+      <path d="M14 4l6 6-14 14H0v-6z"/>
     ),
   };
 

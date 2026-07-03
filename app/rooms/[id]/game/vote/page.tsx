@@ -12,10 +12,20 @@ import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, RoomDoc, Reaction } from
 
 const VOTE_SECONDS = 45;
 
-function ZabutonIcon({ color }: { color: string }) {
+function ZabutonIcon({ filled }: { filled?: boolean }) {
   return (
-    <svg width="15" height="13" viewBox="0 0 30 24" aria-hidden="true">
-      <path d="M5 6h20l3 6-3 6H5L2 12z" fill={color}/>
+    <svg width="16" height="10" viewBox="0 0 20 12" fill="none" aria-hidden="true">
+      {filled ? (
+        <>
+          <rect x="1" y="3" width="18" height="8" rx="2" fill="#fff" opacity="0.9" />
+          <rect x="3" y="1" width="14" height="4" rx="1.5" fill="rgba(255,255,255,.7)" />
+        </>
+      ) : (
+        <>
+          <rect x="1" y="3" width="18" height="8" rx="2" fill="#E5402F" opacity="0.8" />
+          <rect x="3" y="1" width="14" height="4" rx="1.5" fill="#C54B3E" />
+        </>
+      )}
     </svg>
   );
 }
@@ -162,22 +172,24 @@ export default function VotePage() {
       </div>
 
       {/* お題カード（小） */}
-      <div
-        className="mx-[20px] bg-white mb-[14px]"
-        style={{ borderRadius: 16, padding: "13px 15px", border: "1px solid rgba(0,0,0,.07)" }}
-      >
-        <p className="font-gothic text-sub mb-1" style={{ fontSize: 11 }}>お題</p>
-        {round.question.imageUrl && (
-          <div className="mb-2" style={{ borderRadius: 10, overflow: "hidden" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={round.question.imageUrl} alt="お題の写真" className="w-full" style={{ maxHeight: 140, objectFit: "cover" }} />
-          </div>
-        )}
-        <p className="font-mincho font-bold text-[#1A1714]" style={{ fontSize: 16, lineHeight: 1.4 }}>
-          {round.question.text}
-        </p>
-        <p className="font-gothic font-bold text-[#52493A] mt-[12px]" style={{ fontSize: 12 }}>
-          いちばん笑った回答に <span style={{ color: "#E5402F" }}>座布団</span> を１枚。
+      <div className="px-[20px] pb-[12px]">
+        <div
+          className="bg-white mb-[12px]"
+          style={{ borderRadius: 14, padding: "14px 16px", border: "1px solid rgba(0,0,0,.07)" }}
+        >
+          <p className="font-gothic font-extrabold text-sub mb-1" style={{ fontSize: 10 }}>お題</p>
+          {round.question.imageUrl && (
+            <div className="mb-2" style={{ borderRadius: 10, overflow: "hidden" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={round.question.imageUrl} alt="お題の写真" className="w-full" style={{ maxHeight: 140, objectFit: "cover" }} />
+            </div>
+          )}
+          <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 15, lineHeight: 1.4 }}>
+            {round.question.text}
+          </p>
+        </div>
+        <p className="font-gothic text-[#52493A]" style={{ fontSize: 13 }}>
+          いちばん笑った回答に <span className="font-extrabold" style={{ color: "#E5402F", textDecoration: "underline", textDecorationColor: "rgba(229,64,47,.3)" }}>座布団</span> を１枚。
         </p>
       </div>
 
@@ -195,26 +207,26 @@ export default function VotePage() {
                 border: isSelected ? "2px solid #E5402F" : "1px solid rgba(0,0,0,.07)",
               }}
             >
-              <p className="font-gothic font-extrabold text-[#1A1714]" style={{ fontSize: 18, lineHeight: 1.5 }}>{a.text}</p>
-              <div className="flex items-center justify-between mt-[12px]">
+              <p className="font-gothic font-semibold text-[#1A1714]" style={{ fontSize: 17, lineHeight: 1.5, marginBottom: 14 }}>{a.text}</p>
+              <div className="flex items-center justify-between">
                 <span className="font-gothic text-sub" style={{ fontSize: 11 }}>回答 {String.fromCharCode(65 + i)}</span>
                 {isOwn ? (
                   <span className="font-gothic text-sub2" style={{ fontSize: 12 }}>自分の回答</span>
                 ) : isSelected ? (
                   <span
-                    className="inline-flex items-center gap-[7px] font-gothic font-extrabold text-paper"
-                    style={{ fontSize: 13, padding: "8px 15px", borderRadius: 999, background: "#E5402F" }}
+                    className="inline-flex items-center gap-[6px] font-gothic font-extrabold text-paper"
+                    style={{ fontSize: 12, padding: "8px 18px", borderRadius: 999, background: "#E5402F" }}
                   >
-                    <ZabutonIcon color="#FBF7EC" />座布団を渡した
+                    <ZabutonIcon filled />座布団を渡した
                   </span>
                 ) : (
                   <button
                     onClick={() => handleVote(a.id, "funny")}
                     disabled={myVotedId != null}
-                    className="inline-flex items-center gap-[7px] font-gothic font-extrabold disabled:opacity-40 active:scale-95 transition-all"
-                    style={{ fontSize: 13, padding: "8px 15px", borderRadius: 999, color: "#E5402F", background: "#FCE7E3" }}
+                    className="inline-flex items-center gap-[6px] font-gothic font-extrabold disabled:opacity-40 active:scale-95 transition-all"
+                    style={{ fontSize: 12, padding: "8px 18px", borderRadius: 999, color: "#E5402F", background: "rgba(229,64,47,.08)", border: "1px solid rgba(229,64,47,.15)" }}
                   >
-                    <ZabutonIcon color="#E5402F" />座布団
+                    <ZabutonIcon />座布団
                   </button>
                 )}
               </div>

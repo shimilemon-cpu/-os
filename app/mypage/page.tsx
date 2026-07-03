@@ -3,31 +3,20 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { doc, getDoc, getDocs, collection, query, where } from "firebase/firestore";
-import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client";
 import type { UserDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
+import Icon from "@/components/Icon";
 
 type EngimonoName = "daruma" | "cat" | "tai" | "fuku" | "koban" | "mallet" | "mask";
-const COLLECTION: EngimonoName[] = ["daruma", "cat", "tai", "fuku", "koban", "mallet"];
-const COLLECTED: EngimonoName[] = ["daruma", "cat", "tai", "fuku"];
-
-function LockIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="11" width="14" height="9" rx="2"/>
-      <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
-    </svg>
-  );
-}
+const COLLECTED: EngimonoName[] = ["fuku", "cat", "tai"];
 
 export default function MyPage() {
   const router = useRouter();
   const cachedNickname = typeof window !== "undefined" ? localStorage.getItem("ogiri_nickname") : null;
   const [profile, setProfile] = useState<UserDoc | null>(null);
-  const [stats, setStats] = useState({ rooms: 0, zabuton: 0, yokozuna: 0 });
+  const [stats, setStats] = useState({ rooms: 0, zabuton: 0, taisho: 0 });
   const [loading, setLoading] = useState(false);
-  const [notifications, setNotifications] = useState(true);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -41,138 +30,115 @@ export default function MyPage() {
       if (profileSnap.exists()) {
         setProfile({ id: user.uid, ...profileSnap.data() } as UserDoc);
       }
-      setStats({ rooms: roomsSnap.size, zabuton: 238, yokozuna: 14 });
+      setStats({ rooms: roomsSnap.size, zabuton: 87, taisho: 3 });
     }).finally(() => setLoading(false));
   }, [router]);
 
-  const handleSignOut = async () => {
-    await signOut(auth);
-    router.push("/auth/login");
-  };
-
   const user = auth.currentUser;
   const nickname = profile?.nickname ?? cachedNickname ?? user?.displayName ?? "ゲスト";
-  const handle = `＠${(user?.displayName ?? "user").toLowerCase().replace(/\s/g, "_")}`;
 
   return (
     <div className="min-h-screen flex flex-col bg-paper pb-[78px]">
-      <div className="flex-1 px-[20px] pb-[14px] pt-[14px] flex flex-col gap-[16px]">
-
-        {/* プロフィール頭 */}
-        <div className="flex items-center gap-[15px]">
-          <div className="shrink-0 grid place-items-center" style={{ width: 74, height: 74, borderRadius: 24, background: "#FFF3D6" }}>
-            <Engimono name="fuku" width={58} height={64} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 22 }}>{nickname}</p>
-            <p className="font-gothic text-sub" style={{ fontSize: 12 }}>{handle}</p>
-            <span
-              className="inline-block font-gothic font-extrabold text-paper mt-[7px]"
-              style={{ fontSize: 11, padding: "3px 10px", borderRadius: 999, background: "#E5402F" }}
-            >
-              称号・あるあるの達人
-            </span>
-          </div>
+      {/* Header */}
+      <div style={{ padding: "4px 20px 24px" }}>
+        <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
+          <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 24 }}>私の部屋</p>
           <button
-            onClick={handleSignOut}
-            className="font-gothic text-sub shrink-0"
-            style={{ fontSize: 11, padding: "4px 10px", borderRadius: 999, border: "1px solid rgba(0,0,0,.1)" }}
+            className="grid place-items-center bg-white"
+            style={{ width: 38, height: 38, borderRadius: 13, border: "1px solid rgba(0,0,0,.07)" }}
           >
-            ログアウト
+            <Icon name="dots" size={18} color="#1A1714" />
           </button>
         </div>
 
-        {/* Stats */}
-        <div className="flex gap-[10px]">
-          {[
-            { value: loading ? "..." : stats.zabuton, label: "獲得座布団", color: "#E5402F" },
-            { value: loading ? "..." : stats.yokozuna, label: "横綱の回数", color: "#2BA35F" },
-            { value: loading ? "..." : stats.rooms, label: "参加部屋", color: "#E0A93B" },
-          ].map(({ value, label, color }) => (
+        {/* Avatar */}
+        <div className="flex flex-col items-center gap-[10px]">
+          <div className="relative" style={{ width: 88, height: 88 }}>
             <div
-              key={label}
-              className="flex-1 bg-white text-center"
-              style={{ borderRadius: 16, padding: 13, border: "1px solid rgba(0,0,0,.07)" }}
+              className="grid place-items-center"
+              style={{ width: 88, height: 88, background: "#F0EBE0", border: "3px solid #2BA35F", borderRadius: "50%" }}
             >
-              <p className="font-mincho font-extrabold" style={{ fontSize: 23, color }}>{value}</p>
-              <p className="font-gothic text-sub mt-[2px]" style={{ fontSize: 11 }}>{label}</p>
+              <Engimono name="fuku" width={48} height={52} />
             </div>
-          ))}
+            <button
+              className="absolute grid place-items-center"
+              style={{ bottom: -2, right: -2, width: 28, height: 28, background: "#E5402F", border: "2px solid #FBF7EC", borderRadius: "50%" }}
+            >
+              <Icon name="pencil" size={12} color="#FBF7EC" strokeWidth={1.5} />
+            </button>
+          </div>
+          <p className="font-gothic font-extrabold text-[#1A1714]" style={{ fontSize: 18 }}>{nickname}</p>
         </div>
+      </div>
 
-        {/* コレクション */}
-        <div>
-          <p className="font-gothic font-extrabold text-[#1A1714] mb-3" style={{ fontSize: 14 }}>
-            縁起物コレクション <span className="text-sub2" style={{ fontSize: 13 }}>{COLLECTED.length} / {COLLECTION.length}</span>
-          </p>
-          <div className="grid gap-[8px]" style={{ gridTemplateColumns: `repeat(${COLLECTION.length}, 1fr)` }}>
-            {COLLECTION.map((name) => {
-              const owned = COLLECTED.includes(name);
-              return owned ? (
-                <div
-                  key={name}
-                  className="bg-white grid place-items-center aspect-square"
-                  style={{ borderRadius: 13, border: "1px solid rgba(0,0,0,.07)" }}
-                >
-                  <Engimono name={name} width={32} height={36} />
-                </div>
-              ) : (
-                <div
-                  key={name}
-                  className="grid place-items-center aspect-square text-[#C3B99F]"
-                  style={{ borderRadius: 13, background: "#EFE8DA" }}
-                >
-                  <LockIcon />
-                </div>
-              );
-            })}
+      {/* Stats */}
+      <div
+        className="mx-[20px] mb-[20px] bg-white flex"
+        style={{ borderRadius: 18, border: "1px solid rgba(0,0,0,.07)", padding: "18px 8px", boxShadow: "0 2px 8px rgba(40,30,10,.04)" }}
+      >
+        <div className="flex-1 text-center" style={{ borderRight: "1px solid rgba(0,0,0,.05)" }}>
+          <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 24 }}>{loading ? "…" : stats.rooms}</p>
+          <p className="font-gothic font-semibold text-sub" style={{ fontSize: 10, marginTop: 2 }}>参加回数</p>
+        </div>
+        <div className="flex-1 text-center" style={{ borderRight: "1px solid rgba(0,0,0,.05)" }}>
+          <p className="font-mincho font-extrabold" style={{ fontSize: 24, color: "#E5402F" }}>{loading ? "…" : stats.zabuton}</p>
+          <p className="font-gothic font-semibold text-sub" style={{ fontSize: 10, marginTop: 2 }}>座布団</p>
+        </div>
+        <div className="flex-1 text-center">
+          <p className="font-mincho font-extrabold" style={{ fontSize: 24, color: "#F4C422" }}>{loading ? "…" : stats.taisho}</p>
+          <p className="font-gothic font-semibold text-sub" style={{ fontSize: 10, marginTop: 2 }}>大賞</p>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-[20px] flex-1 flex flex-col gap-[8px]">
+        {/* Avatar collection */}
+        <p className="font-gothic font-extrabold text-[#1A1714]" style={{ fontSize: 14, marginBottom: 4 }}>アバターコレクション</p>
+        <div
+          className="bg-white mb-[8px]"
+          style={{ borderRadius: 18, border: "1px solid rgba(0,0,0,.07)", padding: 16 }}
+        >
+          <div className="flex gap-[12px] flex-wrap">
+            {COLLECTED.map((name) => (
+              <div
+                key={name}
+                className="grid place-items-center"
+                style={{
+                  width: 56, height: 56, background: "#F0EBE0", borderRadius: "50%",
+                  border: name === COLLECTED[0] ? "2px solid #2BA35F" : "2px solid transparent",
+                }}
+              >
+                <Engimono name={name} width={30} height={32} />
+              </div>
+            ))}
+            <button
+              className="grid place-items-center"
+              style={{ width: 56, height: 56, background: "rgba(0,0,0,.02)", border: "2px dashed rgba(0,0,0,.12)", borderRadius: "50%" }}
+            >
+              <Icon name="plus" size={18} color="#B6AC97" strokeWidth={2} />
+            </button>
           </div>
         </div>
 
-        {/* 設定リスト */}
-        <div className="bg-white overflow-hidden" style={{ borderRadius: 16, border: "1px solid rgba(0,0,0,.07)" }}>
-          {[
-            { label: "表示名・アバター", right: <span className="font-gothic text-sub2" style={{ fontSize: 13 }}>›</span> },
-            {
-              label: "通知",
-              right: (
-                <button
-                  onClick={() => setNotifications((v) => !v)}
-                  className="relative"
-                  style={{ width: 46, height: 27, borderRadius: 999, background: notifications ? "#2BA35F" : "#E4DCCF" }}
-                >
-                  <span
-                    className="absolute top-[3px] bg-white rounded-full"
-                    style={{ width: 21, height: 21, right: notifications ? 3 : undefined, left: notifications ? undefined : 3 }}
-                  />
-                </button>
-              ),
-            },
-            {
-              label: "テーマ",
-              right: <span className="font-gothic text-sub" style={{ fontSize: 13 }}>めでたポップ ›</span>,
-            },
-          ].map(({ label, right }, i, arr) => (
+        {/* Settings menu */}
+        <p className="font-gothic font-extrabold text-[#1A1714]" style={{ fontSize: 14, marginBottom: 4, marginTop: 8 }}>設定</p>
+        <div
+          className="bg-white overflow-hidden"
+          style={{ borderRadius: 18, border: "1px solid rgba(0,0,0,.07)" }}
+        >
+          {["プロフィール編集", "対戦履歴", "通知設定"].map((label, i, arr) => (
             <div
               key={label}
-              className="flex items-center justify-between px-[16px] font-gothic font-bold text-[#1A1714]"
+              className="flex items-center justify-between px-[16px] font-gothic font-semibold text-[#1A1714]"
               style={{
-                padding: "14px 16px", fontSize: 14,
-                borderBottom: i < arr.length - 1 ? "1px solid rgba(0,0,0,.07)" : "none",
+                padding: 16, fontSize: 14, cursor: "pointer",
+                borderBottom: i < arr.length - 1 ? "1px solid rgba(0,0,0,.04)" : "none",
               }}
             >
               <span>{label}</span>
-              {right}
+              <Icon name="chevron" size={16} color="#B6AC97" strokeWidth={2} />
             </div>
           ))}
-        </div>
-
-        {/* AD placeholder */}
-        <div
-          className="flex items-center justify-center font-gothic text-sub"
-          style={{ height: 60, borderRadius: 12, border: "1.5px dashed rgba(0,0,0,.12)", fontSize: 12 }}
-        >
-          AD
         </div>
       </div>
     </div>

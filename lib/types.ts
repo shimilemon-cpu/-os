@@ -149,6 +149,9 @@ export interface EngawaPostDoc {
   sessionId: string;
   roundId: string;
   answerCount: number;
+  topAnswer?: string;
+  authorName?: string;
+  timeAgo?: string;
 }
 
 export interface EngawaAnswerDoc {

@@ -47,7 +47,7 @@ function TimerRing({ deadline, totalSeconds, onExpire }: { deadline: RoundDoc["a
         <circle
           cx="25" cy="25" r="21"
           fill="none"
-          stroke="#E5402F"
+          stroke={color}
           strokeWidth="5"
           strokeLinecap="round"
           strokeDasharray={CIRC}
@@ -159,7 +159,6 @@ export default function GamePage() {
 
   const total = room?.memberIds.length ?? 0;
   const done = round.answerCount ?? 0;
-  const AVATAR_COLORS = ["#E5402F", "#2BA35F", "#F4C422", "#F0552E", "#5BA9D6"];
 
   return (
     <div className="min-h-screen flex flex-col bg-paper">
@@ -193,21 +192,16 @@ export default function GamePage() {
       )}
 
       {/* 回答数 */}
-      <div className="px-[20px] flex items-center gap-[10px] mb-[14px]">
-        <div className="flex" style={{ gap: 0 }}>
-          {Array.from({ length: total }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: 24, height: 24, borderRadius: "50%",
-                background: i < done ? AVATAR_COLORS[i % AVATAR_COLORS.length] : "#E4DCCF",
-                border: "2px solid #FBF7EC",
-                marginLeft: i > 0 ? -6 : 0,
-              }}
-            />
+      <div className="px-[20px] flex items-center gap-[8px] mb-[14px]">
+        <div className="flex" style={{ gap: 3 }}>
+          {Array.from({ length: done }).map((_, i) => (
+            <div key={`done-${i}`} style={{ width: 10, height: 10, borderRadius: "50%", background: "#2BA35F" }} />
+          ))}
+          {Array.from({ length: total - done }).map((_, i) => (
+            <div key={`pending-${i}`} style={{ width: 10, height: 10, borderRadius: "50%", background: "#F4C422" }} />
           ))}
         </div>
-        <p className="font-gothic text-sub" style={{ fontSize: 12 }}>{done} / {total} 人が回答済み</p>
+        <span className="font-gothic text-sub" style={{ fontSize: 11 }}>{done} / {total} 人が回答済み</span>
       </div>
 
       {/* 回答入力エリア */}
@@ -238,7 +232,7 @@ export default function GamePage() {
               className="flex-1 bg-white font-gothic font-semibold text-[#1A1714] outline-none resize-none"
               style={{
                 borderRadius: 18, padding: "16px", fontSize: 17, lineHeight: 1.6,
-                border: "1.5px solid #E0A93B", minHeight: 120,
+                border: "1.5px dashed #E0A93B", minHeight: 120,
               }}
               placeholder="面白い回答を入力…"
               maxLength={40}

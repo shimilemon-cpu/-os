@@ -7,7 +7,7 @@ import { createRoom, generateInviteCode, generateRoomRef } from "@/lib/ogiri/roo
 import Icon from "@/components/Icon";
 import Engimono from "@/components/Engimono";
 
-const GENRES = ["定番", "あるある", "日常", "ブラック"] as const;
+const GENRES = ["定番", "あるある", "写真で一言", "ブラック"] as const;
 type Genre = typeof GENRES[number];
 
 const HIRAGANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわ";
@@ -67,7 +67,7 @@ export default function NewRoomPage() {
 
         {/* 部屋の名前 */}
         <div>
-          <label className="block font-gothic font-extrabold text-[#52493A] mb-[7px]" style={{ fontSize: 12 }}>部屋の名前</label>
+          <label className="block font-gothic font-extrabold text-[#1A1714] mb-[8px]" style={{ fontSize: 14 }}>部屋の名前</label>
           <div className="relative">
             <input
               className="w-full bg-white font-gothic font-bold text-[#1A1714] outline-none"
@@ -86,7 +86,7 @@ export default function NewRoomPage() {
 
         {/* お題のしくみ */}
         <div>
-          <label className="block font-gothic font-extrabold text-[#52493A] mb-[7px]" style={{ fontSize: 12 }}>お題のしくみ</label>
+          <label className="block font-gothic font-extrabold text-[#1A1714] mb-[8px]" style={{ fontSize: 14 }}>お題のしくみ</label>
           <div className="flex gap-[4px] p-[4px]" style={{ background: "#EBE2CF", borderRadius: 14 }}>
             {["おまかせ", "自分でつくる", "持ち寄り"].map((label, i) => (
               <button
@@ -94,7 +94,7 @@ export default function NewRoomPage() {
                 onClick={() => setTopicMode(i)}
                 className="flex-1 text-center font-gothic"
                 style={{
-                  fontSize: 13, padding: "8px 0", borderRadius: 11,
+                  fontSize: 13, padding: "10px 0", borderRadius: 11,
                   background: topicMode === i ? "#1A1714" : "transparent",
                   color: topicMode === i ? "#FBF7EC" : "#7A6F5C",
                   fontWeight: topicMode === i ? 700 : 600,
@@ -108,7 +108,7 @@ export default function NewRoomPage() {
 
         {/* モード */}
         <div>
-          <label className="block font-gothic font-extrabold text-[#52493A] mb-[7px]" style={{ fontSize: 12 }}>モード</label>
+          <label className="block font-gothic font-extrabold text-[#1A1714] mb-[8px]" style={{ fontSize: 14 }}>モード</label>
           <div className="flex gap-[4px] p-[4px]" style={{ background: "#EBE2CF", borderRadius: 14 }}>
             {["リアルタイム", "非同期"].map((label, i) => (
               <button
@@ -116,7 +116,7 @@ export default function NewRoomPage() {
                 onClick={() => setRoomMode(i as 0 | 1)}
                 className="flex-1 text-center font-gothic"
                 style={{
-                  fontSize: 13, padding: "8px 0", borderRadius: 11,
+                  fontSize: 13, padding: "10px 0", borderRadius: 11,
                   background: roomMode === i ? "#1A1714" : "transparent",
                   color: roomMode === i ? "#FBF7EC" : "#7A6F5C",
                   fontWeight: roomMode === i ? 700 : 600,
@@ -130,7 +130,7 @@ export default function NewRoomPage() {
 
         {/* ジャンル */}
         <div>
-          <label className="block font-gothic font-extrabold text-[#52493A] mb-[7px]" style={{ fontSize: 12 }}>ジャンル</label>
+          <label className="block font-gothic font-extrabold text-[#1A1714] mb-[8px]" style={{ fontSize: 14 }}>ジャンル</label>
           <div className="flex flex-wrap gap-[8px]">
             {GENRES.map((g) => (
               <button
@@ -158,18 +158,20 @@ export default function NewRoomPage() {
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setCapacity((c) => Math.max(2, c - 1))}
-                className="grid place-items-center font-gothic text-sub"
-                style={{ width: 26, height: 26, borderRadius: 8, background: "#EFE8DA", fontSize: 16, fontWeight: 700 }}
+                className="grid place-items-center"
+                style={{ width: 32, height: 32, borderRadius: 999, background: "#EBE2CF" }}
               >
-                −
+                <svg width="14" height="2" viewBox="0 0 14 2" stroke="#1A1714" strokeWidth="2" strokeLinecap="round"><line x1="0" y1="1" x2="14" y2="1" /></svg>
               </button>
-              <span className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 20 }}>{capacity}人</span>
+              <span className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 20 }}>
+                {capacity}<span className="font-gothic" style={{ fontSize: 14, fontWeight: 500, color: "#7A6F5C" }}>人</span>
+              </span>
               <button
                 onClick={() => setCapacity((c) => Math.min(10, c + 1))}
-                className="grid place-items-center font-gothic text-paper"
-                style={{ width: 26, height: 26, borderRadius: 8, background: "#1A1714", fontSize: 16, fontWeight: 700 }}
+                className="grid place-items-center"
+                style={{ width: 32, height: 32, borderRadius: 999, background: "#EBE2CF" }}
               >
-                ＋
+                <svg width="14" height="14" viewBox="0 0 14 14" stroke="#1A1714" strokeWidth="2" strokeLinecap="round"><line x1="7" y1="0" x2="7" y2="14" /><line x1="0" y1="7" x2="14" y2="7" /></svg>
               </button>
             </div>
           </div>
@@ -221,39 +223,40 @@ export default function NewRoomPage() {
         </div>
 
         {/* あいことば */}
-        <div
-          className="flex items-center gap-[12px]"
-          style={{ background: "linear-gradient(100deg,#FFF7E0,#FCEAC6)", border: "1px solid #E0A93B", borderRadius: 16, padding: 14 }}
-        >
-          <Engimono name="koban" width={24} height={38} />
-          <div className="flex-1">
-            <p className="font-gothic font-extrabold text-[#9A6410]" style={{ fontSize: 11 }}>あいことば</p>
+        <div style={{ background: "linear-gradient(100deg,#FFFDF5,#FFF9E8)", border: "1.5px dashed #E0A93B", borderRadius: 18, padding: 16 }}>
+          <div className="flex items-center justify-between mb-[10px]">
+            <p className="font-gothic font-extrabold text-[#7A6F5C]" style={{ fontSize: 12 }}>あいことば（合言葉のみ入室）</p>
+            <button
+              onClick={() => setUseCode((v) => !v)}
+              className="relative shrink-0"
+              style={{ width: 46, height: 27, borderRadius: 999, background: useCode ? "#2BA35F" : "#E4DCCF" }}
+            >
+              <span
+                className="absolute top-[3px] bg-white rounded-full"
+                style={{ width: 21, height: 21, right: useCode ? 3 : undefined, left: useCode ? undefined : 3 }}
+              />
+            </button>
+          </div>
+          <div className="flex items-center gap-[10px]">
+            <div className="grid place-items-center" style={{ width: 32, height: 32 }}>
+              <Engimono name="koban" width={18} height={26} />
+            </div>
             <input
-              className="w-full bg-transparent font-mincho font-extrabold text-[#1A1714] outline-none"
-              style={{ fontSize: 22, letterSpacing: "0.18em" }}
+              className="flex-1 bg-transparent font-mincho font-extrabold text-[#1A1714] outline-none"
+              style={{ fontSize: 22, letterSpacing: "0.15em" }}
               value={aikotoba}
               onChange={(e) => setAikotoba(e.target.value)}
               maxLength={8}
             />
+            <button
+              onClick={() => setAikotoba(generateHiraganaCode())}
+              className="shrink-0 grid place-items-center"
+              style={{ width: 32, height: 32 }}
+              aria-label="あいことばを再生成"
+            >
+              <Icon name="refresh" size={20} color="#9A6410" strokeWidth={2} />
+            </button>
           </div>
-          <button
-            onClick={() => setAikotoba(generateHiraganaCode())}
-            className="text-[#9A6410] shrink-0"
-            style={{ fontSize: 20, padding: "4px" }}
-            aria-label="あいことばを再生成"
-          >
-            🔄
-          </button>
-          <button
-            onClick={() => setUseCode((v) => !v)}
-            className="relative shrink-0"
-            style={{ width: 46, height: 27, borderRadius: 999, background: useCode ? "#2BA35F" : "#E4DCCF" }}
-          >
-            <span
-              className="absolute top-[3px] bg-white rounded-full"
-              style={{ width: 21, height: 21, right: useCode ? 3 : undefined, left: useCode ? undefined : 3 }}
-            />
-          </button>
         </div>
 
         {error && <p className="font-gothic text-red text-sm">{error}</p>}
