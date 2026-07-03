@@ -33,12 +33,16 @@ service cloud.firestore {
     match /rooms/{roomId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.hostId == request.auth.uid;
-      allow update: if isRoomMember(roomId);
+      allow update: if isRoomMember(roomId)
+        || (isSignedIn()
+            && resource.data.status == "waiting"
+            && request.auth.uid in request.resource.data.memberIds
+            && request.resource.data.memberIds.hasAll(resource.data.memberIds));
       allow delete: if isSignedIn() && resource.data.hostId == request.auth.uid;
 
       // ルームメンバー
       match /members/{userId} {
-        allow read: if isRoomMember(roomId);
+        allow read: if isSignedIn();
         allow write: if isSignedIn() && request.auth.uid == userId;
       }
 

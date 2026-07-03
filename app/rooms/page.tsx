@@ -30,7 +30,7 @@ function StatusPill({ status }: { status: string }) {
   const s = STATUS_STYLE[status] ?? STATUS_STYLE.waiting;
   return (
     <span
-      className="font-maru font-black shrink-0"
+      className="font-gothic font-extrabold shrink-0"
       style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, background: s.bg, color: s.color }}
     >
       {STATUS_LABEL[status] ?? status}

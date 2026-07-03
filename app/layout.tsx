@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Shippori_Mincho_B1, Zen_Kaku_Gothic_New, Zen_Maru_Gothic } from "next/font/google";
+import { Shippori_Mincho_B1, Zen_Kaku_Gothic_New } from "next/font/google";
 import "./globals.css";
 import ClientProviders from "@/components/ClientProviders";
 
@@ -17,14 +17,6 @@ const kaku = Zen_Kaku_Gothic_New({
   display: "swap",
   preload: false,
   variable: "--font-kaku",
-});
-
-const maru = Zen_Maru_Gothic({
-  weight: ["500", "700", "900"],
-  subsets: ["latin"],
-  display: "swap",
-  preload: false,
-  variable: "--font-maru-nf",
 });
 
 export const metadata: Metadata = {
@@ -48,7 +40,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja" className={`h-full ${mincho.variable} ${kaku.variable} ${maru.variable}`}>
+    <html lang="ja" className={`h-full ${mincho.variable} ${kaku.variable}`}>
       <body className="min-h-full bg-ink font-body text-text">
         <div className="relative mx-auto max-w-sm min-h-screen">
           <ClientProviders>{children}</ClientProviders>
