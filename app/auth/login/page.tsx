@@ -57,6 +57,7 @@ function LoginInner() {
 
   useEffect(() => {
     if (didAutoStart.current) return;
+    router.prefetch(next);
     if (saved) {
       didAutoStart.current = true;
       auth.authStateReady().then(() => {

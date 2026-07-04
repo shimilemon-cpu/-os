@@ -93,9 +93,14 @@ export default function RoomListClient() {
 
   useEffect(() => {
     let roomsUnsub: (() => void) | undefined;
+    const subscribe = (uid: string) => {
+      if (roomsUnsub) return;
+      roomsUnsub = subscribeUserRooms(uid, (r) => { setRooms(r); setLoading(false); }, () => setLoading(false));
+    };
+    if (auth.currentUser) subscribe(auth.currentUser.uid);
     const authUnsub = onAuthStateChanged(auth, (user) => {
       if (!user) { setLoading(false); return; }
-      roomsUnsub = subscribeUserRooms(user.uid, (r) => { setRooms(r); setLoading(false); }, () => setLoading(false));
+      subscribe(user.uid);
     });
     return () => { authUnsub(); roomsUnsub?.(); };
   }, []);
