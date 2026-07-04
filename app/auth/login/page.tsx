@@ -50,9 +50,29 @@ function LoginInner() {
     if (didAutoStart.current) return;
     didAutoStart.current = true;
     router.prefetch(next);
-    auth.authStateReady().then(() => {
+    auth.authStateReady().then(async () => {
       if (auth.currentUser) {
         router.replace(next);
+        return;
+      }
+      const saved = localStorage.getItem(NICKNAME_KEY);
+      if (saved) {
+        try {
+          setSubmitting(true);
+          const cred = await signInAnonymously(auth);
+          localStorage.setItem(NICKNAME_KEY, saved);
+          Promise.all([
+            updateProfile(cred.user, { displayName: saved }),
+            setDoc(
+              doc(db, "users", cred.user.uid),
+              { nickname: saved, avatarUrl: null, avatarIcon: null, createdAt: Timestamp.now() },
+              { merge: true },
+            ),
+          ]).catch((e) => console.error("[auth] background profile update failed:", e));
+          router.replace(next);
+        } catch {
+          setSubmitting(false);
+        }
       }
     });
   }, [next, router]);
@@ -87,6 +107,18 @@ function LoginInner() {
       setSubmitting(false);
     }
   };
+
+  if (submitting && !showGuest) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-paper gap-3">
+        <div
+          className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+          style={{ borderColor: "#2BA35F", borderTopColor: "transparent" }}
+        />
+        <p className="font-gothic text-sub" style={{ fontSize: 13 }}>ログイン中...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-paper bg-asanoha relative overflow-hidden">
