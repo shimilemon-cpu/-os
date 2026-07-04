@@ -25,7 +25,8 @@ export default function LoginPage() {
 function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/rooms";
+  const rawNext = searchParams.get("next") ?? "/rooms";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/rooms";
   const errorParam = searchParams.get("error");
 
   const [showGuest, setShowGuest] = useState(false);
@@ -49,9 +50,26 @@ function LoginInner() {
     if (didAutoStart.current) return;
     didAutoStart.current = true;
     router.prefetch(next);
-    auth.authStateReady().then(() => {
+    auth.authStateReady().then(async () => {
       if (auth.currentUser) {
         router.replace(next);
+        return;
+      }
+      const saved = localStorage.getItem(NICKNAME_KEY);
+      if (saved) {
+        try {
+          setSubmitting(true);
+          const cred = await signInAnonymously(auth);
+          await updateProfile(cred.user, { displayName: saved });
+          setDoc(
+            doc(db, "users", cred.user.uid),
+            { nickname: saved, avatarUrl: null, avatarIcon: null, createdAt: Timestamp.now() },
+            { merge: true },
+          ).catch((e) => console.error("[auth] Firestore write failed:", e));
+          router.replace(next);
+        } catch {
+          setSubmitting(false);
+        }
       }
     });
   }, [next, router]);
@@ -71,14 +89,12 @@ function LoginInner() {
         : await signInAnonymously(auth);
       const user = cred.user;
       localStorage.setItem(NICKNAME_KEY, name);
-      await Promise.all([
-        updateProfile(user, { displayName: name }),
-        setDoc(
-          doc(db, "users", user.uid),
-          { nickname: name, avatarUrl: null, avatarIcon: null, createdAt: Timestamp.now() },
-          { merge: true },
-        ),
-      ]);
+      await updateProfile(user, { displayName: name });
+      setDoc(
+        doc(db, "users", user.uid),
+        { nickname: name, avatarUrl: null, avatarIcon: null, createdAt: Timestamp.now() },
+        { merge: true },
+      ).catch((e) => console.error("[auth] Firestore write failed:", e));
       router.replace(next);
     } catch (e) {
       console.error("[auth] sign-in failed:", e);
@@ -86,6 +102,18 @@ function LoginInner() {
       setSubmitting(false);
     }
   };
+
+  if (submitting && !showGuest) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-paper gap-3">
+        <div
+          className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+          style={{ borderColor: "#2BA35F", borderTopColor: "transparent" }}
+        />
+        <p className="font-gothic text-sub" style={{ fontSize: 13 }}>ログイン中...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-paper bg-asanoha relative overflow-hidden">
@@ -191,6 +219,7 @@ function LoginInner() {
                   style={{ fontSize: 18, padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E0A93B" }}
                   placeholder="例）タロウ"
                   maxLength={12}
+                  autoComplete="off"
                   value={nickname}
                   autoFocus
                   onChange={(e) => setNickname(e.target.value)}

@@ -16,9 +16,18 @@ function generateHiraganaCode(): string {
   return Array.from({ length: 4 }, () => HIRAGANA[Math.floor(Math.random() * HIRAGANA.length)]).join("");
 }
 
+const ROOM_ADJECTIVES = ["福猫の", "笑門の", "千客万来", "縁起良し", "爆笑", "腹筋崩壊", "珍回答"];
+const ROOM_NOUNS = ["大喜利茶屋", "大喜利座", "笑い処", "寄席", "お笑い道場", "爆笑亭", "一席"];
+
+function generateRoomName(): string {
+  const adj = ROOM_ADJECTIVES[Math.floor(Math.random() * ROOM_ADJECTIVES.length)];
+  const noun = ROOM_NOUNS[Math.floor(Math.random() * ROOM_NOUNS.length)];
+  return `${adj}${noun}`;
+}
+
 export default function NewRoomPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(generateRoomName);
   const [topicMode, setTopicMode] = useState(0);
   const [selectedGenre, setSelectedGenre] = useState<Genre>("定番");
   const [capacity, setCapacity] = useState(8);
@@ -29,21 +38,29 @@ export default function NewRoomPage() {
   const [roomMode, setRoomMode] = useState<0 | 1>(0); // 0=realtime, 1=async
   const [aikotoba, setAikotoba] = useState(generateHiraganaCode);
 
-  const create = () => {
-    if (!name.trim()) return;
+  const [creating, setCreating] = useState(false);
+
+  const create = async () => {
+    if (!name.trim() || creating) return;
     const user = auth.currentUser;
     if (!user) { setError("未ログイン"); return; }
 
+    setCreating(true);
+    setError("");
     const inviteCode = useCode ? aikotoba : generateInviteCode();
     const roomRef = generateRoomRef();
     const roomId = roomRef.id;
-
-    router.push(`/rooms/${roomId}/invite?code=${inviteCode}`);
-
     const topicModes = ["omakase", "custom", "mochiyori"] as const;
     const mode = roomMode === 0 ? "realtime" : "async";
-    createRoom(user.uid, user.displayName ?? "ゲスト", name.trim(), mode, ["王道", "辛口"], roomRef, inviteCode, topicModes[topicMode], capacity)
-      .catch((e) => console.error("createRoom failed:", e));
+
+    try {
+      await createRoom(user.uid, user.displayName ?? "ゲスト", name.trim(), mode, ["王道", "辛口"], roomRef, inviteCode, topicModes[topicMode], capacity, timeLimit);
+      router.push(`/rooms/${roomId}/invite?code=${inviteCode}`);
+    } catch (e) {
+      console.error("createRoom failed:", e);
+      setError("部屋の作成に失敗しました。もう一度お試しください。");
+      setCreating(false);
+    }
   };
 
   const sliderPct = ((timeLimit - 30) / (180 - 30)) * 100;
@@ -74,6 +91,7 @@ export default function NewRoomPage() {
               style={{ border: "1px solid rgba(0,0,0,.07)", borderRadius: 14, padding: "13px 15px", fontSize: 15 }}
               placeholder="例：福猫の大喜利茶屋"
               maxLength={16}
+              autoComplete="off"
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && create()}
@@ -266,11 +284,11 @@ export default function NewRoomPage() {
       <div className="sticky bottom-0 px-[20px] pb-[100px] pt-[10px] bg-paper">
         <button
           onClick={create}
-          disabled={!name.trim()}
+          disabled={!name.trim() || creating}
           className="w-full font-mincho font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-all"
           style={{ fontSize: 18, padding: "16px 0", borderRadius: 18, background: "#E5402F", boxShadow: "0 14px 26px -10px rgba(229,64,47,0.6)" }}
         >
-          のれんを掲げる
+          {creating ? "作成中…" : "のれんを掲げる"}
         </button>
       </div>
     </div>

@@ -38,7 +38,8 @@ export async function GET(request: Request) {
     if (parsed.state !== state) {
       return NextResponse.redirect(`${origin}/auth/login?error=invalid_state`);
     }
-    next = parsed.next ?? "/rooms";
+    const rawNext: string = parsed.next ?? "/rooms";
+    next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/rooms";
   } catch {
     return NextResponse.redirect(`${origin}/auth/login?error=invalid_state`);
   }
@@ -103,12 +104,19 @@ export async function GET(request: Request) {
     const customToken = await getAuth().createCustomToken(firebaseUid);
 
     const redirectUrl = new URL("/auth/complete", origin);
-    redirectUrl.searchParams.set("token", customToken);
     redirectUrl.searchParams.set("next", next);
     redirectUrl.searchParams.set("name", displayName);
     if (pictureUrl) redirectUrl.searchParams.set("picture", pictureUrl);
 
-    return NextResponse.redirect(redirectUrl.toString());
+    const res = NextResponse.redirect(redirectUrl.toString());
+    res.cookies.set("firebase_custom_token", customToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge: 300,
+      path: "/auth/complete",
+    });
+    return res;
   } catch (e) {
     console.error("LINE auth error:", e);
     return NextResponse.redirect(`${origin}/auth/login?error=auth_failed`);

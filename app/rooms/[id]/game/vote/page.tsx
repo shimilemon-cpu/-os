@@ -76,6 +76,7 @@ export default function VotePage() {
   const uid = auth.currentUser?.uid ?? "";
   const isHost = room?.hostId === uid;
   const advancingRef = useRef(false);
+  const votingRef = useRef(false);
 
   useEffect(() => {
     const u1 = subscribeRoom(roomId, setRoom);
@@ -118,24 +119,31 @@ export default function VotePage() {
       await updateRound(sessionId, roundParam, { status: "reviewing" });
       await updateSession(sessionId, { status: "reviewing" });
       const answerPayload = answers.map((a) => ({ id: a.id, text: a.text }));
+      const token = await auth.currentUser?.getIdToken();
       fetch("/api/ogiri/review", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           sessionId, roundId: roundParam,
           question: round?.question.text ?? "",
           answers: answerPayload,
           judges: room?.judges ?? ["王道", "辛口"],
         }),
-      }).catch(console.error);
+      }).catch((e) => console.error("AI review request failed:", e));
     } finally {
       advancingRef.current = false;
     }
   }, [session, isHost, round, sessionId, roundParam, answers]);
 
   const handleVote = async (answerId: string, reaction: Reaction) => {
-    const alreadyVoted = votes.some((v) => v.answerId === answerId && v.voterId === uid);
+    if (votingRef.current) return;
+    const alreadyVoted = votes.some((v) => v.voterId === uid);
     if (alreadyVoted) return;
+    votingRef.current = true;
+    try {
     await submitVote(sessionId, roundParam, answerId, uid, reaction);
     if (isHost && session && room) {
       const totalExpected = (room.memberIds.length - 1) * answers.length;
@@ -143,6 +151,9 @@ export default function VotePage() {
       if (myVotes >= answers.length - 1 && votes.length + 1 >= totalExpected) {
         await advanceToResult();
       }
+    }
+    } finally {
+      votingRef.current = false;
     }
   };
 

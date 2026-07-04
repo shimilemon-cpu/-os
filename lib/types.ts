@@ -26,6 +26,7 @@ export interface RoomDoc {
   capacity: number;          // default 5 for backward compat
   memberIds: string[];       // max capacity
   judges?: AiPersona[];     // undefined → ["王道", "辛口"]
+  answerSeconds?: number;   // default 90
   createdAt: Timestamp | null;
 }
 
@@ -58,7 +59,7 @@ export interface SessionDoc {
 // ─── ラウンド ──────────────────────────────────────────────
 export type RoundStatus = "answering" | "voting" | "reviewing" | "done";
 export type Difficulty = "初級" | "中級" | "上級";
-export type Genre = "日常" | "恋愛" | "仕事" | "カオス" | "その他";
+export type Genre = "定番" | "あるある" | "写真で一言" | "ブラック" | "日常" | "恋愛" | "仕事" | "カオス" | "その他";
 
 export interface RoundDoc {
   id: string;
@@ -112,24 +113,6 @@ export interface AiAnalysisResult {
   nickname: string;
   tendency: string;          // "シュール系", "ボケ系" など
   comment: string;           // "ちょっと●●に寄った回答するね！"
-}
-
-// ─── グループ統計（学習データ） ────────────────────────────────
-export interface GroupStatsDoc {
-  genrePrefs: Record<Genre, number>;
-  reactionDist: Record<Reaction, number>;
-  playCount: number;
-  updatedAt: Timestamp | null;
-}
-
-// ─── 殿堂入り ──────────────────────────────────────────────
-export interface HallOfFameDoc {
-  id: string;
-  text: string;
-  authorNickname: string;
-  roundLabel: string;
-  reactions: Record<Reaction, number>;
-  createdAt: Timestamp | null;
 }
 
 // ─── 問題バンク ────────────────────────────────────────────

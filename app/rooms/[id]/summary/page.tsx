@@ -102,9 +102,13 @@ export default function SummaryPage() {
             return { userId: p.userId, nickname: p.nickname, tendency: "謎の存在", comment: "回答がありませんでした" };
           }
           try {
+            const token = await auth.currentUser?.getIdToken();
             const res = await fetch("/api/ogiri/analyze", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
               body: JSON.stringify({ answers: userAnswers, nickname: p.nickname }),
             });
             const data = await res.json() as { tendency: string; comment: string };

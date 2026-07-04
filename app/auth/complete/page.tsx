@@ -14,18 +14,19 @@ function CompleteInner() {
     if (didRun.current) return;
     didRun.current = true;
 
-    const token = params.get("token");
-    const next = params.get("next") ?? "/rooms";
+    const rawNext = params.get("next") ?? "/rooms";
+    const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/rooms";
     const name = params.get("name");
     const picture = params.get("picture");
 
-    if (!token) {
-      router.replace("/auth/login");
-      return;
-    }
-
-    signInWithCustomToken(auth, token)
-      .then(async (cred) => {
+    fetch("/api/auth/token")
+      .then((r) => r.json() as Promise<{ token: string | null }>)
+      .then(async ({ token }) => {
+        if (!token) {
+          router.replace("/auth/login");
+          return;
+        }
+        const cred = await signInWithCustomToken(auth, token);
         if (name) {
           localStorage.setItem("ogiri_nickname", name);
           await updateProfile(cred.user, {
