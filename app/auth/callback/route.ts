@@ -118,7 +118,7 @@ export async function GET(request: Request) {
     });
     return res;
   } catch (e) {
-    console.error("LINE auth error:", e);
+    console.error("LINE auth error:", e instanceof Error ? e.stack : e);
     return NextResponse.redirect(`${origin}/auth/login?error=auth_failed`);
   }
 }
