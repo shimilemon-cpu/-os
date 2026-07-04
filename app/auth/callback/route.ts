@@ -114,7 +114,7 @@ export async function GET(request: Request) {
       secure: true,
       sameSite: "lax",
       maxAge: 300,
-      path: "/auth/complete",
+      path: "/",
     });
     return res;
   } catch (e) {
