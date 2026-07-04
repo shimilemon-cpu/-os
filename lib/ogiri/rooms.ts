@@ -103,7 +103,9 @@ export function subscribeRoom(roomId: string, cb: (room: RoomDoc) => void) {
 
 export function subscribeMembers(roomId: string, cb: (members: RoomMemberDoc[]) => void) {
   return onSnapshot(collection(db, "rooms", roomId, "members"), (snap) => {
-    cb(snap.docs.map((d) => ({ ...d.data() } as RoomMemberDoc)));
+    const members = snap.docs.map((d) => ({ ...d.data() } as RoomMemberDoc));
+    members.sort((a, b) => (a.joinedAt?.seconds ?? 0) - (b.joinedAt?.seconds ?? 0));
+    cb(members);
   });
 }
 
