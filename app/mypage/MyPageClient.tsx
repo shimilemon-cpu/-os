@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { doc, getDoc, getDocs, collection, query, where } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client";
 import type { UserDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
@@ -155,6 +156,35 @@ export default function MyPageClient() {
               <Icon name="chevron" size={16} color="#B6AC97" strokeWidth={2} />
             </button>
           ))}
+        </div>
+
+        {/* Auth info + Logout */}
+        <div className="mt-4 mb-6">
+          <p className="font-gothic text-sub mb-2" style={{ fontSize: 11 }}>
+            {user?.uid?.startsWith("line_") ? "LINEアカウントでログイン中" : "ゲストとしてログイン中"}
+          </p>
+          <button
+            onClick={async () => {
+              localStorage.removeItem("ogiri_nickname");
+              await signOut(auth);
+              router.push("/auth/login");
+            }}
+            className="w-full font-gothic font-semibold active:scale-[0.98] transition-transform"
+            style={{
+              fontSize: 14, padding: "14px 0",
+              borderRadius: 18,
+              border: "1.5px solid rgba(0,0,0,.1)",
+              color: "#E5402F",
+              background: "transparent",
+            }}
+          >
+            ログアウト
+          </button>
+          {!user?.uid?.startsWith("line_") && (
+            <p className="font-gothic text-sub text-center mt-2" style={{ fontSize: 11 }}>
+              LINEでログインし直すと、どの端末でも同じアカウントで遊べます
+            </p>
+          )}
         </div>
       </div>
 
