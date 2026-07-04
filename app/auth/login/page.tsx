@@ -60,15 +60,12 @@ function LoginInner() {
         try {
           setSubmitting(true);
           const cred = await signInAnonymously(auth);
-          localStorage.setItem(NICKNAME_KEY, saved);
-          Promise.all([
-            updateProfile(cred.user, { displayName: saved }),
-            setDoc(
-              doc(db, "users", cred.user.uid),
-              { nickname: saved, avatarUrl: null, avatarIcon: null, createdAt: Timestamp.now() },
-              { merge: true },
-            ),
-          ]).catch((e) => console.error("[auth] background profile update failed:", e));
+          await updateProfile(cred.user, { displayName: saved });
+          setDoc(
+            doc(db, "users", cred.user.uid),
+            { nickname: saved, avatarUrl: null, avatarIcon: null, createdAt: Timestamp.now() },
+            { merge: true },
+          ).catch((e) => console.error("[auth] Firestore write failed:", e));
           router.replace(next);
         } catch {
           setSubmitting(false);
@@ -92,14 +89,12 @@ function LoginInner() {
         : await signInAnonymously(auth);
       const user = cred.user;
       localStorage.setItem(NICKNAME_KEY, name);
-      Promise.all([
-        updateProfile(user, { displayName: name }),
-        setDoc(
-          doc(db, "users", user.uid),
-          { nickname: name, avatarUrl: null, avatarIcon: null, createdAt: Timestamp.now() },
-          { merge: true },
-        ),
-      ]).catch((e) => console.error("[auth] background profile update failed:", e));
+      await updateProfile(user, { displayName: name });
+      setDoc(
+        doc(db, "users", user.uid),
+        { nickname: name, avatarUrl: null, avatarIcon: null, createdAt: Timestamp.now() },
+        { merge: true },
+      ).catch((e) => console.error("[auth] Firestore write failed:", e));
       router.replace(next);
     } catch (e) {
       console.error("[auth] sign-in failed:", e);
