@@ -119,12 +119,15 @@ export function subscribeUserRooms(
   const q = query(
     collection(db, "rooms"),
     where("memberIds", "array-contains", userId),
-    orderBy("createdAt", "desc"),
     limit(20)
   );
   return onSnapshot(
     q,
-    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as RoomDoc))),
+    (snap) => {
+      const rooms = snap.docs.map((d) => ({ id: d.id, ...d.data() } as RoomDoc));
+      rooms.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+      cb(rooms);
+    },
     (err) => { console.error("subscribeUserRooms:", err); onError?.(err); },
   );
 }
