@@ -14,6 +14,8 @@ import Icon from "@/components/Icon";
 type EngimonoName = "daruma" | "cat" | "tai" | "fuku" | "koban" | "mallet" | "mask" | "tanuki" | "kitsune" | "usagi";
 type Tab = "stats" | "users" | "rooms" | "moderation";
 
+const ADMIN_UIDS = process.env.NEXT_PUBLIC_ADMIN_UID?.split(",").filter(Boolean) ?? [];
+
 const TAB_LABELS: Record<Tab, string> = {
   stats: "統計",
   users: "ユーザー",
@@ -58,6 +60,7 @@ const STATUS_LABEL: Record<string, string> = { waiting: "受付中", active: "�
 
 export default function AdminPage() {
   const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("stats");
 
@@ -122,6 +125,11 @@ export default function AdminPage() {
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) { router.push("/auth/login"); return; }
+    if (ADMIN_UIDS.length > 0 && !ADMIN_UIDS.includes(user.uid)) {
+      router.push("/rooms");
+      return;
+    }
+    setAuthorized(true);
     loadData();
   }, [router, loadData]);
 
@@ -162,7 +170,7 @@ export default function AdminPage() {
 
   const getNickname = (uid: string) => users.find((u) => u.id === uid)?.nickname ?? uid.slice(0, 6);
 
-  if (loading) {
+  if (!authorized || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#E5402F", borderTopColor: "transparent" }} />
