@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { doc, getDoc, getDocs, collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/client";
 import type { UserDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 import Icon from "@/components/Icon";
+import ProfileEditSheet from "./ProfileEditSheet";
 
-type EngimonoName = "daruma" | "cat" | "tai" | "fuku" | "koban" | "mallet" | "mask";
-const COLLECTED: EngimonoName[] = ["fuku", "cat", "tai"];
+type EngimonoName = "daruma" | "cat" | "tai" | "fuku" | "koban" | "mallet" | "mask" | "tanuki" | "kitsune" | "usagi";
+const ALL_ICONS: EngimonoName[] = [
+  "daruma", "cat", "tai", "fuku", "koban",
+  "mallet", "mask", "tanuki", "kitsune", "usagi",
+];
 
 function StatsSkeleton() {
   return (
@@ -26,6 +30,7 @@ export default function MyPageClient() {
   const [profile, setProfile] = useState<UserDoc | null>(null);
   const [stats, setStats] = useState({ rooms: 0, zabuton: 0, taisho: 0 });
   const [loading, setLoading] = useState(true);
+  const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -44,6 +49,13 @@ export default function MyPageClient() {
 
   const user = auth.currentUser;
   const nickname = profile?.nickname ?? cachedNickname ?? user?.displayName ?? "ゲスト";
+  const avatarIcon = (profile?.avatarIcon as EngimonoName | null) ?? "fuku";
+  const avatarUrl = profile?.avatarUrl ?? null;
+
+  const handleSaved = useCallback((data: { nickname: string; avatarIcon: EngimonoName | null; avatarUrl: string | null }) => {
+    setProfile((prev) => prev ? { ...prev, nickname: data.nickname, avatarIcon: data.avatarIcon, avatarUrl: data.avatarUrl } : prev);
+    setShowEdit(false);
+  }, []);
 
   return (
     <>
@@ -52,12 +64,19 @@ export default function MyPageClient() {
         <div className="flex flex-col items-center gap-[10px]">
           <div className="relative" style={{ width: 88, height: 88 }}>
             <div
-              className="grid place-items-center"
+              className="grid place-items-center overflow-hidden"
               style={{ width: 88, height: 88, background: "#F0EBE0", border: "3px solid #2BA35F", borderRadius: "50%" }}
             >
-              <Engimono name="fuku" width={48} height={52} />
+              {avatarIcon && !avatarUrl ? (
+                <Engimono name={avatarIcon} width={48} height={52} />
+              ) : avatarUrl ? (
+                <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <Engimono name="fuku" width={48} height={52} />
+              )}
             </div>
             <button
+              onClick={() => setShowEdit(true)}
               className="absolute grid place-items-center"
               style={{ bottom: -2, right: -2, width: 28, height: 28, background: "#E5402F", border: "2px solid #FBF7EC", borderRadius: "50%" }}
             >
@@ -99,25 +118,19 @@ export default function MyPageClient() {
           className="bg-white mb-[8px]"
           style={{ borderRadius: 18, border: "1px solid rgba(0,0,0,.07)", padding: 16 }}
         >
-          <div className="flex gap-[12px] flex-wrap">
-            {COLLECTED.map((name) => (
+          <div className="flex gap-[10px] flex-wrap">
+            {ALL_ICONS.map((name) => (
               <div
                 key={name}
                 className="grid place-items-center"
                 style={{
-                  width: 56, height: 56, background: "#F0EBE0", borderRadius: "50%",
-                  border: name === COLLECTED[0] ? "2px solid #2BA35F" : "2px solid transparent",
+                  width: 48, height: 48, background: "#F0EBE0", borderRadius: "50%",
+                  border: name === avatarIcon ? "2px solid #2BA35F" : "2px solid transparent",
                 }}
               >
-                <Engimono name={name} width={30} height={32} />
+                <Engimono name={name} width={26} height={28} />
               </div>
             ))}
-            <button
-              className="grid place-items-center"
-              style={{ width: 56, height: 56, background: "rgba(0,0,0,.02)", border: "2px dashed rgba(0,0,0,.12)", borderRadius: "50%" }}
-            >
-              <Icon name="plus" size={18} color="#B6AC97" strokeWidth={2} />
-            </button>
           </div>
         </div>
 
@@ -128,20 +141,34 @@ export default function MyPageClient() {
           style={{ borderRadius: 18, border: "1px solid rgba(0,0,0,.07)" }}
         >
           {["プロフィール編集", "対戦履歴", "通知設定"].map((label, i, arr) => (
-            <div
+            <button
               key={label}
-              className="flex items-center justify-between px-[16px] font-gothic font-semibold text-[#1A1714]"
+              onClick={label === "プロフィール編集" ? () => setShowEdit(true) : undefined}
+              className="w-full flex items-center justify-between px-[16px] font-gothic font-semibold text-[#1A1714]"
               style={{
                 padding: 16, fontSize: 14, cursor: "pointer",
                 borderBottom: i < arr.length - 1 ? "1px solid rgba(0,0,0,.04)" : "none",
+                background: "transparent",
               }}
             >
               <span>{label}</span>
               <Icon name="chevron" size={16} color="#B6AC97" strokeWidth={2} />
-            </div>
+            </button>
           ))}
         </div>
       </div>
+
+      {/* Edit sheet */}
+      {showEdit && user && (
+        <ProfileEditSheet
+          uid={user.uid}
+          initialNickname={nickname}
+          initialAvatarIcon={avatarIcon}
+          initialAvatarUrl={avatarUrl}
+          onClose={() => setShowEdit(false)}
+          onSaved={handleSaved}
+        />
+      )}
     </>
   );
 }

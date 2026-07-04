@@ -1,4 +1,4 @@
-type EngimonoName = "daruma" | "cat" | "tai" | "fuku" | "koban" | "mallet" | "mask";
+type EngimonoName = "daruma" | "cat" | "tai" | "fuku" | "koban" | "mallet" | "mask" | "tanuki" | "kitsune" | "usagi";
 
 interface Props {
   name: EngimonoName;
@@ -16,6 +16,9 @@ const VIEWBOXES: Record<EngimonoName, string> = {
   koban: "0 0 66 100",
   mallet: "0 0 110 110",
   mask: "0 0 100 104",
+  tanuki: "0 0 100 110",
+  kitsune: "0 0 100 110",
+  usagi: "0 0 100 116",
 };
 
 function Daruma() {
@@ -131,6 +134,69 @@ function Mask() {
   );
 }
 
+function Tanuki() {
+  return (
+    <>
+      <path d="M50,70 C72,70 85,88 82,108 L18,108 C15,88 28,70 50,70 Z" fill="#8B6F47"/>
+      <ellipse cx="50" cy="42" rx="30" ry="28" fill="#C4A265"/>
+      <circle cx="18" cy="38" r="7" fill="#C4A265"/>
+      <circle cx="82" cy="38" r="7" fill="#C4A265"/>
+      <path d="M28,16 L35,30 Q30,28 26,24 Z" fill="#8B6F47"/>
+      <path d="M72,16 L65,30 Q70,28 74,24 Z" fill="#8B6F47"/>
+      <ellipse cx="50" cy="46" rx="18" ry="14" fill="#FFEED6"/>
+      <ellipse cx="38" cy="40" rx="8" ry="7" fill="#FFFFFF"/>
+      <ellipse cx="62" cy="40" rx="8" ry="7" fill="#FFFFFF"/>
+      <circle cx="38" cy="41" r="3.5" fill="#2B2017"/>
+      <circle cx="62" cy="41" r="3.5" fill="#2B2017"/>
+      <ellipse cx="50" cy="50" rx="5" ry="3.5" fill="#2B2017"/>
+      <path d="M45,55 Q50,60 55,55" fill="none" stroke="#2B2017" strokeWidth="2" strokeLinecap="round"/>
+      <ellipse cx="50" cy="90" rx="14" ry="10" fill="#FFEED6"/>
+    </>
+  );
+}
+
+function Kitsune() {
+  return (
+    <>
+      <path d="M50,68 C72,68 84,86 80,108 L20,108 C16,86 28,68 50,68 Z" fill="#F4C422"/>
+      <ellipse cx="50" cy="44" rx="28" ry="26" fill="#F6D76A"/>
+      <circle cx="20" cy="40" r="6" fill="#F6D76A"/>
+      <circle cx="80" cy="40" r="6" fill="#F6D76A"/>
+      <path d="M24,8 L32,28 Q26,24 22,18 Z" fill="#F4C422"/>
+      <path d="M76,8 L68,28 Q74,24 78,18 Z" fill="#F4C422"/>
+      <path d="M26,10 L30,24" fill="none" stroke="#FFEED6" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M74,10 L70,24" fill="none" stroke="#FFEED6" strokeWidth="3" strokeLinecap="round"/>
+      <ellipse cx="50" cy="48" rx="16" ry="12" fill="#FFFFFF"/>
+      <path d="M36,42 L42,46 L36,48" fill="none" stroke="#2B2017" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M64,42 L58,46 L64,48" fill="none" stroke="#2B2017" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
+      <ellipse cx="50" cy="52" rx="3.5" ry="2.5" fill="#2B2017"/>
+      <path d="M46,56 Q50,60 54,56" fill="none" stroke="#2B2017" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M46,90 Q50,104 54,90" fill="none" stroke="#F6D76A" strokeWidth="8" strokeLinecap="round"/>
+    </>
+  );
+}
+
+function Usagi() {
+  return (
+    <>
+      <path d="M36,4 Q34,28 40,38" fill="none" stroke="#F4A0A8" strokeWidth="10" strokeLinecap="round"/>
+      <path d="M64,4 Q66,28 60,38" fill="none" stroke="#F4A0A8" strokeWidth="10" strokeLinecap="round"/>
+      <path d="M36,6 Q34,28 40,36" fill="none" stroke="#FFCED4" strokeWidth="4" strokeLinecap="round"/>
+      <path d="M64,6 Q66,28 60,36" fill="none" stroke="#FFCED4" strokeWidth="4" strokeLinecap="round"/>
+      <path d="M50,74 C72,74 84,90 80,114 L20,114 C16,90 28,74 50,74 Z" fill="#EE4F3A"/>
+      <circle cx="50" cy="56" r="26" fill="#FFFFFF"/>
+      <circle cx="22" cy="52" r="6" fill="#FFFFFF"/>
+      <circle cx="78" cy="52" r="6" fill="#FFFFFF"/>
+      <circle cx="40" cy="52" r="3.6" fill="#EE4F3A"/>
+      <circle cx="60" cy="52" r="3.6" fill="#EE4F3A"/>
+      <ellipse cx="50" cy="60" rx="3" ry="2.2" fill="#F4A0A8"/>
+      <path d="M47,63 Q50,67 53,63" fill="none" stroke="#2B2017" strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="32" cy="60" r="4.5" fill="#FFCED4"/>
+      <circle cx="68" cy="60" r="4.5" fill="#FFCED4"/>
+    </>
+  );
+}
+
 const SHAPES: Record<EngimonoName, () => React.ReactElement> = {
   daruma: Daruma,
   cat: Cat,
@@ -139,6 +205,9 @@ const SHAPES: Record<EngimonoName, () => React.ReactElement> = {
   koban: Koban,
   mallet: Mallet,
   mask: Mask,
+  tanuki: Tanuki,
+  kitsune: Kitsune,
+  usagi: Usagi,
 };
 
 import { memo } from "react";
