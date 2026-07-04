@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { getAuth } from "firebase-admin/auth";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 
@@ -55,6 +56,16 @@ async function reviewAnswer(
 }
 
 export async function POST(request: Request) {
+  const idToken = request.headers.get("authorization")?.replace("Bearer ", "");
+  if (!idToken) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    await getAuth().verifyIdToken(idToken);
+  } catch {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  }
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY未設定" }, { status: 500 });
   }

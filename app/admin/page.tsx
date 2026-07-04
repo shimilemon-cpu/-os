@@ -14,7 +14,7 @@ import Icon from "@/components/Icon";
 type EngimonoName = "daruma" | "cat" | "tai" | "fuku" | "koban" | "mallet" | "mask" | "tanuki" | "kitsune" | "usagi";
 type Tab = "stats" | "users" | "rooms" | "moderation";
 
-const ADMIN_UIDS = process.env.NEXT_PUBLIC_ADMIN_UID?.split(",").filter(Boolean) ?? [];
+const ADMIN_EMAILS = ["shimilemon@gmail.com"];
 
 const TAB_LABELS: Record<Tab, string> = {
   stats: "統計",
@@ -123,14 +123,17 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) { router.push("/auth/login"); return; }
-    if (ADMIN_UIDS.length > 0 && !ADMIN_UIDS.includes(user.uid)) {
-      router.push("/rooms");
-      return;
-    }
-    setAuthorized(true);
-    loadData();
+    auth.authStateReady().then(() => {
+      const user = auth.currentUser;
+      if (!user) { router.push("/auth/login"); return; }
+      const email = user.email?.toLowerCase();
+      if (!email || !ADMIN_EMAILS.includes(email)) {
+        router.push("/rooms");
+        return;
+      }
+      setAuthorized(true);
+      loadData();
+    });
   }, [router, loadData]);
 
   const deleteRoom = async (roomId: string, roomName: string) => {

@@ -1,6 +1,7 @@
 import {
   collection, doc, addDoc, updateDoc, onSnapshot,
   Timestamp, query, where, getDocs, orderBy, limit, setDoc, increment,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, Reaction } from "@/lib/types";
@@ -74,15 +75,22 @@ export async function submitAnswer(
   userId: string,
   text: string
 ): Promise<void> {
-  const answerRef = doc(collection(db, "sessions", sessionId, "rounds", roundId, "answers"));
+  const answersCol = collection(db, "sessions", sessionId, "rounds", roundId, "answers");
+  const existing = await getDocs(query(answersCol, where("userId", "==", userId), limit(1)));
+  if (!existing.empty) throw new Error("すでに回答済みです");
+
+  const answerRef = doc(answersCol);
   const roundRef = doc(db, "sessions", sessionId, "rounds", roundId);
-  await setDoc(answerRef, {
+  const displayOrder = Math.random();
+  const batch = writeBatch(db);
+  batch.set(answerRef, {
     userId,
-    displayOrder: 0,
+    displayOrder,
     text,
     submittedAt: Timestamp.now(),
   } satisfies Omit<AnswerDoc, "id">);
-  await updateDoc(roundRef, { answerCount: increment(1) });
+  batch.update(roundRef, { answerCount: increment(1) });
+  await batch.commit();
 }
 
 export function subscribeAnswers(sessionId: string, roundId: string, cb: (a: AnswerDoc[]) => void) {

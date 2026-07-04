@@ -29,21 +29,29 @@ export default function NewRoomPage() {
   const [roomMode, setRoomMode] = useState<0 | 1>(0); // 0=realtime, 1=async
   const [aikotoba, setAikotoba] = useState(generateHiraganaCode);
 
-  const create = () => {
-    if (!name.trim()) return;
+  const [creating, setCreating] = useState(false);
+
+  const create = async () => {
+    if (!name.trim() || creating) return;
     const user = auth.currentUser;
     if (!user) { setError("未ログイン"); return; }
 
+    setCreating(true);
+    setError("");
     const inviteCode = useCode ? aikotoba : generateInviteCode();
     const roomRef = generateRoomRef();
     const roomId = roomRef.id;
-
-    router.push(`/rooms/${roomId}/invite?code=${inviteCode}`);
-
     const topicModes = ["omakase", "custom", "mochiyori"] as const;
     const mode = roomMode === 0 ? "realtime" : "async";
-    createRoom(user.uid, user.displayName ?? "ゲスト", name.trim(), mode, ["王道", "辛口"], roomRef, inviteCode, topicModes[topicMode], capacity)
-      .catch((e) => console.error("createRoom failed:", e));
+
+    try {
+      await createRoom(user.uid, user.displayName ?? "ゲスト", name.trim(), mode, ["王道", "辛口"], roomRef, inviteCode, topicModes[topicMode], capacity, timeLimit);
+      router.push(`/rooms/${roomId}/invite?code=${inviteCode}`);
+    } catch (e) {
+      console.error("createRoom failed:", e);
+      setError("部屋の作成に失敗しました。もう一度お試しください。");
+      setCreating(false);
+    }
   };
 
   const sliderPct = ((timeLimit - 30) / (180 - 30)) * 100;
@@ -266,11 +274,11 @@ export default function NewRoomPage() {
       <div className="sticky bottom-0 px-[20px] pb-[100px] pt-[10px] bg-paper">
         <button
           onClick={create}
-          disabled={!name.trim()}
+          disabled={!name.trim() || creating}
           className="w-full font-mincho font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-all"
           style={{ fontSize: 18, padding: "16px 0", borderRadius: 18, background: "#E5402F", boxShadow: "0 14px 26px -10px rgba(229,64,47,0.6)" }}
         >
-          のれんを掲げる
+          {creating ? "作成中…" : "のれんを掲げる"}
         </button>
       </div>
     </div>

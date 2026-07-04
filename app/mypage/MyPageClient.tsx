@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { doc, getDoc, getDocs, collection, query, where } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client";
-import type { UserDoc } from "@/lib/types";
+import { tallyVotes } from "@/lib/ogiri/sessions";
+import type { UserDoc, VoteDoc, AnswerDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 import Icon from "@/components/Icon";
 import ProfileEditSheet from "./ProfileEditSheet";
@@ -27,25 +28,53 @@ function StatsSkeleton() {
 
 export default function MyPageClient() {
   const router = useRouter();
-  const cachedNickname = typeof window !== "undefined" ? localStorage.getItem("ogiri_nickname") : null;
+  const [cachedNickname, setCachedNickname] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserDoc | null>(null);
   const [stats, setStats] = useState({ rooms: 0, zabuton: 0, taisho: 0 });
   const [loading, setLoading] = useState(true);
   const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) { router.push("/auth/login"); return; }
+    setCachedNickname(localStorage.getItem("ogiri_nickname"));
+  }, []);
 
-    Promise.all([
-      getDoc(doc(db, "users", user.uid)),
-      getDocs(query(collection(db, "rooms"), where("memberIds", "array-contains", user.uid))),
-    ]).then(([profileSnap, roomsSnap]) => {
+  useEffect(() => {
+    auth.authStateReady().then(async () => {
+      const user = auth.currentUser;
+      if (!user) { router.push("/auth/login"); return; }
+
+      const [profileSnap, roomsSnap] = await Promise.all([
+        getDoc(doc(db, "users", user.uid)),
+        getDocs(query(collection(db, "rooms"), where("memberIds", "array-contains", user.uid))),
+      ]);
       if (profileSnap.exists()) {
         setProfile({ id: user.uid, ...profileSnap.data() } as UserDoc);
       }
-      setStats({ rooms: roomsSnap.size, zabuton: 87, taisho: 3 });
-    }).finally(() => setLoading(false));
+
+      let zabuton = 0;
+      let taisho = 0;
+      const sessionsSnap = await getDocs(query(collection(db, "sessions"), where("roomId", "in", roomsSnap.docs.map((d) => d.id).slice(0, 30))));
+      for (const sess of sessionsSnap.docs) {
+        const roundsSnap = await getDocs(collection(db, "sessions", sess.id, "rounds"));
+        for (const rd of roundsSnap.docs) {
+          const [answersSnap, votesSnap] = await Promise.all([
+            getDocs(collection(db, "sessions", sess.id, "rounds", rd.id, "answers")),
+            getDocs(collection(db, "sessions", sess.id, "rounds", rd.id, "votes")),
+          ]);
+          const answers = answersSnap.docs.map((d) => ({ id: d.id, ...d.data() } as AnswerDoc));
+          const votes = votesSnap.docs.map((d) => d.data() as VoteDoc);
+          const tally = tallyVotes(votes);
+          const myAnswers = answers.filter((a) => a.userId === user.uid);
+          for (const a of myAnswers) zabuton += tally[a.id]?.total ?? 0;
+          if (answers.length > 0) {
+            const sorted = [...answers].sort((a, b) => (tally[b.id]?.total ?? 0) - (tally[a.id]?.total ?? 0));
+            if (sorted[0]?.userId === user.uid) taisho++;
+          }
+        }
+      }
+      setStats({ rooms: roomsSnap.size, zabuton, taisho });
+      setLoading(false);
+    });
   }, [router]);
 
   const user = auth.currentUser;

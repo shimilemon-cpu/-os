@@ -22,9 +22,9 @@ export default function RoomsPage() {
             href="/rooms/new"
             className="grid place-items-center bg-white"
             style={{ width: 40, height: 40, borderRadius: 13, border: "1px solid rgba(0,0,0,.07)" }}
-            aria-label="検索"
+            aria-label="部屋を立てる"
           >
-            <Icon name="search" size={18} color="#1A1714" strokeWidth={2.2} />
+            <Icon name="plus" size={18} color="#1A1714" strokeWidth={2.2} />
           </Link>
         </div>
       </div>

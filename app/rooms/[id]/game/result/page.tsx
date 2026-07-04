@@ -10,7 +10,7 @@ import {
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom, finishGame } from "@/lib/ogiri/rooms";
 import { publishToEngawa } from "@/lib/ogiri/engawa";
-import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, RoomDoc } from "@/lib/types";
+import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, RoomDoc, Genre, Difficulty } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 import Icon from "@/components/Icon";
 import OdaiSheet from "@/components/OdaiSheet";
@@ -19,15 +19,18 @@ import { validatePhoto, uploadRoomPhoto } from "@/lib/ogiri/photos";
 
 type QuestionData = { question: string; genre: string; difficulty: string };
 
-function prefetchQuestion(): Promise<QuestionData> {
+async function prefetchQuestion(): Promise<QuestionData> {
+  const token = await auth.currentUser?.getIdToken();
   return fetch("/api/ogiri/question", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({}),
   }).then((r) => r.json() as Promise<QuestionData>);
 }
 
-const ANSWER_SECONDS = 90;
 const RANK_LABELS = ["大関", "関脇", "前頭"];
 const RANK_COLORS = ["#2BA35F", "#E0A93B", "#7A6F5C"];
 const AVATAR_COLORS = ["#2BA35F", "#F4C422", "#D63384", "#E5402F", "#5BA9D6"];
@@ -133,18 +136,18 @@ export default function ResultPage() {
         setUploadingNext(false);
         await createRound(sessionId, nextRound, {
           text: nextPhotoCaption || "この写真で一言",
-          genre: "その他" as never,
-          difficulty: "中級" as never,
+          genre: "その他",
+          difficulty: "中級",
           imageUrl,
-        }, ANSWER_SECONDS);
+        }, room?.answerSeconds ?? 90);
       } else {
         const data = await (prefetchRef.current ?? prefetchQuestion());
         prefetchRef.current = null;
         await createRound(sessionId, nextRound, {
           text: data.question,
-          genre: data.genre as never,
-          difficulty: data.difficulty as never,
-        }, ANSWER_SECONDS);
+          genre: data.genre as Genre,
+          difficulty: data.difficulty as Difficulty,
+        }, room?.answerSeconds ?? 90);
       }
       await updateRound(sessionId, roundParam, { status: "done" });
       await updateSession(sessionId, { currentRound: nextRound, status: "answering" });
@@ -342,14 +345,6 @@ export default function ResultPage() {
       <div className="flex gap-[10px] px-[20px] pb-[40px]">
         {isHost ? (
           <>
-            <button
-              className="bg-white grid place-items-center shrink-0 active:scale-95 transition-transform"
-              style={{ width: 54, height: 54, borderRadius: 17, border: "1px solid rgba(0,0,0,.1)" }}
-              onClick={() => {}}
-              aria-label="再戦"
-            >
-              <Icon name="refresh" size={22} color="#1A1714" />
-            </button>
             <button
               onClick={goNext}
               className="flex-1 font-mincho font-extrabold text-paper active:scale-[0.98] transition-all"

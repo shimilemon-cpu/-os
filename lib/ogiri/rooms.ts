@@ -2,7 +2,7 @@ import {
   collection, doc, getDoc, updateDoc,
   onSnapshot, Timestamp, arrayUnion, setDoc,
   query, where, orderBy, limit,
-  DocumentReference,
+  DocumentReference, writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { RoomDoc, RoomMemberDoc, InviteCodeDoc, TopicMode } from "@/lib/types";
@@ -26,6 +26,7 @@ export async function createRoom(
   inviteCode?: string,
   topicMode: TopicMode = "omakase",
   capacity: number = 5,
+  answerSeconds: number = 90,
 ): Promise<string> {
   const code = inviteCode ?? generateInviteCode();
   const ref = roomRef ?? generateRoomRef();
@@ -38,6 +39,7 @@ export async function createRoom(
     topicMode,
     status: "waiting",
     capacity,
+    answerSeconds,
     memberIds: [hostId],
     judges,
     createdAt: Timestamp.now(),
@@ -76,13 +78,15 @@ export async function joinRoomByCode(
   if (room.memberIds.length >= (room.capacity ?? 5)) throw new Error("定員オーバー");
   if (room.status !== "waiting") throw new Error("ゲームはすでに開始されています");
 
-  await updateDoc(doc(db, "rooms", roomId), { memberIds: arrayUnion(userId) });
-  await setDoc(doc(db, "rooms", roomId, "members", userId), {
+  const batch = writeBatch(db);
+  batch.update(doc(db, "rooms", roomId), { memberIds: arrayUnion(userId) });
+  batch.set(doc(db, "rooms", roomId, "members", userId), {
     userId,
     nickname,
     isReady: false,
     joinedAt: Timestamp.now(),
   } satisfies Omit<RoomMemberDoc, "id">);
+  await batch.commit();
 
   return roomId;
 }

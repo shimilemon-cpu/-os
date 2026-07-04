@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { Timestamp } from "firebase/firestore";
 import { auth } from "@/lib/firebase/client";
 import {
   subscribeSession, subscribeRound, submitAnswer,
@@ -12,7 +13,6 @@ import type { SessionDoc, RoundDoc, RoomDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 import OdaiSheet from "@/components/OdaiSheet";
 
-const ANSWER_SECONDS = 90;
 const VOTE_SECONDS = 45;
 
 function TimerRing({ deadline, totalSeconds, onExpire }: { deadline: RoundDoc["answerDeadline"] | null; totalSeconds: number; onExpire?: () => void }) {
@@ -118,11 +118,10 @@ export default function GamePage() {
     if (!isHost && !isDeadlinePast) return;
     advancingRef.current = true;
     try {
-      const voteDeadline = new Date(Date.now() + VOTE_SECONDS * 1000);
+      const voteDeadline = Timestamp.fromDate(new Date(Date.now() + VOTE_SECONDS * 1000));
       await updateRound(sessionId, String(session.currentRound), {
         status: "voting",
-        // @ts-expect-error dynamic field
-        voteDeadline: { seconds: Math.floor(voteDeadline.getTime() / 1000), nanoseconds: 0 },
+        voteDeadline,
       });
       await updateSession(sessionId, { status: "voting" });
     } finally {
@@ -168,7 +167,7 @@ export default function GamePage() {
           <p className="font-gothic text-sub" style={{ fontSize: 11 }}>{room?.name}・第{session.currentRound}問</p>
           <p className="font-mincho font-bold text-[#1A1714]" style={{ fontSize: 17 }}>回答を考える</p>
         </div>
-        <TimerRing deadline={round.answerDeadline} totalSeconds={ANSWER_SECONDS} onExpire={advanceToVoting} />
+        <TimerRing deadline={round.answerDeadline} totalSeconds={room?.answerSeconds ?? 90} onExpire={advanceToVoting} />
       </div>
 
       {/* お題カード */}

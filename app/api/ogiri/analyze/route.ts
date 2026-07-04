@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { getAuth } from "firebase-admin/auth";
+import "@/lib/firebase/admin";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(request: Request) {
+  const idToken = request.headers.get("authorization")?.replace("Bearer ", "");
+  if (!idToken) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    await getAuth().verifyIdToken(idToken);
+  } catch {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  }
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ tendency: "謎の存在", comment: "分析できませんでした" });
   }

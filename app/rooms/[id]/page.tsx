@@ -7,21 +7,24 @@ import { auth } from "@/lib/firebase/client";
 import { subscribeRoom, subscribeMembers, setMemberReady, startGame } from "@/lib/ogiri/rooms";
 import { createSession, createRound, getActiveSession } from "@/lib/ogiri/sessions";
 import { validatePhoto, uploadRoomPhoto } from "@/lib/ogiri/photos";
-import type { RoomDoc, RoomMemberDoc } from "@/lib/types";
+import type { RoomDoc, RoomMemberDoc, Genre, Difficulty } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 import OdaiSheet from "@/components/OdaiSheet";
 
 type QuestionData = { question: string; genre: string; difficulty: string };
 
-function prefetchQuestion(): Promise<QuestionData> {
+async function prefetchQuestion(): Promise<QuestionData> {
+  const token = await auth.currentUser?.getIdToken();
   return fetch("/api/ogiri/question", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({}),
   }).then((r) => r.json() as Promise<QuestionData>);
 }
 
-const ANSWER_SECONDS = 90;
 const CHARM_NAMES = ["daruma", "cat", "tai", "fuku", "mask"] as const;
 const CHARM_BG = ["#FCE8E3", "#EAF7EF", "#FDEFE0", "#FFF3D6", "#E8F0FC"] as const;
 
@@ -96,17 +99,17 @@ export default function WaitingRoomPage() {
         setUploading(false);
         await createRound(sessionId, 1, {
           text: photoCaption || "この写真で一言",
-          genre: "その他" as never,
-          difficulty: "中級" as never,
+          genre: "その他",
+          difficulty: "中級",
           imageUrl,
-        }, ANSWER_SECONDS);
+        }, room.answerSeconds ?? 90);
       } else {
         const data = await (prefetchRef.current ?? prefetchQuestion());
         await createRound(sessionId, 1, {
           text: data.question,
-          genre: data.genre as never,
-          difficulty: data.difficulty as never,
-        }, ANSWER_SECONDS);
+          genre: data.genre as Genre,
+          difficulty: data.difficulty as Difficulty,
+        }, room.answerSeconds ?? 90);
         prefetchRef.current = null;
       }
       await startGame(roomId);

@@ -129,7 +129,7 @@ export default function ProfileEditSheet({
             type="text"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
-            maxLength={20}
+            maxLength={12}
             className="w-full font-gothic bg-white text-[#1A1714] outline-none"
             style={{
               fontSize: 15, padding: "12px 14px",
@@ -139,7 +139,7 @@ export default function ProfileEditSheet({
             placeholder="ニックネーム"
           />
           <span className="font-gothic text-sub block text-right" style={{ fontSize: 10, marginTop: 4 }}>
-            {nickname.length}/20
+            {nickname.length}/12
           </span>
         </label>
 

@@ -25,7 +25,8 @@ export default function LoginPage() {
 function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/rooms";
+  const rawNext = searchParams.get("next") ?? "/rooms";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/rooms";
   const errorParam = searchParams.get("error");
 
   const [showGuest, setShowGuest] = useState(false);
