@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+function getOrigin(request: Request): string {
+  const url = new URL(request.url);
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+  return url.origin.replace(/^http:/, "https:");
+}
+
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = getOrigin(request);
   const next = searchParams.get("next") ?? "/rooms";
 
   const state = crypto.randomUUID();

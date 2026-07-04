@@ -31,8 +31,17 @@ function LoginInner() {
   const [showGuest, setShowGuest] = useState(false);
   const [nickname, setNickname] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const ERROR_MESSAGES: Record<string, string> = {
+    line_denied: "LINEログインがキャンセルされました",
+    no_state: "セッションが切れました（Cookieなし）。もう一度お試しください",
+    invalid_state: "セッションが無効です（state不一致）。もう一度お試しください",
+    token_failed: "LINEトークン取得に失敗しました。コールバックURLを確認してください",
+    profile_failed: "LINEプロフィール取得に失敗しました",
+    auth_failed: "Firebase認証に失敗しました（サーバー設定を確認）",
+    signin_failed: "クライアント側のログインに失敗しました",
+  };
   const [error, setError] = useState<string | null>(
-    errorParam ? "ログインに失敗しました。もう一度お試しください。" : null,
+    errorParam ? (ERROR_MESSAGES[errorParam] ?? `エラー: ${errorParam}`) : null,
   );
   const didAutoStart = useRef(false);
 

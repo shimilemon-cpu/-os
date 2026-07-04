@@ -3,8 +3,19 @@ import { cookies } from "next/headers";
 import { getAuth } from "firebase-admin/auth";
 import { adminDb } from "@/lib/firebase/admin";
 
+function getOrigin(request: Request): string {
+  const url = new URL(request.url);
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+  return url.origin.replace(/^http:/, "https:");
+}
+
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = getOrigin(request);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
   const error = searchParams.get("error");
@@ -30,6 +41,11 @@ export async function GET(request: Request) {
     next = parsed.next ?? "/rooms";
   } catch {
     return NextResponse.redirect(`${origin}/auth/login?error=invalid_state`);
+  }
+
+  if (!process.env.LINE_CHANNEL_ID || !process.env.LINE_CHANNEL_SECRET) {
+    console.error("LINE_CHANNEL_ID or LINE_CHANNEL_SECRET not set");
+    return NextResponse.redirect(`${origin}/auth/login?error=auth_failed`);
   }
 
   try {
