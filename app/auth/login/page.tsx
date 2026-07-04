@@ -44,10 +44,11 @@ function LoginInner() {
       const cred = auth.currentUser ? { user: auth.currentUser } : await signInAnonymously(auth);
       const user = cred.user;
       localStorage.setItem(NICKNAME_KEY, name);
+      await Promise.all([
+        updateProfile(user, { displayName: name }),
+        setDoc(doc(db, "users", user.uid), { nickname: name, avatarUrl: null, avatarIcon: null, createdAt: Timestamp.now() }, { merge: true }),
+      ]);
       router.replace(next);
-      updateProfile(user, { displayName: name }).catch(console.error);
-      const userRef = doc(db, "users", user.uid);
-      setDoc(userRef, { nickname: name, avatarUrl: null, createdAt: Timestamp.now() }, { merge: true }).catch(console.error);
     } catch (e) {
       console.error("[auth] anonymous sign-in failed:", e);
       setError("入室に失敗しました。もう一度お試しください。");

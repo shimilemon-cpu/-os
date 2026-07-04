@@ -24,12 +24,15 @@ export default function JoinRoomPage() {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("未ログイン");
-      const roomId = await joinRoomByCode(trimmed, user.uid, user.displayName ?? "ゲスト");
+      const savedNickname = localStorage.getItem("ogiri_nickname");
+      const nickname = savedNickname || user.displayName || "ゲスト";
+      const roomId = await joinRoomByCode(trimmed, user.uid, nickname);
       const snap = await getDoc(doc(db, "users", user.uid));
       if (!snap.exists()) {
         await setDoc(doc(db, "users", user.uid), {
-          nickname: user.displayName ?? "ゲスト",
-          avatarUrl: user.photoURL ?? null,
+          nickname,
+          avatarUrl: null,
+          avatarIcon: null,
           createdAt: Timestamp.now(),
         });
       }
