@@ -72,14 +72,14 @@ function LoginInner() {
         : await signInAnonymously(auth);
       const user = cred.user;
       localStorage.setItem(NICKNAME_KEY, name);
-      await Promise.all([
+      Promise.all([
         updateProfile(user, { displayName: name }),
         setDoc(
           doc(db, "users", user.uid),
           { nickname: name, avatarUrl: null, avatarIcon: null, createdAt: Timestamp.now() },
           { merge: true },
         ),
-      ]);
+      ]).catch((e) => console.error("[auth] background profile update failed:", e));
       router.replace(next);
     } catch (e) {
       console.error("[auth] sign-in failed:", e);
