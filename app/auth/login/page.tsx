@@ -192,6 +192,7 @@ function LoginInner() {
                   style={{ fontSize: 18, padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E0A93B" }}
                   placeholder="例）タロウ"
                   maxLength={12}
+                  autoComplete="off"
                   value={nickname}
                   autoFocus
                   onChange={(e) => setNickname(e.target.value)}

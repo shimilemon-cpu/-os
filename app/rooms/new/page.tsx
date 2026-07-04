@@ -16,9 +16,18 @@ function generateHiraganaCode(): string {
   return Array.from({ length: 4 }, () => HIRAGANA[Math.floor(Math.random() * HIRAGANA.length)]).join("");
 }
 
+const ROOM_ADJECTIVES = ["福猫の", "笑門の", "千客万来", "縁起良し", "爆笑", "腹筋崩壊", "珍回答"];
+const ROOM_NOUNS = ["大喜利茶屋", "大喜利座", "笑い処", "寄席", "お笑い道場", "爆笑亭", "一席"];
+
+function generateRoomName(): string {
+  const adj = ROOM_ADJECTIVES[Math.floor(Math.random() * ROOM_ADJECTIVES.length)];
+  const noun = ROOM_NOUNS[Math.floor(Math.random() * ROOM_NOUNS.length)];
+  return `${adj}${noun}`;
+}
+
 export default function NewRoomPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(generateRoomName);
   const [topicMode, setTopicMode] = useState(0);
   const [selectedGenre, setSelectedGenre] = useState<Genre>("定番");
   const [capacity, setCapacity] = useState(8);
@@ -82,6 +91,7 @@ export default function NewRoomPage() {
               style={{ border: "1px solid rgba(0,0,0,.07)", borderRadius: 14, padding: "13px 15px", fontSize: 15 }}
               placeholder="例：福猫の大喜利茶屋"
               maxLength={16}
+              autoComplete="off"
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && create()}
