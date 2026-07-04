@@ -9,7 +9,6 @@ import Engimono from "@/components/Engimono";
 import Noren from "@/components/Noren";
 
 const NICKNAME_KEY = "ogiri_nickname";
-const NAME_SUGGESTIONS = ["タロウ", "サクラ", "ゲンキ", "ヒカル", "モモ", "ケンタ"];
 
 export default function LoginPage() {
   return (
@@ -27,52 +26,56 @@ function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/rooms";
+  const errorParam = searchParams.get("error");
 
-  const saved = typeof window !== "undefined" ? localStorage.getItem(NICKNAME_KEY) : null;
-  const [nickname, setNickname] = useState(() => {
-    return saved ?? NAME_SUGGESTIONS[Math.floor(Math.random() * NAME_SUGGESTIONS.length)];
-  });
+  const [showGuest, setShowGuest] = useState(false);
+  const [nickname, setNickname] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    errorParam ? "ログインに失敗しました。もう一度お試しください。" : null,
+  );
   const didAutoStart = useRef(false);
 
-  const quickStart = async (name: string) => {
+  useEffect(() => {
+    if (didAutoStart.current) return;
+    didAutoStart.current = true;
+    router.prefetch(next);
+    auth.authStateReady().then(() => {
+      if (auth.currentUser) {
+        router.replace(next);
+      }
+    });
+  }, [next, router]);
+
+  const loginWithLine = () => {
+    window.location.href = `/api/auth/line?next=${encodeURIComponent(next)}`;
+  };
+
+  const guestStart = async () => {
+    const name = nickname.trim();
     if (!name || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
-      const cred = auth.currentUser ? { user: auth.currentUser } : await signInAnonymously(auth);
+      const cred = auth.currentUser
+        ? { user: auth.currentUser }
+        : await signInAnonymously(auth);
       const user = cred.user;
       localStorage.setItem(NICKNAME_KEY, name);
       await Promise.all([
         updateProfile(user, { displayName: name }),
-        setDoc(doc(db, "users", user.uid), { nickname: name, avatarUrl: null, avatarIcon: null, createdAt: Timestamp.now() }, { merge: true }),
+        setDoc(
+          doc(db, "users", user.uid),
+          { nickname: name, avatarUrl: null, avatarIcon: null, createdAt: Timestamp.now() },
+          { merge: true },
+        ),
       ]);
       router.replace(next);
     } catch (e) {
-      console.error("[auth] anonymous sign-in failed:", e);
+      console.error("[auth] sign-in failed:", e);
       setError("入室に失敗しました。もう一度お試しください。");
       setSubmitting(false);
     }
-  };
-
-  useEffect(() => {
-    if (didAutoStart.current) return;
-    router.prefetch(next);
-    if (saved) {
-      didAutoStart.current = true;
-      auth.authStateReady().then(() => {
-        if (auth.currentUser) {
-          router.replace(next);
-        } else {
-          quickStart(saved);
-        }
-      });
-    }
-  }, []);
-
-  const pickSuggestion = (name: string) => {
-    setNickname(name);
   };
 
   return (
@@ -82,7 +85,7 @@ function LoginInner() {
         <Noren text="大喜利" />
       </div>
 
-      {/* 縁起物（散らし） */}
+      {/* 縁起物 */}
       <Engimono name="cat" width={68} height={73} style={{ position: "absolute", top: 90, right: -8, opacity: 0.85, transform: "rotate(8deg)" }} />
       <Engimono name="koban" width={44} height={29} style={{ position: "absolute", top: 130, left: 12, opacity: 0.55, transform: "rotate(-12deg)" }} />
       <Engimono name="fuku" width={58} height={67} style={{ position: "absolute", bottom: 20, right: 14, opacity: 0.6, transform: "rotate(6deg)" }} />
@@ -116,78 +119,24 @@ function LoginInner() {
             </div>
           </div>
 
-          {/* 木札風の名前入力カード */}
-          <div
-            className="relative bg-white mb-4"
-            style={{
-              borderRadius: 20, padding: "18px 18px 16px",
-              border: "1px solid rgba(0,0,0,.07)",
-              boxShadow: "0 10px 30px -18px rgba(40,30,10,.35)",
-            }}
-          >
-            {/* コーナー装飾 */}
-            <div className="absolute" style={{ top: -8, left: 16, width: 40, height: 16, background: "#E5402F", borderRadius: 4, transform: "rotate(-2deg)" }}>
-              <p className="font-mincho font-extrabold text-paper text-center" style={{ fontSize: 10, lineHeight: "16px", letterSpacing: "0.08em" }}>入 場</p>
-            </div>
-
-            <label className="font-gothic font-extrabold text-sub mb-2 block" style={{ fontSize: 11, letterSpacing: "0.12em" }}>
-              ＼ お名前を入力 ／
-            </label>
-            <input
-              className="w-full bg-[#FBF7EC] font-gothic font-bold text-[#1A1714] outline-none"
-              style={{
-                fontSize: 18, padding: "12px 14px", borderRadius: 12,
-                border: "1.5px solid #E0A93B",
-              }}
-              placeholder="例）タロウ"
-              maxLength={12}
-              value={nickname}
-              autoFocus
-              onChange={(e) => setNickname(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && quickStart(nickname.trim())}
-            />
-            <div className="flex justify-between items-center mt-1.5 font-gothic text-sub" style={{ fontSize: 10 }}>
-              <span>ひらがな・カタカナ・漢字OK</span>
-              <span>{nickname.length}/12</span>
-            </div>
-
-            {/* サジェスト */}
-            <div className="mt-3 pt-3" style={{ borderTop: "1px dashed rgba(0,0,0,.1)" }}>
-              <p className="font-gothic text-sub mb-1.5" style={{ fontSize: 10 }}>思いつかない？</p>
-              <div className="flex flex-wrap gap-[6px]">
-                {NAME_SUGGESTIONS.map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => pickSuggestion(n)}
-                    className="font-gothic font-bold active:scale-95 transition-transform"
-                    style={{
-                      fontSize: 12, padding: "5px 11px", borderRadius: 999,
-                      background: "#EBE2CF", color: "#52493A",
-                    }}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* CTA */}
+          {/* LINE ログインボタン */}
           <button
-            onClick={() => quickStart(nickname.trim())}
-            disabled={!nickname.trim() || submitting}
-            className="w-full font-mincho font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-transform relative"
+            onClick={loginWithLine}
+            className="w-full flex items-center justify-center gap-3 font-gothic font-extrabold text-white active:scale-[0.98] transition-transform mb-3"
             style={{
-              fontSize: 19, padding: "16px 0", borderRadius: 18,
-              background: "linear-gradient(180deg,#EE4F3A,#E5402F)",
-              boxShadow: "0 14px 26px -10px rgba(229,64,47,0.6)",
+              fontSize: 17, padding: "16px 0", borderRadius: 18,
+              background: "#06C755",
+              boxShadow: "0 14px 26px -10px rgba(6,199,85,0.5)",
             }}
           >
-            {submitting ? "入室中…" : "はじめる →"}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+              <path d="M12 2C6.48 2 2 5.82 2 10.5c0 2.83 1.68 5.33 4.2 6.95-.1.82-.53 3.07-.61 3.55-.1.62.23.61.48.44.2-.13 2.82-1.92 3.97-2.7.63.09 1.28.14 1.96.14 5.52 0 10-3.82 10-8.5S17.52 2 12 2zm-3.17 11.13H6.85a.57.57 0 01-.57-.57V7.94a.57.57 0 011.14 0v4.05h1.41a.57.57 0 010 1.14zm1.68-.57a.57.57 0 01-1.14 0V7.94a.57.57 0 011.14 0v4.62zm4.2 0a.57.57 0 01-.44.56.56.56 0 01-.58-.2L11.8 9.96v2.6a.57.57 0 01-1.14 0V7.94a.57.57 0 01.44-.56.56.56 0 01.58.2l1.89 2.96V7.94a.57.57 0 011.14 0v4.62zm3.3-3.48a.57.57 0 010 1.14h-1.42v.91h1.42a.57.57 0 010 1.14h-1.99a.57.57 0 01-.57-.57V7.94a.57.57 0 01.57-.57h1.99a.57.57 0 010 1.14h-1.42v.91h1.42z"/>
+            </svg>
+            LINEでログイン
           </button>
 
           {/* フィーチャーピル */}
-          <div className="flex justify-center gap-[6px] mt-4">
+          <div className="flex justify-center gap-[6px] mt-1 mb-4">
             {[
               { icon: "🎤", label: "みんなで大喜利" },
               { icon: "🤖", label: "AIが採点" },
@@ -203,8 +152,59 @@ function LoginInner() {
             ))}
           </div>
 
+          {/* ゲスト入室（折りたたみ） */}
+          {!showGuest ? (
+            <button
+              onClick={() => setShowGuest(true)}
+              className="w-full text-center font-gothic text-sub active:opacity-70 transition-opacity"
+              style={{ fontSize: 12, padding: "10px 0" }}
+            >
+              LINEなしで遊ぶ →
+            </button>
+          ) : (
+            <div className="animate-pop-in">
+              <div
+                className="relative bg-white mb-3"
+                style={{
+                  borderRadius: 20, padding: "18px 18px 16px",
+                  border: "1px solid rgba(0,0,0,.07)",
+                  boxShadow: "0 10px 30px -18px rgba(40,30,10,.35)",
+                }}
+              >
+                <div className="absolute" style={{ top: -8, left: 16, width: 40, height: 16, background: "#E5402F", borderRadius: 4, transform: "rotate(-2deg)" }}>
+                  <p className="font-mincho font-extrabold text-paper text-center" style={{ fontSize: 10, lineHeight: "16px", letterSpacing: "0.08em" }}>入 場</p>
+                </div>
+                <label className="font-gothic font-extrabold text-sub mb-2 block" style={{ fontSize: 11, letterSpacing: "0.12em" }}>
+                  ＼ お名前を入力 ／
+                </label>
+                <input
+                  className="w-full bg-[#FBF7EC] font-gothic font-bold text-[#1A1714] outline-none"
+                  style={{ fontSize: 18, padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E0A93B" }}
+                  placeholder="例）タロウ"
+                  maxLength={12}
+                  value={nickname}
+                  autoFocus
+                  onChange={(e) => setNickname(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && guestStart()}
+                />
+                <p className="font-gothic text-sub text-right mt-1" style={{ fontSize: 10 }}>{nickname.length}/12</p>
+              </div>
+              <button
+                onClick={guestStart}
+                disabled={!nickname.trim() || submitting}
+                className="w-full font-gothic font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-transform"
+                style={{
+                  fontSize: 15, padding: "14px 0", borderRadius: 18,
+                  background: "#1A1714",
+                }}
+              >
+                {submitting ? "入室中…" : "ゲストで入室 →"}
+              </button>
+            </div>
+          )}
+
           <p className="text-center font-gothic text-sub mt-3" style={{ fontSize: 10, lineHeight: 1.6 }}>
-            登録不要・お名前だけで遊べます
+            LINEでログインすると、どの端末でも同じアカウントで遊べます
           </p>
 
           {error && (
