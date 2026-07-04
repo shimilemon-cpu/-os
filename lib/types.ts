@@ -5,6 +5,7 @@ export interface UserDoc {
   id: string;
   nickname: string | null;
   avatarUrl: string | null;
+  avatarIcon: string | null;
   createdAt: Timestamp | null;
 }
 
