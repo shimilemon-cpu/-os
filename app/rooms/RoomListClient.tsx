@@ -93,14 +93,27 @@ export default function RoomListClient() {
 
   useEffect(() => {
     let roomsUnsub: (() => void) | undefined;
+    let resolved = false;
     const subscribe = (uid: string) => {
       if (roomsUnsub) return;
       roomsUnsub = subscribeUserRooms(uid, (r) => { setRooms(r); setLoading(false); }, () => setLoading(false));
     };
-    if (auth.currentUser) subscribe(auth.currentUser.uid);
+    if (auth.currentUser) {
+      resolved = true;
+      subscribe(auth.currentUser.uid);
+    } else {
+      auth.authStateReady().then(() => {
+        resolved = true;
+        if (auth.currentUser) {
+          subscribe(auth.currentUser.uid);
+        } else {
+          setLoading(false);
+        }
+      });
+    }
     const authUnsub = onAuthStateChanged(auth, (user) => {
-      if (!user) { setLoading(false); return; }
-      subscribe(user.uid);
+      if (!resolved) return;
+      if (user) subscribe(user.uid);
     });
     return () => { authUnsub(); roomsUnsub?.(); };
   }, []);
