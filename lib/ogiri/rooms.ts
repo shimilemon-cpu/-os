@@ -48,6 +48,8 @@ export async function createRoom(
   await Promise.all([
     setDoc(doc(db, "inviteCodes", code), {
       roomId: ref.id,
+      roomName: name,
+      hostNickname: hostNickname,
       createdAt: Timestamp.now(),
     } satisfies Omit<InviteCodeDoc, "id">),
     setDoc(doc(db, "rooms", ref.id, "members", hostId), {
@@ -59,6 +61,12 @@ export async function createRoom(
   ]);
 
   return ref.id;
+}
+
+export async function getInviteInfo(inviteCode: string): Promise<InviteCodeDoc | null> {
+  const snap = await getDoc(doc(db, "inviteCodes", inviteCode.toUpperCase()));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as InviteCodeDoc & { id: string };
 }
 
 export async function joinRoomByCode(
