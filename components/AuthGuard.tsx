@@ -10,7 +10,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
 
-  const isPublic = pathname.startsWith("/auth");
+  // ゲストでも見られる画面（ホーム・カプセル閲覧）。投稿やマイページは要ログイン。
+  const isPublic =
+    pathname.startsWith("/auth") ||
+    pathname === "/" ||
+    (pathname.startsWith("/capsule/") && !pathname.endsWith("/edit"));
 
   useEffect(() => {
     if (isPublic) {

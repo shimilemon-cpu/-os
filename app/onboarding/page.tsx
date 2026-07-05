@@ -10,7 +10,7 @@ import { REGIONS, ENV_TYPES } from "@/lib/region";
 
 const GENDERS = ["男性", "女性", "その他", "未回答"] as const;
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2;
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -45,9 +45,9 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen flex flex-col px-6 py-12 bg-[var(--bg)]">
-      {/* ステップインジケーター */}
+      {/* ステップインジケーター（2ステップ） */}
       <div className="flex gap-1.5 mb-8 max-w-sm mx-auto w-full">
-        {([1, 2, 3] as Step[]).map((n) => (
+        {([1, 2] as Step[]).map((n) => (
           <div
             key={n}
             className={`flex-1 h-1 rounded-full transition-colors ${
@@ -111,15 +111,15 @@ export default function OnboardingPage() {
         {step === 2 && (
           <>
             <div>
-              <h1 className="text-[var(--text)] text-xl font-medium">育った地域は？</h1>
+              <h1 className="text-[var(--text)] text-xl font-medium">育ったエリアは？</h1>
               <p className="text-[var(--muted)] text-sm mt-1">
-                記憶の風景をより正確に再現するために使います。<br />スキップもできます。
+                記憶の風景をより正確に描くために使います。<br />あとでマイページから変更・設定できます。
               </p>
             </div>
 
             <div className="space-y-5">
               <div>
-                <label className="text-[var(--accent-2)] text-xs block mb-2">地域（都道府県のエリア）</label>
+                <label className="text-[var(--accent-2)] text-xs block mb-2">地域</label>
                 <div className="grid grid-cols-2 gap-2">
                   {REGIONS.map((r) => (
                     <button key={r} onClick={() => setRegion(r === region ? "" : r)} className={chipCls(region === r)}>
@@ -128,39 +128,16 @@ export default function OnboardingPage() {
                   ))}
                 </div>
               </div>
-            </div>
 
-            <div className="flex gap-3">
-              <button onClick={() => setStep(1)} className="text-[var(--muted)] text-sm px-4 py-3">戻る</button>
-              <button
-                onClick={() => setStep(3)}
-                className="flex-1 bg-[var(--accent)] text-[var(--bg)] font-semibold py-4 rounded-2xl text-sm"
-              >
-                次へ
-              </button>
-            </div>
-            <button onClick={handleSave} className="text-center text-[var(--muted)] text-xs">
-              スキップしてはじめる
-            </button>
-          </>
-        )}
-
-        {step === 3 && (
-          <>
-            <div>
-              <h1 className="text-[var(--text)] text-xl font-medium">どんな景色の場所？</h1>
-              <p className="text-[var(--muted)] text-sm mt-1">
-                育った環境の景色タイプを選んでください。<br />思い出の画像生成に反映されます。
-              </p>
-            </div>
-
-            <div>
-              <div className="grid grid-cols-2 gap-2">
-                {ENV_TYPES.map((e) => (
-                  <button key={e} onClick={() => setEnvType(e === envType ? "" : e)} className={chipCls(envType === e)}>
-                    {e}
-                  </button>
-                ))}
+              <div>
+                <label className="text-[var(--accent-2)] text-xs block mb-2">景色タイプ</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {ENV_TYPES.map((e) => (
+                    <button key={e} onClick={() => setEnvType(e === envType ? "" : e)} className={chipCls(envType === e)}>
+                      {e}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -171,7 +148,10 @@ export default function OnboardingPage() {
             >
               {saving ? "保存中…" : "はじめる"}
             </button>
-            <button onClick={() => setStep(2)} className="text-center text-[var(--muted)] text-xs">戻る</button>
+            <div className="flex items-center justify-center gap-4">
+              <button onClick={() => setStep(1)} className="text-[var(--muted)] text-xs">戻る</button>
+              <button onClick={handleSave} disabled={saving} className="text-[var(--muted)] text-xs">スキップしてはじめる</button>
+            </div>
           </>
         )}
       </div>

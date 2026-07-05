@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "@/lib/firebase/client";
 import CapsuleCard from "@/components/CapsuleCard";
+import { PenLine } from "lucide-react";
 import type { CapsuleDoc } from "@/lib/types";
 
 const TABS = ["おすすめ", "新着", "同世代"] as const;
@@ -16,6 +19,12 @@ export default function HomeClient() {
   const [decade, setDecade] = useState<number | typeof ALL>(ALL);
   const [capsules, setCapsules] = useState<CapsuleDoc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => setIsGuest(!user));
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -108,17 +117,33 @@ export default function HomeClient() {
           <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
         </div>
       ) : visible.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 gap-2">
-          <p className="text-[var(--muted)] text-sm">
-            {decade === ALL ? "まだカプセルがありません" : `${decade}年代のカプセルはまだありません`}
+        <div className="flex flex-col items-center justify-center px-8 py-16 gap-3 text-center">
+          <p className="serif text-[var(--text)] text-base leading-relaxed">
+            音楽と一緒に、<br />100文字の記憶を残す。
           </p>
-          <p className="text-[var(--muted)] text-xs">最初の記憶を残してみませんか？</p>
+          <p className="text-[var(--muted)] text-xs leading-relaxed">
+            {decade === ALL
+              ? "曲を選び、あの日を書くと、AIが4枚の情景を描きます。誰かの記憶を開くと、その曲が流れます。"
+              : `${decade}年代のカプセルはまだありません。`}
+          </p>
+          <Link href="/post" className="mt-2 inline-flex items-center gap-2 bg-[var(--accent)] text-[var(--bg)] text-sm font-semibold px-6 py-3 rounded-full">
+            <PenLine size={15} />最初の記憶を残す
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 p-4">
           {visible.map((capsule) => (
             <CapsuleCard key={capsule.id} capsule={capsule} />
           ))}
+        </div>
+      )}
+
+      {/* ゲスト向けの参加導線（閲覧はできるが投稿はログインが必要） */}
+      {!loading && isGuest && visible.length > 0 && (
+        <div className="px-4">
+          <Link href="/post" className="flex items-center justify-center gap-2 bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] text-sm py-3 rounded-full">
+            <PenLine size={15} className="text-[var(--accent)]" />あなたの記憶も残す
+          </Link>
         </div>
       )}
     </div>

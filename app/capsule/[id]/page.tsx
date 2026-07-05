@@ -63,7 +63,12 @@ export default function CapsulePage({ params }: { params: Promise<{ id: string }
       const snap = await getDoc(doc(db, "capsules", id));
       if (snap.exists()) {
         setCapsule({ id: snap.id, ...snap.data() } as CapsuleDoc);
-        await updateDoc(doc(db, "capsules", id), { views: increment(1) });
+        // 閲覧数の加算はログイン必須。ゲストや失敗時は無視して閲覧は続行する
+        try {
+          await updateDoc(doc(db, "capsules", id), { views: increment(1) });
+        } catch {
+          // ゲスト閲覧などで加算できなくても問題ない
+        }
       }
     };
     load();

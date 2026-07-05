@@ -2,11 +2,13 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, CheckCircle, XCircle, Sparkles, Sun } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle, XCircle, Sparkles, Sun, ShieldAlert } from "lucide-react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client";
+import { isAdmin } from "@/lib/admin";
 import { searchMusic, type ItunesTrack } from "@/lib/itunes";
 
 // 各年代を代表する名曲に紐づけたデモカプセル（投稿者の属性もバラバラにして
@@ -359,6 +361,36 @@ function SeedBatch({
 }
 
 export default function SeedPage() {
+  const [ready, setReady] = useState(false);
+  const [allowed, setAllowed] = useState(false);
+
+  // デモ作成は管理者専用（URLを知っていても他人が実行できないようにする）
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setAllowed(isAdmin(user));
+      setReady(true);
+    });
+    return () => unsub();
+  }, []);
+
+  if (!ready) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-6 h-6 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!allowed) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-3 px-8 text-center">
+        <ShieldAlert size={28} className="text-[var(--danger)]" />
+        <p className="text-[var(--muted)] text-sm">このページは管理者専用です。</p>
+        <Link href="/" className="text-[var(--accent)] text-sm">ホームへ戻る</Link>
+      </div>
+    );
+  }
+
   return (
     <div className="pb-24 min-h-screen">
       <div className="sticky top-0 z-40 bg-[var(--bg)]/90 backdrop-blur border-b border-[var(--border)]">
