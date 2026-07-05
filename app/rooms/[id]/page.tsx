@@ -151,8 +151,10 @@ export default function WaitingRoomPage() {
     }
   }, [isHost]);
 
-  const allReady = members.length >= 2 && members.every((m) => m.isReady || m.userId === uid);
-  const readyCount = members.filter((m) => m.isReady).length;
+  const isAsync = room?.mode === "async";
+  const othersReady = members.filter((m) => m.userId !== uid);
+  const readyCount = othersReady.filter((m) => m.isReady).length;
+  const canStart = members.length >= 2 && (isAsync || othersReady.every((m) => m.isReady));
 
   if (!room) {
     return (
@@ -218,7 +220,7 @@ export default function WaitingRoomPage() {
         <div className="flex items-center gap-[8px]">
           <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
           <p className="font-mincho font-extrabold text-sub" style={{ fontSize: 11, letterSpacing: "0.16em" }}>
-            ◆ メンバー {members.length}/{room.capacity ?? 5} ・ 準備完了 {readyCount}人
+            ◆ メンバー {members.length}/{room.capacity ?? 5}{!isAsync && ` ・ 準備完了 ${readyCount}人`}
           </p>
           <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.1)" }} />
         </div>
@@ -242,9 +244,9 @@ export default function WaitingRoomPage() {
             </div>
             <span
               className="font-gothic font-extrabold shrink-0"
-              style={{ fontSize: 12, color: m.isReady ? "#2BA35F" : "#B6AC97" }}
+              style={{ fontSize: 12, color: isAsync ? "#2BA35F" : m.isReady ? "#2BA35F" : "#B6AC97" }}
             >
-              {m.isReady ? "✓ 準備OK" : "待機中"}
+              {isAsync ? "✓ 入室済み" : m.isReady ? "✓ 準備OK" : "待機中"}
             </span>
           </div>
         ))}
@@ -321,7 +323,7 @@ export default function WaitingRoomPage() {
 
       {/* アクションボタン */}
       <div className="px-[20px] flex flex-col gap-[10px] mt-auto">
-        {!isHost && (
+        {!isHost && !isAsync && (
           <button
             onClick={toggleReady}
             className="w-full font-mincho font-extrabold active:scale-[0.98] transition-all"
@@ -339,7 +341,7 @@ export default function WaitingRoomPage() {
         {isHost && (
           <button
             onClick={handleStart}
-            disabled={members.length < 2 || !allReady || starting || (room.topicMode === "mochiyori" && !photoFile)}
+            disabled={members.length < 2 || !canStart || starting || (room.topicMode === "mochiyori" && !photoFile)}
             className="w-full font-mincho font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-all"
             style={{ fontSize: 18, padding: "16px 0", borderRadius: 18, background: "#2BA35F", boxShadow: "0 14px 26px -10px rgba(43,163,95,.6)" }}
           >
@@ -351,8 +353,8 @@ export default function WaitingRoomPage() {
               ? "あと1人招待してください"
               : room.topicMode === "mochiyori" && !photoFile
               ? "お題の写真を選んでください"
-              : !allReady
-              ? `全員の準備を待っています (${readyCount}/${members.length})`
+              : !canStart
+              ? `全員の準備を待っています (${readyCount}/${othersReady.length})`
               : "大喜利、始め！"}
           </button>
         )}
