@@ -23,7 +23,7 @@ export default function InvitePage() {
         }
         const savedNickname = localStorage.getItem("ogiri_nickname");
         const nickname = savedNickname || user.displayName || "ゲスト";
-        const roomId = await joinRoomByCode(code, user.uid, nickname);
+        const roomId = await joinRoomByCode(code.toUpperCase(), user.uid, nickname);
         router.replace(`/rooms/${roomId}`);
       } catch (e) {
         setError(e instanceof Error ? e.message : "参加に失敗しました");
