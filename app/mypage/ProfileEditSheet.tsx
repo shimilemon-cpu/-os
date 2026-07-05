@@ -77,14 +77,14 @@ export default function ProfileEditSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40" />
       <div
         className="relative w-full bg-paper"
         style={{
           maxWidth: 480,
           borderRadius: "24px 24px 0 0",
-          padding: "20px 20px 32px",
+          padding: "20px 20px calc(32px + env(safe-area-inset-bottom, 0px))",
           maxHeight: "85vh",
           overflowY: "auto",
         }}
