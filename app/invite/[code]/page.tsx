@@ -14,7 +14,8 @@ async function fetchInviteInfo(code: string): Promise<InviteCodeDoc | null> {
 }
 
 export default function InvitePage() {
-  const { code } = useParams<{ code: string }>();
+  const { code: rawCode } = useParams<{ code: string }>();
+  const code = decodeURIComponent(rawCode);
   const router = useRouter();
   const [invite, setInvite] = useState<InviteCodeDoc | null>(null);
   const [status, setStatus] = useState<"loading" | "card" | "joining" | "error">("loading");
@@ -47,7 +48,7 @@ export default function InvitePage() {
       }
       const savedNickname = localStorage.getItem("ogiri_nickname");
       const nickname = savedNickname || user.displayName || "ゲスト";
-      const roomId = await joinRoomByCode(code.toUpperCase(), user.uid, nickname);
+      const roomId = await joinRoomByCode(code, user.uid, nickname);
       router.replace(`/rooms/${roomId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "参加に失敗しました");
@@ -136,7 +137,7 @@ export default function InvitePage() {
             <div className="flex items-center justify-center gap-2 mt-2">
               <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.08)" }} />
               <p className="font-mincho font-extrabold tracking-[0.3em]" style={{ fontSize: 24, color: "#E0A93B" }}>
-                {code.toUpperCase()}
+                {code}
               </p>
               <span style={{ height: 1, flex: 1, background: "rgba(0,0,0,.08)" }} />
             </div>
