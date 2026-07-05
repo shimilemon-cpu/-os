@@ -15,14 +15,20 @@ export default function InvitePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getInviteInfo(code).then((info) => {
-      if (!info) {
-        setError("この招待リンクは無効です");
-        setStatus("error");
-      } else {
-        setInvite(info);
-        setStatus("card");
-      }
+    auth.authStateReady().then(() =>
+      getInviteInfo(code).then((info) => {
+        if (!info) {
+          setError("この招待リンクは無効です");
+          setStatus("error");
+        } else {
+          setInvite(info);
+          setStatus("card");
+        }
+      })
+    ).catch((e) => {
+      console.error("[invite] getInviteInfo failed:", e);
+      setError("招待情報の取得に失敗しました。再度お試しください");
+      setStatus("error");
     });
   }, [code]);
 
@@ -58,6 +64,13 @@ export default function InvitePage() {
       <div className="min-h-screen flex flex-col items-center justify-center px-8 gap-5 bg-paper">
         <Engimono name="daruma" width={56} height={62} style={{ opacity: 0.4 }} />
         <p className="font-gothic font-bold" style={{ fontSize: 14, color: "#E5402F" }}>{error}</p>
+        <button
+          onClick={() => { setStatus("loading"); setError(""); window.location.reload(); }}
+          className="font-gothic font-bold text-[#2BA35F] underline"
+          style={{ fontSize: 14 }}
+        >
+          もう一度試す
+        </button>
         <button
           onClick={() => router.push("/rooms")}
           className="font-gothic font-bold text-sub underline"
