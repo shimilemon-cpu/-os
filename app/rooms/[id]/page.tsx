@@ -163,7 +163,7 @@ export default function WaitingRoomPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper bg-asanoha pb-[20px]">
+    <div className="min-h-screen flex flex-col bg-paper bg-asanoha pb-[100px]">
       {/* AppBar */}
       <div className="px-[20px] pt-[10px] pb-[10px] flex items-center gap-[12px]">
         <div className="flex-1">
