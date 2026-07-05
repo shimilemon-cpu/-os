@@ -29,18 +29,21 @@ export function subscribeEngawa(cb: (posts: EngawaPostDoc[]) => void, max = 40) 
 }
 
 export function subscribeEngawaPost(postId: string, cb: (post: EngawaPostDoc) => void) {
+  if (!postId) return () => {};
   return onSnapshot(doc(db, "engawa", postId), (snap) => {
     if (snap.exists()) cb({ id: snap.id, ...snap.data() } as EngawaPostDoc);
-  });
+  }, (err) => console.error("subscribeEngawaPost:", err));
 }
 
 export function subscribeEngawaAnswers(postId: string, cb: (answers: EngawaAnswerDoc[]) => void) {
+  if (!postId) return () => {};
   const q = query(
     collection(db, "engawa", postId, "answers"),
     orderBy("createdAt", "asc")
   );
   return onSnapshot(q, (snap) =>
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as EngawaAnswerDoc)))
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as EngawaAnswerDoc))),
+    (err) => console.error("subscribeEngawaAnswers:", err)
   );
 }
 
