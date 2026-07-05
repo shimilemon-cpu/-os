@@ -92,7 +92,7 @@ export default function InvitePage() {
       <Engimono name="cat" width={68} height={73} style={{ position: "absolute", top: 40, right: -8, opacity: 0.7, transform: "rotate(8deg)" }} />
       <Engimono name="koban" width={44} height={29} style={{ position: "absolute", top: 100, left: 12, opacity: 0.45, transform: "rotate(-12deg)" }} />
 
-      <div className="relative flex-1 flex flex-col items-center justify-center px-6 pb-8">
+      <div className="relative flex-1 flex flex-col items-center justify-center px-6 pb-[100px]">
         <div className="w-full max-w-sm mx-auto flex flex-col items-center animate-pop-in">
           <Engimono name="mallet" width={56} height={56} style={{ marginBottom: 16 }} />
 

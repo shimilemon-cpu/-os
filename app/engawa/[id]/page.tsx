@@ -55,7 +55,7 @@ export default function EngawaDetailPage() {
   const color = GENRE_COLORS[post.question.genre] ?? "#B6AC97";
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper pb-[20px]">
+    <div className="min-h-screen flex flex-col bg-paper pb-[100px]">
       {/* AppBar */}
       <div className="px-[20px] pt-[10px] pb-[14px] flex items-center gap-[12px]">
         <button

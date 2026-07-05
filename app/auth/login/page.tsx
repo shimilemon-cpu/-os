@@ -129,7 +129,7 @@ function LoginInner() {
       <Engimono name="mask" width={42} height={44} style={{ position: "absolute", bottom: 60, left: -6, opacity: 0.4, transform: "rotate(-14deg)" }} />
 
       {/* メイン */}
-      <div className="relative flex-1 flex flex-col justify-center px-6 pb-8">
+      <div className="relative flex-1 flex flex-col justify-center px-6 pb-[100px]">
         <div className="w-full max-w-sm mx-auto flex flex-col animate-pop-in">
           {/* ロゴ */}
           <div className="text-center mb-5">

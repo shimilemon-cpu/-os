@@ -56,7 +56,7 @@ export default function JoinRoomPage() {
       <Engimono name="koban" width={29} height={44} style={{ position: "absolute", top: 140, left: 12, opacity: 0.55, transform: "rotate(-12deg)" }} />
 
       {/* メイン */}
-      <div className="relative flex-1 flex flex-col justify-center px-6 pb-8">
+      <div className="relative flex-1 flex flex-col justify-center px-6 pb-[100px]">
         <div className="w-full max-w-sm mx-auto flex flex-col animate-pop-in">
           {/* タイトル */}
           <div className="text-center mb-6">
