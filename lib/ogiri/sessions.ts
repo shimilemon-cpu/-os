@@ -139,6 +139,18 @@ export function subscribeAiReviews(
   );
 }
 
+export async function transitionPhase(
+  sessionId: string,
+  roundId: string,
+  roundData: Partial<Omit<RoundDoc, "id">>,
+  sessionData: Partial<Omit<SessionDoc, "id">>,
+): Promise<void> {
+  const batch = writeBatch(db);
+  batch.update(doc(db, "sessions", sessionId, "rounds", roundId), roundData);
+  batch.update(doc(db, "sessions", sessionId), sessionData);
+  await batch.commit();
+}
+
 // Tally votes per answer: returns { answerId -> { funny, smart, crazy, total } }
 export function tallyVotes(votes: VoteDoc[]): Record<string, Record<Reaction | "total", number>> {
   const tally: Record<string, Record<Reaction | "total", number>> = {};

@@ -6,7 +6,7 @@ import { auth } from "@/lib/firebase/client";
 import {
   subscribeSession, subscribeRound, subscribeAnswers,
   subscribeVotes, subscribeAiReviews, tallyVotes,
-  updateRound, updateSession, createRound,
+  transitionPhase, createRound, updateSession,
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom, finishGame } from "@/lib/ogiri/rooms";
 import { publishToEngawa } from "@/lib/ogiri/engawa";
@@ -149,8 +149,10 @@ export default function ResultPage() {
           difficulty: data.difficulty as Difficulty,
         }, room?.answerSeconds ?? 90);
       }
-      await updateRound(sessionId, roundParam, { status: "done" });
-      await updateSession(sessionId, { currentRound: nextRound, status: "answering" });
+      await transitionPhase(sessionId, roundParam,
+        { status: "done" },
+        { currentRound: nextRound, status: "answering" },
+      );
       setShowPhotoUpload(false);
       setNextPhotoFile(null);
       setNextPhotoPreview(null);
