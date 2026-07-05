@@ -13,16 +13,33 @@ import OdaiSheet from "@/components/OdaiSheet";
 
 type QuestionData = { question: string; genre: string; difficulty: string };
 
+const FALLBACK_QUESTIONS: QuestionData[] = [
+  { question: "こんな寿司屋は嫌だ。どんな？", genre: "日常", difficulty: "初級" },
+  { question: "絶対に売れない新商品の名前とは？", genre: "カオス", difficulty: "中級" },
+  { question: "世界一どうでもいいギネス記録とは？", genre: "その他", difficulty: "中級" },
+  { question: "おばあちゃんの知恵袋に絶対載らないライフハックとは？", genre: "日常", difficulty: "中級" },
+  { question: "「それ、AIに聞けば？」と言われて一番悲しい場面とは？", genre: "その他", difficulty: "上級" },
+];
+
 async function prefetchQuestion(): Promise<QuestionData> {
   const token = await auth.currentUser?.getIdToken();
-  return fetch("/api/ogiri/question", {
+  const res = await fetch("/api/ogiri/question", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify({}),
-  }).then((r) => r.json() as Promise<QuestionData>);
+  });
+  if (!res.ok) {
+    console.warn("question API failed, using fallback:", res.status);
+    return FALLBACK_QUESTIONS[Math.floor(Math.random() * FALLBACK_QUESTIONS.length)];
+  }
+  const data = await res.json();
+  if (!data.question) {
+    return FALLBACK_QUESTIONS[Math.floor(Math.random() * FALLBACK_QUESTIONS.length)];
+  }
+  return data as QuestionData;
 }
 
 const CHARM_NAMES = ["daruma", "cat", "tai", "fuku", "mask"] as const;
@@ -43,6 +60,7 @@ export default function WaitingRoomPage() {
   const [photoCaption, setPhotoCaption] = useState("");
   const [photoError, setPhotoError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [startError, setStartError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -91,6 +109,7 @@ export default function WaitingRoomPage() {
     const isMochiyori = room.topicMode === "mochiyori";
     if (isMochiyori && !photoFile) return;
     setStarting(true);
+    setStartError("");
     try {
       const sessionId = await createSession(roomId, 5);
       if (isMochiyori && photoFile) {
@@ -119,6 +138,7 @@ export default function WaitingRoomPage() {
       prefetchRef.current = null;
       setStarting(false);
       setUploading(false);
+      setStartError("ゲーム開始に失敗しました。もう一度お試しください。");
     }
   }, [room, roomId, router, photoFile, photoCaption]);
 
@@ -292,6 +312,11 @@ export default function WaitingRoomPage() {
           )}
           {photoError && <p className="font-gothic text-red mt-1" style={{ fontSize: 11 }}>{photoError}</p>}
         </div>
+      )}
+
+      {/* エラー表示 */}
+      {startError && (
+        <p className="px-[20px] font-gothic font-bold text-center" style={{ fontSize: 12, color: "#E5402F" }}>{startError}</p>
       )}
 
       {/* アクションボタン */}
