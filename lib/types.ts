@@ -39,6 +39,8 @@ export interface RoomMemberDoc {
 
 export interface InviteCodeDoc {
   roomId: string;
+  roomName?: string;
+  hostNickname?: string;
   createdAt: Timestamp | null;
 }
 
