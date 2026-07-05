@@ -1,5 +1,5 @@
 import {
-  collection, doc, getDoc, updateDoc,
+  collection, doc, getDoc, getDocs, updateDoc,
   onSnapshot, Timestamp, arrayUnion, setDoc,
   query, where, orderBy, limit,
   DocumentReference, writeBatch,
@@ -64,8 +64,15 @@ export async function createRoom(
 }
 
 export async function getInviteInfo(inviteCode: string): Promise<InviteCodeDoc | null> {
-  const snap = await getDoc(doc(db, "inviteCodes", inviteCode.toUpperCase()));
-  if (!snap.exists()) return null;
+  const snap = await getDoc(doc(db, "inviteCodes", inviteCode));
+  if (!snap.exists()) {
+    const q = query(collection(db, "rooms"), where("inviteCode", "==", inviteCode), limit(1));
+    const roomSnap = await getDocs(q);
+    if (roomSnap.empty) return null;
+    const roomDoc = roomSnap.docs[0];
+    const room = roomDoc.data();
+    return { id: roomDoc.id, roomId: roomDoc.id, roomName: room.name, createdAt: room.createdAt } as InviteCodeDoc & { id: string };
+  }
   return { id: snap.id, ...snap.data() } as InviteCodeDoc & { id: string };
 }
 
@@ -74,10 +81,17 @@ export async function joinRoomByCode(
   userId: string,
   nickname: string
 ): Promise<string> {
-  const codeSnap = await getDoc(doc(db, "inviteCodes", inviteCode.toUpperCase()));
-  if (!codeSnap.exists()) throw new Error("招待コードが無効です");
+  let roomId: string;
 
-  const { roomId } = codeSnap.data() as InviteCodeDoc;
+  const codeSnap = await getDoc(doc(db, "inviteCodes", inviteCode));
+  if (codeSnap.exists()) {
+    roomId = (codeSnap.data() as InviteCodeDoc).roomId;
+  } else {
+    const q = query(collection(db, "rooms"), where("inviteCode", "==", inviteCode), limit(1));
+    const snap = await getDocs(q);
+    if (snap.empty) throw new Error("招待コードが無効です");
+    roomId = snap.docs[0].id;
+  }
   const roomSnap = await getDoc(doc(db, "rooms", roomId));
   if (!roomSnap.exists()) throw new Error("ルームが見つかりません");
 
