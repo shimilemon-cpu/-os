@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
 import {
@@ -61,7 +61,7 @@ function VoteTimer({ deadline, totalSeconds, onExpire }: { deadline: RoundDoc["v
   );
 }
 
-export default function VotePage() {
+function VotePageContent() {
   const { id: roomId } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sid") ?? "";
@@ -263,5 +263,17 @@ export default function VotePage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function VotePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-paper">
+        <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
+      </div>
+    }>
+      <VotePageContent />
+    </Suspense>
   );
 }

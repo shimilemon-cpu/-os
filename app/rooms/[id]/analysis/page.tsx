@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getDocs, collection } from "firebase/firestore";
@@ -35,7 +35,7 @@ function StatBar({ label, value, color }: { label: string; value: number; color:
   );
 }
 
-export default function AnalysisPage() {
+function AnalysisPageContent() {
   const { id: roomId } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sid") ?? "";
@@ -238,5 +238,17 @@ export default function AnalysisPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AnalysisPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-paper">
+        <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
+      </div>
+    }>
+      <AnalysisPageContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/firebase/client";
@@ -21,7 +21,7 @@ interface RoundSummary {
   mvp: { text: string; userId: string; total: number } | null;
 }
 
-export default function SummaryPage() {
+function SummaryPageContent() {
   const { id: roomId } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sid") ?? "";
@@ -296,5 +296,17 @@ export default function SummaryPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SummaryPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-paper">
+        <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
+      </div>
+    }>
+      <SummaryPageContent />
+    </Suspense>
   );
 }

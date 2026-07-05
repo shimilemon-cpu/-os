@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
 import {
@@ -35,7 +35,7 @@ const RANK_LABELS = ["大関", "関脇", "前頭"];
 const RANK_COLORS = ["#2BA35F", "#E0A93B", "#7A6F5C"];
 const AVATAR_COLORS = ["#2BA35F", "#F4C422", "#D63384", "#E5402F", "#5BA9D6"];
 
-export default function ResultPage() {
+function ResultPageContent() {
   const { id: roomId } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sid") ?? "";
@@ -360,5 +360,17 @@ export default function ResultPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ResultPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-paper">
+        <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
+      </div>
+    }>
+      <ResultPageContent />
+    </Suspense>
   );
 }
