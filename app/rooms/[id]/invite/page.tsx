@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getRoom } from "@/lib/ogiri/rooms";
 import Engimono from "@/components/Engimono";
 
-export default function InvitePage() {
+function InvitePageContent() {
   const { id: roomId } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const codeFromUrl = searchParams.get("code");
@@ -163,5 +163,17 @@ export default function InvitePage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function InvitePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-paper">
+        <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
+      </div>
+    }>
+      <InvitePageContent />
+    </Suspense>
   );
 }
