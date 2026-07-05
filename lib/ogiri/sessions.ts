@@ -33,9 +33,10 @@ export async function getActiveSession(roomId: string): Promise<SessionDoc | nul
 }
 
 export function subscribeSession(sessionId: string, cb: (s: SessionDoc) => void) {
+  if (!sessionId) return () => {};
   return onSnapshot(doc(db, "sessions", sessionId), (snap) => {
     if (snap.exists()) cb({ id: snap.id, ...snap.data() } as SessionDoc);
-  });
+  }, (err) => console.error("subscribeSession error:", err));
 }
 
 export async function updateSession(sessionId: string, data: Partial<Omit<SessionDoc, "id">>) {
@@ -60,9 +61,10 @@ export async function createRound(
 }
 
 export function subscribeRound(sessionId: string, roundId: string, cb: (r: RoundDoc) => void) {
+  if (!sessionId || !roundId) return () => {};
   return onSnapshot(doc(db, "sessions", sessionId, "rounds", roundId), (snap) => {
     if (snap.exists()) cb({ id: snap.id, ...snap.data() } as RoundDoc);
-  });
+  }, (err) => console.error("subscribeRound error:", err));
 }
 
 export async function updateRound(sessionId: string, roundId: string, data: Partial<Omit<RoundDoc, "id">>) {
@@ -94,6 +96,7 @@ export async function submitAnswer(
 }
 
 export function subscribeAnswers(sessionId: string, roundId: string, cb: (a: AnswerDoc[]) => void) {
+  if (!sessionId || !roundId) return () => {};
   return onSnapshot(
     collection(db, "sessions", sessionId, "rounds", roundId, "answers"),
     (snap) => {
@@ -101,7 +104,8 @@ export function subscribeAnswers(sessionId: string, roundId: string, cb: (a: Ans
         .map((d) => ({ id: d.id, ...d.data() } as AnswerDoc))
         .sort((a, b) => a.displayOrder - b.displayOrder);
       cb(answers);
-    }
+    },
+    (err) => console.error("subscribeAnswers error:", err)
   );
 }
 
@@ -122,9 +126,11 @@ export async function submitVote(
 }
 
 export function subscribeVotes(sessionId: string, roundId: string, cb: (v: VoteDoc[]) => void) {
+  if (!sessionId || !roundId) return () => {};
   return onSnapshot(
     collection(db, "sessions", sessionId, "rounds", roundId, "votes"),
-    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as VoteDoc)))
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as VoteDoc))),
+    (err) => console.error("subscribeVotes error:", err)
   );
 }
 
@@ -133,9 +139,11 @@ export function subscribeAiReviews(
   roundId: string,
   cb: (r: AiReviewDoc[]) => void
 ) {
+  if (!sessionId || !roundId) return () => {};
   return onSnapshot(
     collection(db, "sessions", sessionId, "rounds", roundId, "aiReviews"),
-    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as AiReviewDoc)))
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as AiReviewDoc))),
+    (err) => console.error("subscribeAiReviews error:", err)
   );
 }
 
