@@ -66,7 +66,7 @@ export async function joinRoomByCode(
   userId: string,
   nickname: string
 ): Promise<string> {
-  const codeSnap = await getDoc(doc(db, "inviteCodes", inviteCode));
+  const codeSnap = await getDoc(doc(db, "inviteCodes", inviteCode.toUpperCase()));
   if (!codeSnap.exists()) throw new Error("招待コードが無効です");
 
   const { roomId } = codeSnap.data() as InviteCodeDoc;
