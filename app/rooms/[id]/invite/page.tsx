@@ -74,7 +74,7 @@ export default function InvitePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-5 pt-10 pb-12 bg-paper">
+    <div className="min-h-screen flex flex-col px-5 pt-10 pb-[100px] bg-paper">
       {/* 上部 */}
       <div className="text-center mb-8 animate-pop-in">
         <div className="mx-auto mb-3 w-20">

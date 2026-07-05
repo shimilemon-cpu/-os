@@ -182,7 +182,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper pb-[40px]">
+    <div className="min-h-screen flex flex-col bg-paper pb-[100px]">
       {/* Header */}
       <div className="px-[20px] pt-[14px] pb-[10px] flex items-center justify-between">
         <div>
