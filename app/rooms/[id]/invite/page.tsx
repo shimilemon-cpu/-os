@@ -32,13 +32,13 @@ export default function InvitePage() {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (!isMobile) return;
     lineOpenedRef.current = true;
-    const link = `${window.location.origin}/invite/${codeFromUrl}`;
+    const link = `${window.location.origin}/invite/${encodeURIComponent(codeFromUrl)}`;
     const text = `大喜利Pocketで遊ぼう！\nあいことば：${codeFromUrl}\n↓タップして参加\n${link}`;
     window.location.href = `https://line.me/R/msg/text/?${encodeURIComponent(text)}`;
   }, [codeFromUrl]);
 
   const inviteLink = inviteCode
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/invite/${inviteCode}`
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/invite/${encodeURIComponent(inviteCode)}`
     : "";
 
   const copyLink = async () => {

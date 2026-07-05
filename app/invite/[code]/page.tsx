@@ -3,9 +3,15 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
-import { getInviteInfo, joinRoomByCode } from "@/lib/ogiri/rooms";
+import { joinRoomByCode } from "@/lib/ogiri/rooms";
 import type { InviteCodeDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
+
+async function fetchInviteInfo(code: string): Promise<InviteCodeDoc | null> {
+  const res = await fetch(`/api/ogiri/invite-info?code=${encodeURIComponent(code)}`);
+  if (!res.ok) return null;
+  return res.json();
+}
 
 export default function InvitePage() {
   const { code } = useParams<{ code: string }>();
@@ -15,18 +21,16 @@ export default function InvitePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    auth.authStateReady().then(() =>
-      getInviteInfo(code).then((info) => {
-        if (!info) {
-          setError("この招待リンクは無効です");
-          setStatus("error");
-        } else {
-          setInvite(info);
-          setStatus("card");
-        }
-      })
-    ).catch((e) => {
-      console.error("[invite] getInviteInfo failed:", e);
+    fetchInviteInfo(code).then((info) => {
+      if (!info) {
+        setError("この招待リンクは無効です");
+        setStatus("error");
+      } else {
+        setInvite(info);
+        setStatus("card");
+      }
+    }).catch((e) => {
+      console.error("[invite] fetchInviteInfo failed:", e);
       setError("招待情報の取得に失敗しました。再度お試しください");
       setStatus("error");
     });
