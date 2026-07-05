@@ -5,7 +5,7 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
 import {
   subscribeAnswers, subscribeVotes, subscribeSession,
-  subscribeRound, submitVote, updateRound, updateSession,
+  subscribeRound, submitVote, transitionPhase,
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, RoomDoc, Reaction } from "@/lib/types";
@@ -116,8 +116,10 @@ export default function VotePage() {
     if (!isHost && !isDeadlinePast) return;
     advancingRef.current = true;
     try {
-      await updateRound(sessionId, roundParam, { status: "reviewing" });
-      await updateSession(sessionId, { status: "reviewing" });
+      await transitionPhase(sessionId, roundParam,
+        { status: "reviewing" },
+        { status: "reviewing" },
+      );
       const answerPayload = answers.map((a) => ({ id: a.id, text: a.text }));
       const token = await auth.currentUser?.getIdToken();
       fetch("/api/ogiri/review", {

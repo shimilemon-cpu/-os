@@ -1,5 +1,5 @@
 import {
-  collection, doc, addDoc, updateDoc, onSnapshot,
+  collection, doc, addDoc, setDoc, updateDoc, onSnapshot,
   Timestamp, query, orderBy, limit, increment,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
@@ -10,14 +10,15 @@ export async function publishToEngawa(
   roundId: string,
   question: { text: string; genre: Genre; difficulty: Difficulty }
 ): Promise<string> {
-  const ref = await addDoc(collection(db, "engawa"), {
+  const id = `${sessionId}_${roundId}`;
+  await setDoc(doc(db, "engawa", id), {
     question,
     publishedAt: Timestamp.now(),
     sessionId,
     roundId,
     answerCount: 0,
-  } satisfies Omit<EngawaPostDoc, "id">);
-  return ref.id;
+  } satisfies Omit<EngawaPostDoc, "id">, { merge: true });
+  return id;
 }
 
 export function subscribeEngawa(cb: (posts: EngawaPostDoc[]) => void, max = 40) {

@@ -6,7 +6,7 @@ import { Timestamp } from "firebase/firestore";
 import { auth } from "@/lib/firebase/client";
 import {
   subscribeSession, subscribeRound, submitAnswer,
-  updateRound, updateSession,
+  transitionPhase,
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, RoomDoc } from "@/lib/types";
@@ -119,11 +119,10 @@ export default function GamePage() {
     advancingRef.current = true;
     try {
       const voteDeadline = Timestamp.fromDate(new Date(Date.now() + VOTE_SECONDS * 1000));
-      await updateRound(sessionId, String(session.currentRound), {
-        status: "voting",
-        voteDeadline,
-      });
-      await updateSession(sessionId, { status: "voting" });
+      await transitionPhase(sessionId, String(session.currentRound),
+        { status: "voting", voteDeadline },
+        { status: "voting" },
+      );
     } finally {
       advancingRef.current = false;
     }
