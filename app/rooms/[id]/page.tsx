@@ -75,7 +75,7 @@ export default function WaitingRoomPage() {
 
   const copyInvite = async () => {
     if (!room) return;
-    const link = `${window.location.origin}/invite/${room.inviteCode}`;
+    const link = `${window.location.origin}/invite/${encodeURIComponent(room.inviteCode)}`;
     await navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
