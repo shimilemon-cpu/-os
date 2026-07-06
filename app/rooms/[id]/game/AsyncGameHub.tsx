@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
+import { getDocs, collection } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
 import {
   subscribeAllRounds,
   getUserAnsweredRounds,
@@ -68,13 +70,19 @@ function RoundCard({
   index,
   action,
   memberCount,
+  isHost,
+  closing,
   onTap,
+  onClose,
 }: {
   round: RoundDoc;
   index: number;
   action: RoundAction;
   memberCount: number;
+  isHost: boolean;
+  closing: boolean;
   onTap: () => void;
+  onClose?: () => void;
 }) {
   const cfg = ACTION_CONFIG[action];
   const genreColor = GENRE_COLORS[round.question.genre] ?? "#B6AC97";
@@ -84,10 +92,7 @@ function RoundCard({
   const isActionable = action === "answer" || action === "vote" || action === "result";
 
   return (
-    <button
-      onClick={onTap}
-      disabled={action === "waiting"}
-      className="w-full text-left active:scale-[0.98] transition-transform disabled:active:scale-100"
+    <div
       style={{
         borderRadius: 18,
         padding: "16px 16px 14px",
@@ -99,6 +104,8 @@ function RoundCard({
           ? `0 4px 14px -6px ${cfg.bg}40`
           : "0 2px 8px rgba(40,30,10,.04)",
       }}
+      onClick={action !== "waiting" ? onTap : undefined}
+      className={`w-full text-left ${action !== "waiting" ? "active:scale-[0.98] cursor-pointer" : ""} transition-transform`}
     >
       <div className="flex items-center gap-[10px] mb-[10px]">
         <span
@@ -192,7 +199,24 @@ function RoundCard({
           {cfg.label}
         </span>
       </div>
-    </button>
+
+      {isHost && round.status === "answering" && round.answerCount > 0 && onClose && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          disabled={closing}
+          className="w-full mt-[10px] font-gothic font-extrabold active:scale-[0.98] transition-transform disabled:opacity-50"
+          style={{
+            fontSize: 12,
+            padding: "10px 0",
+            borderRadius: 12,
+            background: closing ? "#EBE2CF" : "#1A1714",
+            color: closing ? "#7A6F5C" : "#FBF7EC",
+          }}
+        >
+          {closing ? "AI審査中…" : `回答を締め切る（${round.answerCount}件）`}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -212,7 +236,9 @@ export default function AsyncGameHub({
   const [answered, setAnswered] = useState<Set<string>>(new Set());
   const [voted, setVoted] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [closingRound, setClosingRound] = useState<string | null>(null);
   const uid = auth.currentUser?.uid ?? "";
+  const isHost = room.hostId === uid;
   const checkedRef = useRef(false);
   const finishingRef = useRef(false);
 
@@ -281,6 +307,47 @@ export default function AsyncGameHub({
       .catch(console.error);
   }, [rounds, session.totalRounds, sessionId, roomId, router]);
 
+  const handleCloseRound = useCallback(async (round: RoundDoc) => {
+    if (closingRound) return;
+    setClosingRound(round.id);
+    try {
+      await advanceAsyncRoundToReviewing(sessionId, round.id);
+
+      const answersSnap = await getDocs(
+        collection(db, "sessions", sessionId, "rounds", round.id, "answers"),
+      );
+      const answerList = answersSnap.docs.map((d) => ({
+        id: d.id,
+        text: (d.data() as { text: string }).text,
+      }));
+
+      if (answerList.length > 0) {
+        const token = await auth.currentUser?.getIdToken();
+        fetch("/api/ogiri/review", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            sessionId,
+            roundId: round.id,
+            question: round.question.text,
+            answers: answerList,
+          }),
+        }).catch(console.error);
+      }
+
+      router.push(
+        `/rooms/${roomId}/game/result?sid=${sessionId}&round=${round.id}`,
+      );
+    } catch (e) {
+      console.error("Close round failed:", e);
+    } finally {
+      setClosingRound(null);
+    }
+  }, [closingRound, sessionId, roomId, router]);
+
   const handleTap = (round: RoundDoc, action: RoundAction) => {
     if (action === "answer") {
       router.push(
@@ -324,7 +391,7 @@ export default function AsyncGameHub({
       <div className="px-[20px] pt-[10px] pb-[14px]">
         <div className="flex items-center gap-[8px] mb-1">
           <button
-            onClick={() => router.push(`/rooms/${roomId}`)}
+            onClick={() => router.push("/rooms")}
             className="grid place-items-center bg-white"
             style={{
               width: 38,
@@ -412,7 +479,10 @@ export default function AsyncGameHub({
               index={i}
               action={action}
               memberCount={room.memberIds.length}
+              isHost={isHost}
+              closing={closingRound === round.id}
               onTap={() => handleTap(round, action)}
+              onClose={() => handleCloseRound(round)}
             />
           );
         })}

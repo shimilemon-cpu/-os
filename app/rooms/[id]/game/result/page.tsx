@@ -166,7 +166,22 @@ function ResultPageContent() {
   }, [session, isHost, sessionId, roundParam, room?.topicMode, roomId, nextPhotoFile, nextPhotoCaption]);
 
   const tally = tallyVotes(votes);
-  const sorted = [...answers].sort((a, b) => (tally[b.id]?.total ?? 0) - (tally[a.id]?.total ?? 0));
+  const isAsync = session?.mode === "async";
+
+  const aiScoreMap: Record<string, number> = {};
+  if (isAsync && aiReviews.length > 0) {
+    for (const r of aiReviews) {
+      aiScoreMap[r.answerId] = (aiScoreMap[r.answerId] ?? 0) + r.score;
+    }
+    const personaCount = new Set(aiReviews.map((r) => r.persona)).size || 1;
+    for (const key of Object.keys(aiScoreMap)) {
+      aiScoreMap[key] = Math.round(aiScoreMap[key] / personaCount);
+    }
+  }
+
+  const sorted = isAsync
+    ? [...answers].sort((a, b) => (aiScoreMap[b.id] ?? 0) - (aiScoreMap[a.id] ?? 0))
+    : [...answers].sort((a, b) => (tally[b.id]?.total ?? 0) - (tally[a.id]?.total ?? 0));
   const mvp = sorted[0];
 
   return (
@@ -287,8 +302,17 @@ function ResultPageContent() {
               className="inline-flex items-center gap-[7px] font-gothic font-extrabold text-paper mt-3"
               style={{ fontSize: 14, padding: "7px 16px", borderRadius: 999, background: "rgba(0,0,0,.22)" }}
             >
-              <svg width="16" height="14" viewBox="0 0 30 24"><path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/></svg>
-              座布団 {tally[mvp.id]?.total ?? 0}枚
+              {isAsync ? (
+                <>
+                  <span style={{ fontSize: 16 }}>🎯</span>
+                  AI審査 {aiScoreMap[mvp.id] ?? 0}点
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="14" viewBox="0 0 30 24"><path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/></svg>
+                  座布団 {tally[mvp.id]?.total ?? 0}枚
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -313,8 +337,8 @@ function ResultPageContent() {
               <div className="flex-1 min-w-0">
                 <p className="font-gothic font-extrabold text-[#1A1714] truncate" style={{ fontSize: 14 }}>{a.text}</p>
               </div>
-              <span className="font-gothic font-extrabold text-red shrink-0" style={{ fontSize: 14 }}>
-                {tally[a.id]?.total ?? 0}枚
+              <span className="font-gothic font-extrabold shrink-0" style={{ fontSize: 14, color: isAsync ? "#1A1714" : "#E5402F" }}>
+                {isAsync ? `${aiScoreMap[a.id] ?? 0}点` : `${tally[a.id]?.total ?? 0}枚`}
               </span>
             </div>
           );
@@ -324,23 +348,62 @@ function ResultPageContent() {
         {aiReviews.length > 0 && (
           <div className="mt-2 space-y-2">
             <p className="font-gothic font-extrabold text-sub" style={{ fontSize: 12 }}>AI審査員の講評</p>
-            {["王道", "辛口"].map((persona) => {
-              const personaReviews = aiReviews.filter((r) => r.persona === persona);
-              if (personaReviews.length === 0) return null;
-              const topReview = personaReviews.sort((a, b) => b.score - a.score)[0];
-              const topAnswer = answers.find((a) => a.id === topReview.answerId);
-              const color = persona === "王道" ? "#F4C422" : "#E5402F";
-              return (
-                <div key={persona} className="bg-white" style={{ borderRadius: 16, padding: 14, border: "1px solid rgba(0,0,0,.07)" }}>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-gothic font-bold" style={{ fontSize: 13, color }}>{persona === "王道" ? "👑" : "🔪"} {persona}AI</p>
-                    <span className="font-gothic font-bold" style={{ fontSize: 13, color }}>{topReview.score}点</span>
+            {isAsync ? (
+              sorted.map((a) => {
+                const reviews = aiReviews.filter((r) => r.answerId === a.id);
+                if (reviews.length === 0) return null;
+                return (
+                  <div key={a.id} className="bg-white" style={{ borderRadius: 16, padding: 14, border: "1px solid rgba(0,0,0,.07)" }}>
+                    <p className="font-gothic font-extrabold text-[#1A1714] mb-[8px]" style={{ fontSize: 14 }}>
+                      「{a.text}」
+                    </p>
+                    <div className="flex flex-col gap-[8px]">
+                      {reviews.map((rev) => {
+                        const color = rev.persona === "王道" ? "#F4C422" : "#E5402F";
+                        return (
+                          <div key={rev.id} style={{ paddingLeft: 10, borderLeft: `3px solid ${color}` }}>
+                            <div className="flex items-center gap-[6px] mb-[2px]">
+                              <span className="font-gothic font-bold" style={{ fontSize: 12, color }}>
+                                {rev.persona === "王道" ? "👑" : "🔪"} {rev.persona}
+                              </span>
+                              <span className="font-gothic font-extrabold" style={{ fontSize: 12, color }}>{rev.score}点</span>
+                            </div>
+                            <p className="font-gothic text-[#52493A]" style={{ fontSize: 12, lineHeight: 1.5 }}>{rev.comment}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <p className="font-gothic text-sub" style={{ fontSize: 12 }}>「{topAnswer?.text ?? ""}」</p>
-                  <p className="font-gothic text-[#1A1714]" style={{ fontSize: 13, lineHeight: 1.6, marginTop: 4 }}>{topReview.comment}</p>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              ["王道", "辛口"].map((persona) => {
+                const personaReviews = aiReviews.filter((r) => r.persona === persona);
+                if (personaReviews.length === 0) return null;
+                const topReview = personaReviews.sort((a, b) => b.score - a.score)[0];
+                const topAnswer = answers.find((a) => a.id === topReview.answerId);
+                const color = persona === "王道" ? "#F4C422" : "#E5402F";
+                return (
+                  <div key={persona} className="bg-white" style={{ borderRadius: 16, padding: 14, border: "1px solid rgba(0,0,0,.07)" }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-gothic font-bold" style={{ fontSize: 13, color }}>{persona === "王道" ? "👑" : "🔪"} {persona}AI</p>
+                      <span className="font-gothic font-bold" style={{ fontSize: 13, color }}>{topReview.score}点</span>
+                    </div>
+                    <p className="font-gothic text-sub" style={{ fontSize: 12 }}>「{topAnswer?.text ?? ""}」</p>
+                    <p className="font-gothic text-[#1A1714]" style={{ fontSize: 13, lineHeight: 1.6, marginTop: 4 }}>{topReview.comment}</p>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* AI審査中インジケーター */}
+        {isAsync && aiReviews.length === 0 && round?.status === "reviewing" && (
+          <div className="mt-2 text-center py-6" style={{ borderRadius: 16, border: "1.5px dashed rgba(0,0,0,.12)", background: "rgba(255,255,255,.4)" }}>
+            <div className="w-6 h-6 mx-auto mb-2 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#F4C422", borderTopColor: "transparent" }} />
+            <p className="font-gothic font-bold text-sub" style={{ fontSize: 13 }}>AI審査員が採点中…</p>
+            <p className="font-gothic text-sub" style={{ fontSize: 11, marginTop: 2 }}>少々お待ちください</p>
           </div>
         )}
       </div>

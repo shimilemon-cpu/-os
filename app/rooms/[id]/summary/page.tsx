@@ -4,11 +4,11 @@ import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/firebase/client";
-import { getDocs, collection } from "firebase/firestore";
+import { getDocs, getDoc, doc, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { subscribeRoom, resetRoom } from "@/lib/ogiri/rooms";
 import { tallyVotes } from "@/lib/ogiri/sessions";
-import type { RoomDoc, AnswerDoc, VoteDoc, AiAnalysisResult } from "@/lib/types";
+import type { RoomDoc, AnswerDoc, VoteDoc, AiReviewDoc, AiAnalysisResult } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 
 const RANK_LABELS = ["横綱", "大関", "関脇", "小結", "前頭"];
@@ -31,6 +31,7 @@ function SummaryPageContent() {
   const [roundSummaries, setRoundSummaries] = useState<RoundSummary[]>([]);
   const [playerScores, setPlayerScores] = useState<{ userId: string; nickname: string; total: number }[]>([]);
   const [analyses, setAnalyses] = useState<AiAnalysisResult[]>([]);
+  const [isAsync, setIsAsync] = useState(false);
   const [loading, setLoading] = useState(true);
   const uid = auth.currentUser?.uid ?? "";
 
@@ -48,10 +49,14 @@ function SummaryPageContent() {
     if (!sessionId) return;
     const load = async () => {
       try {
-        const [roundsSnap, membersSnap] = await Promise.all([
+        const [roundsSnap, membersSnap, sessionSnap] = await Promise.all([
           getDocs(collection(db, "sessions", sessionId, "rounds")),
           getDocs(collection(db, "rooms", roomId, "members")),
+          getDoc(doc(db, "sessions", sessionId)),
         ]);
+        const asyncMode = sessionSnap.data()?.mode === "async";
+        setIsAsync(asyncMode);
+
         const summaries: RoundSummary[] = [];
         const scoreMap: Record<string, number> = {};
         const nicknameMap: Record<string, string> = {};
@@ -63,33 +68,66 @@ function SummaryPageContent() {
               getDocs(collection(db, "sessions", sessionId, "rounds", roundDoc.id, "answers")),
               getDocs(collection(db, "sessions", sessionId, "rounds", roundDoc.id, "votes")),
             ]);
-            return { roundDoc, answersSnap, votesSnap };
+            const aiReviewsSnap = asyncMode
+              ? await getDocs(collection(db, "sessions", sessionId, "rounds", roundDoc.id, "aiReviews"))
+              : null;
+            return { roundDoc, answersSnap, votesSnap, aiReviewsSnap };
           })
         );
 
-        for (const { roundDoc, answersSnap, votesSnap } of roundResults) {
+        for (const { roundDoc, answersSnap, votesSnap, aiReviewsSnap } of roundResults) {
           const roundData = roundDoc.data();
           const answers = answersSnap.docs.map((d) => ({ id: d.id, ...d.data() } as AnswerDoc));
           const votes = votesSnap.docs.map((d) => d.data() as VoteDoc);
           const tally = tallyVotes(votes);
 
-          for (const a of answers) {
-            scoreMap[a.userId] = (scoreMap[a.userId] ?? 0) + (tally[a.id]?.total ?? 0);
-            if (!answersByUser[a.userId]) answersByUser[a.userId] = [];
-            answersByUser[a.userId].push(a.text);
+          if (asyncMode && aiReviewsSnap) {
+            const aiReviews = aiReviewsSnap.docs.map((d) => d.data() as AiReviewDoc);
+            const aiScores: Record<string, number[]> = {};
+            for (const r of aiReviews) {
+              if (!aiScores[r.answerId]) aiScores[r.answerId] = [];
+              aiScores[r.answerId].push(r.score);
+            }
+            for (const a of answers) {
+              const scores = aiScores[a.id] ?? [];
+              const avg = scores.length > 0 ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length) : 0;
+              scoreMap[a.userId] = (scoreMap[a.userId] ?? 0) + avg;
+              if (!answersByUser[a.userId]) answersByUser[a.userId] = [];
+              answersByUser[a.userId].push(a.text);
+            }
+            const sorted = [...answers].sort((a, b) => {
+              const aAvg = aiScores[b.id]?.reduce((s, v) => s + v, 0) ?? 0;
+              const bAvg = aiScores[a.id]?.reduce((s, v) => s + v, 0) ?? 0;
+              return aAvg - bAvg;
+            });
+            const mvpAnswer = sorted[0];
+            const mvpScores = mvpAnswer ? (aiScores[mvpAnswer.id] ?? []) : [];
+            const mvpAvg = mvpScores.length > 0 ? Math.round(mvpScores.reduce((s, v) => s + v, 0) / mvpScores.length) : 0;
+            summaries.push({
+              round: Number(roundDoc.id),
+              question: roundData.question?.text ?? "",
+              mvp: mvpAnswer
+                ? { text: mvpAnswer.text, userId: mvpAnswer.userId, total: mvpAvg }
+                : null,
+            });
+          } else {
+            for (const a of answers) {
+              scoreMap[a.userId] = (scoreMap[a.userId] ?? 0) + (tally[a.id]?.total ?? 0);
+              if (!answersByUser[a.userId]) answersByUser[a.userId] = [];
+              answersByUser[a.userId].push(a.text);
+            }
+            const sorted = [...answers].sort(
+              (a, b) => (tally[b.id]?.total ?? 0) - (tally[a.id]?.total ?? 0)
+            );
+            const mvpAnswer = sorted[0];
+            summaries.push({
+              round: Number(roundDoc.id),
+              question: roundData.question?.text ?? "",
+              mvp: mvpAnswer
+                ? { text: mvpAnswer.text, userId: mvpAnswer.userId, total: tally[mvpAnswer.id]?.total ?? 0 }
+                : null,
+            });
           }
-
-          const sorted = [...answers].sort(
-            (a, b) => (tally[b.id]?.total ?? 0) - (tally[a.id]?.total ?? 0)
-          );
-          const mvpAnswer = sorted[0];
-          summaries.push({
-            round: Number(roundDoc.id),
-            question: roundData.question?.text ?? "",
-            mvp: mvpAnswer
-              ? { text: mvpAnswer.text, userId: mvpAnswer.userId, total: tally[mvpAnswer.id]?.total ?? 0 }
-              : null,
-          });
         }
         for (const d of membersSnap.docs) {
           nicknameMap[d.id] = (d.data().nickname as string) ?? d.id;
@@ -169,8 +207,12 @@ function SummaryPageContent() {
               className="inline-flex items-center gap-[7px] font-gothic font-extrabold text-paper mt-3"
               style={{ fontSize: 14, padding: "7px 16px", borderRadius: 999, background: "rgba(0,0,0,.22)" }}
             >
-              <svg width="16" height="14" viewBox="0 0 30 24"><path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/></svg>
-              座布団 {champion.total}枚
+              {isAsync ? (
+                <><span style={{ fontSize: 16 }}>🎯</span> AI審査 {champion.total}点</>
+              ) : (
+                <><svg width="16" height="14" viewBox="0 0 30 24"><path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/></svg>
+                座布団 {champion.total}枚</>
+              )}
             </div>
           </div>
         </div>
@@ -204,7 +246,7 @@ function SummaryPageContent() {
                     {isMe ? `${p.nickname}（あなた）` : p.nickname}
                   </p>
                   <span className="font-gothic font-extrabold shrink-0" style={{ fontSize: 14, color: "#E5402F" }}>
-                    {p.total}枚
+                    {isAsync ? `${p.total}点` : `${p.total}枚`}
                   </span>
                 </div>
               );
@@ -265,11 +307,17 @@ function SummaryPageContent() {
                 </div>
                 {s.mvp ? (
                   <div className="flex items-center gap-[8px]">
-                    <svg width="13" height="11" viewBox="0 0 30 24" className="shrink-0">
-                      <path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/>
-                    </svg>
+                    {isAsync ? (
+                      <span style={{ fontSize: 13 }} className="shrink-0">🎯</span>
+                    ) : (
+                      <svg width="13" height="11" viewBox="0 0 30 24" className="shrink-0">
+                        <path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/>
+                      </svg>
+                    )}
                     <p className="font-gothic font-extrabold text-[#1A1714] flex-1" style={{ fontSize: 14 }}>{s.mvp.text}</p>
-                    <span className="font-gothic text-sub shrink-0" style={{ fontSize: 11 }}>{s.mvp.total}枚</span>
+                    <span className="font-gothic text-sub shrink-0" style={{ fontSize: 11 }}>
+                      {isAsync ? `${s.mvp.total}点` : `${s.mvp.total}枚`}
+                    </span>
                   </div>
                 ) : (
                   <p className="font-gothic text-sub" style={{ fontSize: 12 }}>データなし</p>
@@ -283,7 +331,8 @@ function SummaryPageContent() {
         <div className="flex flex-col gap-[10px] mt-2">
           <button
             onClick={() => {
-              const text = `大喜利Pocket「${room?.name ?? ""}」\n🏆 ${champion?.total ?? 0}枚で千秋楽！\n#大喜利Pocket`;
+              const scoreText = isAsync ? `${champion?.total ?? 0}点` : `${champion?.total ?? 0}枚`;
+              const text = `大喜利Pocket「${room?.name ?? ""}」\n🏆 ${scoreText}で千秋楽！\n#大喜利Pocket`;
               if (navigator.share) navigator.share({ text });
               else navigator.clipboard.writeText(text);
             }}
