@@ -1,12 +1,12 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/firebase/client";
 import { getDocs, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { subscribeRoom } from "@/lib/ogiri/rooms";
+import { subscribeRoom, resetRoom } from "@/lib/ogiri/rooms";
 import { tallyVotes } from "@/lib/ogiri/sessions";
 import type { RoomDoc, AnswerDoc, VoteDoc, AiAnalysisResult } from "@/lib/types";
 import Engimono from "@/components/Engimono";
@@ -25,6 +25,7 @@ function SummaryPageContent() {
   const { id: roomId } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sid") ?? "";
+  const router = useRouter();
 
   const [room, setRoom] = useState<RoomDoc | null>(null);
   const [roundSummaries, setRoundSummaries] = useState<RoundSummary[]>([]);
@@ -34,9 +35,14 @@ function SummaryPageContent() {
   const uid = auth.currentUser?.uid ?? "";
 
   useEffect(() => {
-    const unsub = subscribeRoom(roomId, setRoom);
+    const unsub = subscribeRoom(roomId, (r) => {
+      setRoom(r);
+      if (r.status === "waiting") {
+        router.replace(`/rooms/${roomId}`);
+      }
+    });
     return unsub;
-  }, [roomId]);
+  }, [roomId, router]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -286,6 +292,17 @@ function SummaryPageContent() {
           >
             結果をシェア
           </button>
+          {room?.hostId === uid && (
+            <button
+              onClick={async () => {
+                await resetRoom(roomId);
+              }}
+              className="w-full font-mincho font-extrabold active:scale-[0.98] transition-all"
+              style={{ fontSize: 17, padding: "16px 0", borderRadius: 18, background: "#F4C422", color: "#1A1714" }}
+            >
+              もう一度遊ぶ
+            </button>
+          )}
           <Link
             href="/rooms"
             className="block text-center font-gothic font-bold text-sub py-2"

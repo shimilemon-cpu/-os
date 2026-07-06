@@ -162,10 +162,20 @@ export function subscribeUserRooms(
   );
 }
 
-export async function startGame(roomId: string) {
-  await updateDoc(doc(db, "rooms", roomId), { status: "active" });
+export async function startGame(roomId: string, sessionId: string) {
+  await updateDoc(doc(db, "rooms", roomId), { status: "active", activeSessionId: sessionId });
 }
 
 export async function finishGame(roomId: string) {
   await updateDoc(doc(db, "rooms", roomId), { status: "finished" });
+}
+
+export async function resetRoom(roomId: string) {
+  const membersSnap = await getDocs(collection(db, "rooms", roomId, "members"));
+  const batch = writeBatch(db);
+  batch.update(doc(db, "rooms", roomId), { status: "waiting", activeSessionId: null });
+  for (const m of membersSnap.docs) {
+    batch.update(m.ref, { isReady: false });
+  }
+  await batch.commit();
 }

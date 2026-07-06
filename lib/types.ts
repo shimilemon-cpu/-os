@@ -27,6 +27,7 @@ export interface RoomDoc {
   memberIds: string[];       // max capacity
   judges?: AiPersona[];     // undefined → ["王道", "辛口"]
   answerSeconds?: number;   // default 90
+  activeSessionId?: string;
   createdAt: Timestamp | null;
 }
 
