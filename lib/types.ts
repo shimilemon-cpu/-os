@@ -100,6 +100,17 @@ export interface VoteDoc {
   createdAt: Timestamp | null;
 }
 
+// ─── 感想スタンプ ─────────────────────────────────────────────
+export type StampType = "秀逸" | "天才" | "ツボ" | "思いつかなかった" | "めっちゃ好き";
+
+export interface StampDoc {
+  id: string;
+  answerId: string;
+  userId: string;
+  stamp: StampType;
+  createdAt: Timestamp | null;
+}
+
 // ─── AI講評 ────────────────────────────────────────────────
 export type AiPersona = "王道" | "辛口";
 

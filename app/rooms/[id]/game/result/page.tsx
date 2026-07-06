@@ -5,12 +5,12 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
 import {
   subscribeSession, subscribeRound, subscribeAnswers,
-  subscribeVotes, subscribeAiReviews, tallyVotes,
+  subscribeVotes, subscribeAiReviews, subscribeStamps, toggleStamp, tallyVotes,
   transitionPhase, createRound, updateSession, updateRound,
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom, finishGame } from "@/lib/ogiri/rooms";
 import { publishToEngawa } from "@/lib/ogiri/engawa";
-import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, RoomDoc, Genre, Difficulty } from "@/lib/types";
+import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, StampDoc, StampType, RoomDoc, Genre, Difficulty } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 import Icon from "@/components/Icon";
 import OdaiSheet from "@/components/OdaiSheet";
@@ -35,6 +35,66 @@ const RANK_LABELS = ["大関", "関脇", "前頭"];
 const RANK_COLORS = ["#2BA35F", "#E0A93B", "#7A6F5C"];
 const AVATAR_COLORS = ["#2BA35F", "#F4C422", "#D63384", "#E5402F", "#5BA9D6"];
 
+const STAMP_CONFIG: { type: StampType; emoji: string }[] = [
+  { type: "秀逸",         emoji: "✨" },
+  { type: "天才",         emoji: "🧠" },
+  { type: "ツボ",         emoji: "🤣" },
+  { type: "思いつかなかった", emoji: "💡" },
+  { type: "めっちゃ好き",   emoji: "❤️" },
+];
+
+function StampBar({
+  answerId, stamps, uid, sessionId, roundId,
+}: {
+  answerId: string; stamps: StampDoc[]; uid: string; sessionId: string; roundId: string;
+}) {
+  const answerStamps = stamps.filter((s) => s.answerId === answerId);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const handleToggle = async (stamp: StampType) => {
+    if (busy) return;
+    setBusy(stamp);
+    try {
+      await toggleStamp(sessionId, roundId, answerId, uid, stamp);
+    } catch (e) {
+      console.error("Stamp toggle failed:", e);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap gap-[5px] mt-[8px]">
+      {STAMP_CONFIG.map(({ type, emoji }) => {
+        const count = answerStamps.filter((s) => s.stamp === type).length;
+        const mine = answerStamps.some((s) => s.stamp === type && s.userId === uid);
+        return (
+          <button
+            key={type}
+            onClick={(e) => { e.stopPropagation(); handleToggle(type); }}
+            disabled={busy === type}
+            className="flex items-center gap-[3px] font-gothic active:scale-95 transition-all"
+            style={{
+              fontSize: 11,
+              padding: "4px 8px",
+              borderRadius: 999,
+              background: mine ? "#EBE2CF" : "#F5F2EB",
+              border: mine ? "1.5px solid #E0A93B" : "1px solid rgba(0,0,0,.06)",
+              fontWeight: mine ? 700 : 500,
+              color: mine ? "#9A6410" : "#7A6F5C",
+              opacity: busy === type ? 0.5 : 1,
+            }}
+          >
+            <span style={{ fontSize: 13 }}>{emoji}</span>
+            <span>{type}</span>
+            {count > 0 && <span className="font-extrabold" style={{ color: mine ? "#E0A93B" : "#B6AC97" }}>{count}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ResultPageContent() {
   const { id: roomId } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -48,6 +108,7 @@ function ResultPageContent() {
   const [answers, setAnswers] = useState<AnswerDoc[]>([]);
   const [votes, setVotes] = useState<VoteDoc[]>([]);
   const [aiReviews, setAiReviews] = useState<AiReviewDoc[]>([]);
+  const [stamps, setStamps] = useState<StampDoc[]>([]);
   const uid = auth.currentUser?.uid ?? "";
   const isHost = room?.hostId === uid;
   const [showInterstitial, setShowInterstitial] = useState(false);
@@ -79,7 +140,8 @@ function ResultPageContent() {
     const u4 = subscribeAnswers(sessionId, roundParam, setAnswers);
     const u5 = subscribeVotes(sessionId, roundParam, setVotes);
     const u6 = subscribeAiReviews(sessionId, roundParam, setAiReviews);
-    return () => { u1(); u2(); u3(); u4(); u5(); u6(); };
+    const u7 = subscribeStamps(sessionId, roundParam, setStamps);
+    return () => { u1(); u2(); u3(); u4(); u5(); u6(); u7(); };
   }, [roomId, sessionId, roundParam, router]);
 
   useEffect(() => {
@@ -314,6 +376,7 @@ function ResultPageContent() {
                 </>
               )}
             </div>
+            <StampBar answerId={mvp.id} stamps={stamps} uid={uid} sessionId={sessionId} roundId={roundParam} />
           </div>
         </div>
       )}
@@ -326,20 +389,23 @@ function ResultPageContent() {
           return (
             <div
               key={a.id}
-              className="bg-white flex items-center gap-[13px]"
+              className="bg-white"
               style={{ borderRadius: 15, padding: "11px 14px", border: "1px solid rgba(0,0,0,.07)" }}
             >
-              <span className="font-mincho font-extrabold" style={{ fontSize: 14, width: 34, color }}>{label}</span>
-              <div
-                className="rounded-full shrink-0"
-                style={{ width: 30, height: 30, background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="font-gothic font-extrabold text-[#1A1714] truncate" style={{ fontSize: 14 }}>{a.text}</p>
+              <div className="flex items-center gap-[13px]">
+                <span className="font-mincho font-extrabold" style={{ fontSize: 14, width: 34, color }}>{label}</span>
+                <div
+                  className="rounded-full shrink-0"
+                  style={{ width: 30, height: 30, background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-gothic font-extrabold text-[#1A1714] truncate" style={{ fontSize: 14 }}>{a.text}</p>
+                </div>
+                <span className="font-gothic font-extrabold shrink-0" style={{ fontSize: 14, color: isAsync ? "#1A1714" : "#E5402F" }}>
+                  {isAsync ? `${aiScoreMap[a.id] ?? 0}点` : `${tally[a.id]?.total ?? 0}枚`}
+                </span>
               </div>
-              <span className="font-gothic font-extrabold shrink-0" style={{ fontSize: 14, color: isAsync ? "#1A1714" : "#E5402F" }}>
-                {isAsync ? `${aiScoreMap[a.id] ?? 0}点` : `${tally[a.id]?.total ?? 0}枚`}
-              </span>
+              <StampBar answerId={a.id} stamps={stamps} uid={uid} sessionId={sessionId} roundId={roundParam} />
             </div>
           );
         })}
