@@ -1,10 +1,10 @@
 import {
   collection, doc, addDoc, updateDoc, onSnapshot,
   Timestamp, query, where, getDocs, orderBy, limit, setDoc, increment,
-  writeBatch,
+  writeBatch, deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, Reaction } from "@/lib/types";
+import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, StampDoc, StampType, Reaction } from "@/lib/types";
 
 export async function createSession(
   roomId: string,
@@ -290,4 +290,42 @@ export function isDeadlinePast(
 ): boolean {
   const ms = getTimestampMs(ts);
   return ms > 0 && Date.now() >= ms;
+}
+
+// ─── 感想スタンプ ──────────────────────────────────────────────
+
+export async function toggleStamp(
+  sessionId: string,
+  roundId: string,
+  answerId: string,
+  userId: string,
+  stamp: StampType,
+): Promise<boolean> {
+  const stampsCol = collection(db, "sessions", sessionId, "rounds", roundId, "stamps");
+  const q = query(stampsCol, where("answerId", "==", answerId), where("userId", "==", userId), where("stamp", "==", stamp), limit(1));
+  const snap = await getDocs(q);
+  if (!snap.empty) {
+    await deleteDoc(snap.docs[0].ref);
+    return false;
+  }
+  await addDoc(stampsCol, {
+    answerId,
+    userId,
+    stamp,
+    createdAt: Timestamp.now(),
+  });
+  return true;
+}
+
+export function subscribeStamps(
+  sessionId: string,
+  roundId: string,
+  cb: (stamps: StampDoc[]) => void,
+) {
+  if (!sessionId || !roundId) return () => {};
+  return onSnapshot(
+    collection(db, "sessions", sessionId, "rounds", roundId, "stamps"),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as StampDoc)),
+    (err) => console.error("subscribeStamps error:", err),
+  );
 }
