@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase/client";
+import { auth, db } from "@/lib/firebase/client";
+import { getDoc, doc } from "firebase/firestore";
 import { createRoom, generateInviteCode, generateRoomRef } from "@/lib/ogiri/rooms";
 import Icon from "@/components/Icon";
 import Engimono from "@/components/Engimono";
@@ -54,7 +55,9 @@ export default function NewRoomPage() {
     const mode = roomMode === 0 ? "realtime" : "async";
 
     try {
-      await createRoom(user.uid, user.displayName ?? "ゲスト", name.trim(), mode, ["王道", "辛口"], roomRef, inviteCode, topicModes[topicMode], capacity, timeLimit);
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      const nickname = userSnap.exists() ? (userSnap.data()?.nickname || user.displayName || "ゲスト") : (user.displayName ?? "ゲスト");
+      await createRoom(user.uid, nickname, name.trim(), mode, ["王道", "辛口"], roomRef, inviteCode, topicModes[topicMode], capacity, timeLimit);
       router.push(`/rooms/${roomId}/invite?code=${inviteCode}`);
     } catch (e) {
       console.error("createRoom failed:", e);
