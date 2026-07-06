@@ -155,7 +155,7 @@ function GamePageContent() {
     );
   }
 
-  const total = room?.memberIds.length ?? 0;
+  const total = room?.memberIds?.length ?? 0;
   const done = round.answerCount ?? 0;
 
   return (
