@@ -20,8 +20,9 @@ function TimerRing({ deadline, totalSeconds, onExpire }: { deadline: RoundDoc["a
 
   useEffect(() => {
     if (!deadline) return;
-    const toDate = (deadline as { toDate?: () => Date }).toDate;
-    const end = typeof toDate === "function" ? toDate().getTime() : 0;
+    const dl = deadline as { toDate?: () => Date; seconds?: number };
+    const end = typeof dl.toDate === "function" ? dl.toDate().getTime()
+      : typeof dl.seconds === "number" ? dl.seconds * 1000 : 0;
     if (!end) return;
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
@@ -111,8 +112,9 @@ function GamePageContent() {
     const isDeadlinePast = (() => {
       const dl = round.answerDeadline;
       if (!dl) return false;
-      const toDate = (dl as { toDate?: () => Date }).toDate;
-      const end = typeof toDate === "function" ? toDate().getTime() : 0;
+      const tsObj = dl as { toDate?: () => Date; seconds?: number };
+      const end = typeof tsObj.toDate === "function" ? tsObj.toDate().getTime()
+        : typeof tsObj.seconds === "number" ? tsObj.seconds * 1000 : 0;
       return end > 0 && Date.now() >= end;
     })();
     if (!isHost && !isDeadlinePast) return;
