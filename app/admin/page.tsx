@@ -15,6 +15,7 @@ type EngimonoName = "daruma" | "cat" | "tai" | "fuku" | "koban" | "mallet" | "ma
 type Tab = "stats" | "users" | "rooms" | "moderation";
 
 const ADMIN_EMAILS = ["shimilemon@gmail.com"];
+const ADMIN_UIDS: string[] = [];
 
 const TAB_LABELS: Record<Tab, string> = {
   stats: "統計",
@@ -126,8 +127,10 @@ export default function AdminPage() {
     auth.authStateReady().then(() => {
       const user = auth.currentUser;
       if (!user) { router.push("/auth/login"); return; }
-      const email = user.email?.toLowerCase();
-      if (!email || !ADMIN_EMAILS.includes(email)) {
+      const email = user.email?.toLowerCase() ?? "";
+      const isAdmin = ADMIN_EMAILS.includes(email) || ADMIN_UIDS.includes(user.uid);
+      if (!isAdmin) {
+        alert(`管理者権限がありません。\nあなたの UID: ${user.uid}\nこの UID を開発者に共有してください。`);
         router.push("/rooms");
         return;
       }
