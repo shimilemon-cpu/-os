@@ -5,13 +5,15 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Timestamp } from "firebase/firestore";
 import { auth } from "@/lib/firebase/client";
 import {
-  subscribeSession, subscribeRound, submitAnswer,
-  transitionPhase,
+  subscribeSession, subscribeRound, subscribeAnswers, submitAnswer,
+  transitionPhase, advanceAsyncRoundToVoting, getTimestampMs,
+  getUserAnsweredRounds,
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, RoomDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 import OdaiSheet from "@/components/OdaiSheet";
+import AsyncGameHub from "./AsyncGameHub";
 
 const VOTE_SECONDS = 45;
 
@@ -67,10 +69,46 @@ function TimerRing({ deadline, totalSeconds, onExpire }: { deadline: RoundDoc["a
   );
 }
 
+function AsyncDeadlineBadge({ deadline }: { deadline: RoundDoc["answerDeadline"] | null }) {
+  const [remaining, setRemaining] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      const end = getTimestampMs(deadline as { toDate?: () => Date; seconds?: number } | null);
+      if (!end) { setRemaining(""); return; }
+      const diff = Math.max(0, end - Date.now());
+      if (diff === 0) { setRemaining("期限切れ"); return; }
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      setRemaining(h > 0 ? `あと${h}時間${m > 0 ? `${m}分` : ""}` : `あと${m}分`);
+    };
+    update();
+    const id = setInterval(update, 60_000);
+    return () => clearInterval(id);
+  }, [deadline]);
+
+  if (!remaining) return null;
+  return (
+    <span
+      className="font-gothic font-extrabold"
+      style={{
+        fontSize: 11,
+        padding: "4px 10px",
+        borderRadius: 999,
+        background: "#EBE2CF",
+        color: "#7A6F5C",
+      }}
+    >
+      {remaining}
+    </span>
+  );
+}
+
 function GamePageContent() {
   const { id: roomId } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sid") ?? "";
+  const roundParam = searchParams.get("round");
   const router = useRouter();
 
   const [session, setSession] = useState<SessionDoc | null>(null);
@@ -83,10 +121,19 @@ function GamePageContent() {
   const isHost = room?.hostId === uid;
   const advancingRef = useRef(false);
 
+  const isAsync = session?.mode === "async";
+
   useEffect(() => {
     const u1 = subscribeRoom(roomId, setRoom);
     const u2 = subscribeSession(sessionId, (s) => {
       setSession(s);
+      if (s.mode === "async") {
+        if (s.status === "finished") {
+          router.replace(`/rooms/${roomId}/summary?sid=${sessionId}`);
+        }
+        return;
+      }
+      // Realtime navigation
       if (s.status === "voting") {
         router.replace(`/rooms/${roomId}/game/vote?sid=${sessionId}&round=${s.currentRound}`);
       }
@@ -97,19 +144,52 @@ function GamePageContent() {
     return () => { u1(); u2(); };
   }, [roomId, sessionId, router]);
 
+  const activeRoundId = isAsync ? roundParam : session ? String(session.currentRound) : null;
+
   useEffect(() => {
-    if (!session) return;
-    const u = subscribeRound(sessionId, String(session.currentRound), setRound);
+    if (!activeRoundId) return;
+    const u = subscribeRound(sessionId, activeRoundId, (r) => {
+      setRound(r);
+      if (isAsync) {
+        if (r.status === "voting") {
+          router.replace(`/rooms/${roomId}/game/vote?sid=${sessionId}&round=${r.id}`);
+        }
+        if (r.status === "reviewing" || r.status === "done") {
+          router.replace(`/rooms/${roomId}/game/result?sid=${sessionId}&round=${r.id}`);
+        }
+      }
+    });
     setSubmitted(false);
     setAnswer("");
     return u;
-  }, [sessionId, session?.currentRound]);
+  }, [sessionId, activeRoundId, isAsync, roomId, router]);
+
+  // Check if user already answered this round (for async)
+  useEffect(() => {
+    if (!isAsync || !activeRoundId || !uid || !session) return;
+    getUserAnsweredRounds(sessionId, uid, session.totalRounds).then((set) => {
+      if (set.has(activeRoundId)) {
+        setSubmitted(true);
+      }
+    });
+  }, [isAsync, activeRoundId, uid, sessionId, session]);
 
   const advanceToVoting = useCallback(async () => {
     if (!session || advancingRef.current) return;
     if (round?.status !== "answering") return;
-    // In async mode any player can trigger deadline-based transitions; host can always advance manually
-    const isDeadlinePast = (() => {
+
+    if (isAsync) {
+      advancingRef.current = true;
+      try {
+        await advanceAsyncRoundToVoting(sessionId, activeRoundId!);
+      } finally {
+        advancingRef.current = false;
+      }
+      return;
+    }
+
+    // Realtime logic
+    const isDeadlinePastNow = (() => {
       const dl = round.answerDeadline;
       if (!dl) return false;
       const tsObj = dl as { toDate?: () => Date; seconds?: number };
@@ -117,7 +197,7 @@ function GamePageContent() {
         : typeof tsObj.seconds === "number" ? tsObj.seconds * 1000 : 0;
       return end > 0 && Date.now() >= end;
     })();
-    if (!isHost && !isDeadlinePast) return;
+    if (!isHost && !isDeadlinePastNow) return;
     advancingRef.current = true;
     try {
       const voteDeadline = Timestamp.fromDate(new Date(Date.now() + VOTE_SECONDS * 1000));
@@ -128,15 +208,21 @@ function GamePageContent() {
     } finally {
       advancingRef.current = false;
     }
-  }, [session, isHost, round, sessionId]);
+  }, [session, isHost, round, sessionId, isAsync, activeRoundId]);
 
   const handleSubmit = async () => {
     if (!answer.trim() || submitting || submitted) return;
     setSubmitting(true);
     try {
-      await submitAnswer(sessionId, String(session!.currentRound), uid, answer.trim());
+      await submitAnswer(sessionId, activeRoundId!, uid, answer.trim());
       setSubmitted(true);
-      if (isHost && session && room) {
+
+      if (isAsync && room) {
+        const newCount = (round?.answerCount ?? 0) + 1;
+        if (newCount >= room.memberIds.length) {
+          await advanceAsyncRoundToVoting(sessionId, activeRoundId!);
+        }
+      } else if (isHost && session && room) {
         const newCount = (round?.answerCount ?? 0) + 1;
         if (newCount >= room.memberIds.length) {
           await advanceToVoting();
@@ -149,7 +235,29 @@ function GamePageContent() {
     }
   };
 
-  if (!session || !round) {
+  // Loading state
+  if (!session || !room) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-paper">
+        <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  // Async hub — no round selected
+  if (isAsync && !roundParam) {
+    return (
+      <AsyncGameHub
+        roomId={roomId}
+        session={session}
+        room={room}
+        sessionId={sessionId}
+      />
+    );
+  }
+
+  // Waiting for round data
+  if (!round) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
@@ -159,22 +267,38 @@ function GamePageContent() {
 
   const total = room?.memberIds?.length ?? 0;
   const done = round.answerCount ?? 0;
+  const roundNumber = isAsync ? Number(activeRoundId) : session.currentRound;
 
   return (
     <div className="min-h-screen flex flex-col bg-paper">
       {/* AppBar */}
       <div className="px-[20px] pt-[10px] pb-[14px] flex items-center justify-between">
         <div className="flex-1">
-          <p className="font-gothic text-sub" style={{ fontSize: 11 }}>{room?.name}・第{session.currentRound}問</p>
+          {isAsync && (
+            <button
+              onClick={() => router.push(`/rooms/${roomId}/game?sid=${sessionId}`)}
+              className="font-gothic text-sub mb-1 flex items-center gap-1"
+              style={{ fontSize: 11 }}
+            >
+              ← お題一覧に戻る
+            </button>
+          )}
+          <p className="font-gothic text-sub" style={{ fontSize: 11 }}>
+            {room?.name}・第{roundNumber}問
+          </p>
           <p className="font-mincho font-bold text-[#1A1714]" style={{ fontSize: 17 }}>回答を考える</p>
         </div>
-        <TimerRing deadline={round.answerDeadline} totalSeconds={room?.answerSeconds ?? 90} onExpire={advanceToVoting} />
+        {isAsync ? (
+          <AsyncDeadlineBadge deadline={round.answerDeadline} />
+        ) : (
+          <TimerRing deadline={round.answerDeadline} totalSeconds={room?.answerSeconds ?? 90} onExpire={advanceToVoting} />
+        )}
       </div>
 
       {/* お題カード */}
       {round.question.imageUrl ? (
         <div className="mx-[20px] mb-[18px]">
-          <OdaiSheet imageUrl={round.question.imageUrl} text={round.question.text} roundNumber={session.currentRound} />
+          <OdaiSheet imageUrl={round.question.imageUrl} text={round.question.text} roundNumber={roundNumber} />
         </div>
       ) : (
         <div
@@ -183,7 +307,7 @@ function GamePageContent() {
         >
           <Engimono name="cat" width={96} height={104} style={{ position: "absolute", right: -10, bottom: -14, opacity: 0.9 }} />
           <p className="font-gothic font-extrabold text-[#CFF3DD] mb-2" style={{ fontSize: 12, letterSpacing: "0.1em" }}>
-            ＼ 第{session.currentRound}問のお題 ／
+            ＼ 第{roundNumber}問のお題 ／
           </p>
           <p className="font-mincho font-extrabold text-white" style={{ fontSize: 25, lineHeight: 1.5, maxWidth: "80%" }}>
             {round.question.text}
@@ -213,9 +337,21 @@ function GamePageContent() {
                 <path d="M5 13l5 5L19 6"/>
               </svg>
               <p className="font-gothic font-bold text-[#2BA35F]" style={{ fontSize: 14 }}>回答を投じました</p>
-              <p className="font-gothic text-sub mt-1" style={{ fontSize: 12 }}>他の人の回答を待っています…</p>
+              <p className="font-gothic text-sub mt-1" style={{ fontSize: 12 }}>
+                {isAsync
+                  ? "全員の回答が揃うと投票が始まります"
+                  : "他の人の回答を待っています…"}
+              </p>
             </div>
-            {isHost && (
+            {isAsync ? (
+              <button
+                onClick={() => router.push(`/rooms/${roomId}/game?sid=${sessionId}`)}
+                className="w-full font-gothic font-bold text-sub active:scale-[0.98] transition-transform"
+                style={{ fontSize: 14, padding: "12px 0", borderRadius: 14, border: "1px solid rgba(0,0,0,.1)" }}
+              >
+                ← お題一覧に戻る
+              </button>
+            ) : isHost ? (
               <button
                 onClick={advanceToVoting}
                 className="w-full font-gothic font-bold text-sub active:scale-[0.98] transition-transform"
@@ -223,7 +359,7 @@ function GamePageContent() {
               >
                 投票フェーズに進む →
               </button>
-            )}
+            ) : null}
           </div>
         ) : (
           <div className="flex-1 flex flex-col space-y-3">

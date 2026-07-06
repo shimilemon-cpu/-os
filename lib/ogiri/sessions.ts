@@ -6,12 +6,17 @@ import {
 import { db } from "@/lib/firebase/client";
 import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, Reaction } from "@/lib/types";
 
-export async function createSession(roomId: string, totalRounds = 5): Promise<string> {
+export async function createSession(
+  roomId: string,
+  totalRounds = 5,
+  mode: "realtime" | "async" = "realtime",
+): Promise<string> {
   const ref = await addDoc(collection(db, "sessions"), {
     roomId,
-    currentRound: 1,
+    currentRound: mode === "async" ? 0 : 1,
     totalRounds,
     status: "answering",
+    mode,
     answerDeadline: null,
     voteDeadline: null,
     createdAt: Timestamp.now(),
@@ -168,4 +173,121 @@ export function tallyVotes(votes: VoteDoc[]): Record<string, Record<Reaction | "
     tally[v.answerId].total++;
   }
   return tally;
+}
+
+// ─── 非同期モード ──────────────────────────────────────────────
+
+const ASYNC_DEADLINE_HOURS = 24;
+
+export async function createAsyncRound(
+  sessionId: string,
+  round: number,
+  question: RoundDoc["question"],
+): Promise<void> {
+  const deadline = Timestamp.fromDate(
+    new Date(Date.now() + ASYNC_DEADLINE_HOURS * 60 * 60 * 1000),
+  );
+  await setDoc(doc(db, "sessions", sessionId, "rounds", String(round)), {
+    question,
+    status: "answering",
+    answerCount: 0,
+    startedAt: Timestamp.now(),
+    answerDeadline: deadline,
+    voteDeadline: null,
+  } satisfies Omit<RoundDoc, "id">);
+}
+
+export function subscribeAllRounds(
+  sessionId: string,
+  cb: (rounds: RoundDoc[]) => void,
+) {
+  if (!sessionId) return () => {};
+  return onSnapshot(
+    collection(db, "sessions", sessionId, "rounds"),
+    (snap) => {
+      const rounds = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as RoundDoc)
+        .sort((a, b) => Number(a.id) - Number(b.id));
+      cb(rounds);
+    },
+    (err) => console.error("subscribeAllRounds error:", err),
+  );
+}
+
+export async function getUserAnsweredRounds(
+  sessionId: string,
+  userId: string,
+  totalRounds: number,
+): Promise<Set<string>> {
+  const answered = new Set<string>();
+  await Promise.all(
+    Array.from({ length: totalRounds }, async (_, i) => {
+      const roundId = String(i + 1);
+      const q = query(
+        collection(db, "sessions", sessionId, "rounds", roundId, "answers"),
+        where("userId", "==", userId),
+        limit(1),
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) answered.add(roundId);
+    }),
+  );
+  return answered;
+}
+
+export async function getUserVotedRounds(
+  sessionId: string,
+  userId: string,
+  totalRounds: number,
+): Promise<Set<string>> {
+  const voted = new Set<string>();
+  await Promise.all(
+    Array.from({ length: totalRounds }, async (_, i) => {
+      const roundId = String(i + 1);
+      const q = query(
+        collection(db, "sessions", sessionId, "rounds", roundId, "votes"),
+        where("voterId", "==", userId),
+        limit(1),
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) voted.add(roundId);
+    }),
+  );
+  return voted;
+}
+
+export async function advanceAsyncRoundToVoting(
+  sessionId: string,
+  roundId: string,
+): Promise<void> {
+  const voteDeadline = Timestamp.fromDate(
+    new Date(Date.now() + ASYNC_DEADLINE_HOURS * 60 * 60 * 1000),
+  );
+  await updateRound(sessionId, roundId, {
+    status: "voting",
+    voteDeadline,
+  });
+}
+
+export async function advanceAsyncRoundToReviewing(
+  sessionId: string,
+  roundId: string,
+): Promise<void> {
+  await updateRound(sessionId, roundId, { status: "reviewing" });
+}
+
+export function getTimestampMs(
+  ts: { toDate?: () => Date; seconds?: number } | null,
+): number {
+  if (!ts) return 0;
+  if (typeof ts.toDate === "function") return ts.toDate().getTime();
+  if (typeof ts.seconds === "number") return ts.seconds * 1000;
+  return 0;
+}
+
+export function isDeadlinePast(
+  ts: { toDate?: () => Date; seconds?: number } | null,
+): boolean {
+  const ms = getTimestampMs(ts);
+  return ms > 0 && Date.now() >= ms;
 }

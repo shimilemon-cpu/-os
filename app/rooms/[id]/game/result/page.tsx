@@ -6,7 +6,7 @@ import { auth } from "@/lib/firebase/client";
 import {
   subscribeSession, subscribeRound, subscribeAnswers,
   subscribeVotes, subscribeAiReviews, tallyVotes,
-  transitionPhase, createRound, updateSession,
+  transitionPhase, createRound, updateSession, updateRound,
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom, finishGame } from "@/lib/ogiri/rooms";
 import { publishToEngawa } from "@/lib/ogiri/engawa";
@@ -66,8 +66,10 @@ function ResultPageContent() {
     const u1 = subscribeRoom(roomId, setRoom);
     const u2 = subscribeSession(sessionId, (s) => {
       setSession(s);
-      if (s.status === "answering") {
-        router.replace(`/rooms/${roomId}/game?sid=${sessionId}`);
+      if (s.mode !== "async") {
+        if (s.status === "answering") {
+          router.replace(`/rooms/${roomId}/game?sid=${sessionId}`);
+        }
       }
       if (s.status === "finished") {
         router.replace(`/rooms/${roomId}/summary?sid=${sessionId}`);
@@ -345,7 +347,20 @@ function ResultPageContent() {
 
       {/* Footer */}
       <div className="flex gap-[10px] px-[20px] pb-[40px]">
-        {isHost ? (
+        {session?.mode === "async" ? (
+          <button
+            onClick={async () => {
+              if (round?.status === "reviewing") {
+                await updateRound(sessionId, roundParam, { status: "done" });
+              }
+              router.push(`/rooms/${roomId}/game?sid=${sessionId}`);
+            }}
+            className="flex-1 font-gothic font-bold text-sub active:scale-[0.98] transition-transform"
+            style={{ fontSize: 14, padding: "16px 0", borderRadius: 18, border: "1px solid rgba(0,0,0,.1)" }}
+          >
+            ← お題一覧に戻る
+          </button>
+        ) : isHost ? (
           <>
             <button
               onClick={goNext}

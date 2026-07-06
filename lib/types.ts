@@ -53,6 +53,7 @@ export interface SessionDoc {
   currentRound: number;
   totalRounds: number;
   status: SessionStatus;
+  mode?: RoomMode;
   answerDeadline: Timestamp | null;
   voteDeadline: Timestamp | null;
   createdAt: Timestamp | null;
