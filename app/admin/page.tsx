@@ -15,7 +15,7 @@ type EngimonoName = "daruma" | "cat" | "tai" | "fuku" | "koban" | "mallet" | "ma
 type Tab = "stats" | "users" | "rooms" | "moderation";
 
 const ADMIN_EMAILS = ["shimilemon@gmail.com"];
-const ADMIN_UIDS: string[] = [];
+const ADMIN_UIDS = ["line_U5926c00204e9a7aaa2fb14902ea6a6c2"];
 
 const TAB_LABELS: Record<Tab, string> = {
   stats: "統計",
