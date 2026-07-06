@@ -34,13 +34,14 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja" className={`h-full ${mincho.variable} ${kaku.variable}`}>
       <body className="min-h-full bg-ink font-body text-text">
-        <div className="relative mx-auto max-w-sm min-h-screen">
+        <div className="relative mx-auto max-w-sm min-h-dvh">
           <ClientProviders>{children}</ClientProviders>
         </div>
       </body>

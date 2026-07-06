@@ -170,7 +170,7 @@ function ResultPageContent() {
   const mvp = sorted[0];
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper">
+    <div className="min-h-dvh flex flex-col bg-paper">
       {showInterstitial && (
         <InterstitialAd onClose={() => { setShowInterstitial(false); doFinish(); }} skipAfter={5} />
       )}
@@ -381,7 +381,7 @@ function ResultPageContent() {
 export default function ResultPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     }>

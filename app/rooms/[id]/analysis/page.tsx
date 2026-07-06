@@ -121,7 +121,7 @@ function AnalysisPageContent() {
   const totalReactions = stats ? Object.values(stats.reactionDist).reduce((s, n) => s + n, 0) : 0;
 
   return (
-    <div className="min-h-screen pb-24 px-5 pt-8 bg-ink">
+    <div className="min-h-dvh pb-24 px-5 pt-8 bg-ink">
       <Link
         href={`/rooms/${roomId}/summary?sid=${sessionId}`}
         className="inline-flex items-center gap-1 text-text-muted text-sm font-bold mb-6"
@@ -244,7 +244,7 @@ function AnalysisPageContent() {
 export default function AnalysisPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     }>

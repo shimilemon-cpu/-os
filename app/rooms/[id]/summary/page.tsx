@@ -130,7 +130,7 @@ function SummaryPageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-paper">
+      <div className="min-h-dvh flex flex-col items-center justify-center gap-4 bg-paper">
         <Engimono name="daruma" width={64} height={70} style={{ animation: "spinslow 3s linear infinite" }} />
         <p className="font-gothic font-bold text-sub" style={{ fontSize: 14 }}>結果を集計中…</p>
       </div>
@@ -138,7 +138,7 @@ function SummaryPageContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper pb-[30px]">
+    <div className="min-h-dvh flex flex-col bg-paper pb-[30px]">
       {/* AppBar */}
       <div className="px-[20px] pt-[10px] pb-[14px] text-center">
         <p className="font-gothic text-sub mb-1" style={{ fontSize: 11 }}>{room?.name}</p>
@@ -302,7 +302,7 @@ function SummaryPageContent() {
 export default function SummaryPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     }>

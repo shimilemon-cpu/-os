@@ -14,7 +14,7 @@ export default function GameError({
   }, [error]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-paper px-6">
+    <div className="min-h-dvh flex flex-col items-center justify-center gap-4 bg-paper px-6">
       <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 20 }}>
         読み込みエラー
       </p>

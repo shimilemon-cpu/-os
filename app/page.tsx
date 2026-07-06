@@ -22,7 +22,7 @@ export default function LandingPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-paper flex flex-col items-center justify-center p-4">
+    <div className="min-h-dvh bg-paper flex flex-col items-center justify-center p-4">
       <div
         className="relative w-full max-w-sm overflow-hidden bg-paper"
         style={{ aspectRatio: "4/3", borderRadius: 22, boxShadow: "0 24px 60px -28px rgba(40,30,10,.4)", border: "1px solid rgba(0,0,0,.05)" }}

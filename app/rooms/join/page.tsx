@@ -45,7 +45,7 @@ export default function JoinRoomPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper bg-asanoha relative overflow-hidden">
+    <div className="min-h-dvh flex flex-col bg-paper bg-asanoha relative overflow-hidden">
       {/* 暖簾 */}
       <div className="pt-3 px-6">
         <Noren text="入室" />

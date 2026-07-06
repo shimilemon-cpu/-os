@@ -58,7 +58,7 @@ export default function InvitePage() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#E0A93B", borderTopColor: "transparent" }} />
       </div>
     );
@@ -66,7 +66,7 @@ export default function InvitePage() {
 
   if (status === "error") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-8 gap-5 bg-paper">
+      <div className="min-h-dvh flex flex-col items-center justify-center px-8 gap-5 bg-paper">
         <Engimono name="daruma" width={56} height={62} style={{ opacity: 0.4 }} />
         <p className="font-gothic font-bold" style={{ fontSize: 14, color: "#E5402F" }}>{error}</p>
         <button
@@ -88,7 +88,7 @@ export default function InvitePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper bg-asanoha relative overflow-hidden">
+    <div className="min-h-dvh flex flex-col bg-paper bg-asanoha relative overflow-hidden">
       <Engimono name="cat" width={68} height={73} style={{ position: "absolute", top: 40, right: -8, opacity: 0.7, transform: "rotate(8deg)" }} />
       <Engimono name="koban" width={44} height={29} style={{ position: "absolute", top: 100, left: 12, opacity: 0.45, transform: "rotate(-12deg)" }} />
 

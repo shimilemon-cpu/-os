@@ -175,14 +175,14 @@ export default function AdminPage() {
 
   if (!authorized || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#E5402F", borderTopColor: "transparent" }} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper pb-[100px]">
+    <div className="min-h-dvh flex flex-col bg-paper pb-[100px]">
       {/* Header */}
       <div className="px-[20px] pt-[14px] pb-[10px] flex items-center justify-between">
         <div>

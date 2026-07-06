@@ -17,7 +17,7 @@ export default function BottomNav() {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 flex justify-around max-w-sm mx-auto"
-      style={{ height: 78, background: "#ffffff", borderTop: "1px solid rgba(0,0,0,.07)", paddingTop: 12 }}
+      style={{ height: "calc(78px + env(safe-area-inset-bottom, 0px))", paddingBottom: "env(safe-area-inset-bottom, 0px)", background: "#ffffff", borderTop: "1px solid rgba(0,0,0,.07)", paddingTop: 12 }}
     >
       {ITEMS.map(({ href, label, icon }) => {
         const active = pathname === href || (href !== "/rooms" && href !== "/" && pathname.startsWith(href));
