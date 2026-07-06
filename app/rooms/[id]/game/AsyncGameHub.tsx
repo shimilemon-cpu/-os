@@ -391,7 +391,7 @@ export default function AsyncGameHub({
       <div className="px-[20px] pt-[10px] pb-[14px]">
         <div className="flex items-center gap-[8px] mb-1">
           <button
-            onClick={() => router.push(`/rooms/${roomId}`)}
+            onClick={() => router.push("/rooms")}
             className="grid place-items-center bg-white"
             style={{
               width: 38,
