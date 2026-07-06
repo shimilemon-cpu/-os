@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  collection, getDocs, getDoc, query, orderBy, limit,
-  doc, deleteDoc, updateDoc, Timestamp,
+  collection, getDocs, query, orderBy, limit,
+  doc, updateDoc, Timestamp,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/client";
 import type { RoomDoc, UserDoc, AnswerDoc } from "@/lib/types";
@@ -59,23 +59,41 @@ const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
 };
 const STATUS_LABEL: Record<string, string> = { waiting: "受付中", active: "進行中", finished: "終了" };
 
+async function adminApiCall(action: string, params: Record<string, string> = {}) {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch("/api/admin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ action, ...params }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(err.error ?? "Request failed");
+  }
+  return res.json();
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("stats");
+  const [busy, setBusy] = useState<string | null>(null);
 
   const [users, setUsers] = useState<UserDoc[]>([]);
   const [rooms, setRooms] = useState<RoomDoc[]>([]);
   const [answers, setAnswers] = useState<AnswerItem[]>([]);
   const [userRoomCounts, setUserRoomCounts] = useState<Record<string, number>>({});
+  const [bannedIds, setBannedIds] = useState<Set<string>>(new Set());
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [usersSnap, roomsSnap] = await Promise.all([
+      const [usersSnap, roomsSnap, bannedSnap] = await Promise.all([
         getDocs(query(collection(db, "users"), limit(200))),
         getDocs(query(collection(db, "rooms"), limit(100))),
+        getDocs(collection(db, "bannedUsers")),
       ]);
 
       const usersList = usersSnap.docs.map((d) => ({ id: d.id, ...d.data() } as UserDoc));
@@ -92,6 +110,7 @@ export default function AdminPage() {
       setUsers(usersList);
       setRooms(roomsList);
       setUserRoomCounts(counts);
+      setBannedIds(new Set(bannedSnap.docs.map((d) => d.id)));
 
       const answerItems: AnswerItem[] = [];
       const sessionsSnap = await getDocs(query(collection(db, "sessions"), limit(30)));
@@ -140,24 +159,74 @@ export default function AdminPage() {
   }, [router, loadData]);
 
   const deleteRoom = async (roomId: string, roomName: string) => {
-    if (!confirm(`「${roomName}」を削除しますか？`)) return;
+    if (!confirm(`「${roomName}」を削除しますか？\nサブコレクション含め完全削除されます。`)) return;
+    setBusy(`delete-room-${roomId}`);
     try {
-      await deleteDoc(doc(db, "rooms", roomId));
+      await adminApiCall("deleteRoom", { roomId });
       setRooms((prev) => prev.filter((r) => r.id !== roomId));
     } catch (e) {
       console.error("Delete room failed:", e);
       alert("削除に失敗しました");
+    } finally {
+      setBusy(null);
     }
   };
 
   const deleteAllRooms = async () => {
-    if (!confirm(`全${rooms.length}件のルームを削除しますか？この操作は取り消せません。`)) return;
+    if (!confirm(`全${rooms.length}件のルームを完全削除しますか？\nセッション・回答・投票すべて消えます。この操作は取り消せません。`)) return;
+    setBusy("delete-all-rooms");
     try {
-      await Promise.all(rooms.map((r) => deleteDoc(doc(db, "rooms", r.id))));
+      const result = await adminApiCall("deleteAllRooms");
       setRooms([]);
+      alert(`${result.deleted}件の部屋を削除しました`);
     } catch (e) {
       console.error("Delete all rooms failed:", e);
-      alert("一部の削除に失敗しました");
+      alert("削除に失敗しました");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const deleteUser = async (userId: string, nickname: string) => {
+    if (!confirm(`「${nickname}」(${userId.slice(0, 12)}…)を削除しますか？\n全部屋から除外され、ユーザーデータとAuth情報が削除されます。`)) return;
+    setBusy(`delete-user-${userId}`);
+    try {
+      await adminApiCall("deleteUser", { userId });
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+    } catch (e) {
+      console.error("Delete user failed:", e);
+      alert("ユーザー削除に失敗しました");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const banUser = async (userId: string, nickname: string) => {
+    const reason = prompt(`「${nickname}」をBANする理由（任意）:`);
+    if (reason === null) return;
+    setBusy(`ban-${userId}`);
+    try {
+      await adminApiCall("banUser", { userId, reason });
+      setBannedIds((prev) => new Set([...prev, userId]));
+    } catch (e) {
+      console.error("Ban failed:", e);
+      alert("BANに失敗しました");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const unbanUser = async (userId: string) => {
+    if (!confirm("BANを解除しますか？")) return;
+    setBusy(`unban-${userId}`);
+    try {
+      await adminApiCall("unbanUser", { userId });
+      setBannedIds((prev) => { const s = new Set(prev); s.delete(userId); return s; });
+    } catch (e) {
+      console.error("Unban failed:", e);
+      alert("BAN解除に失敗しました");
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -173,12 +242,19 @@ export default function AdminPage() {
 
   const deleteAnswer = async (item: AnswerItem) => {
     if (!confirm(`「${item.text}」を削除しますか？`)) return;
+    setBusy(`delete-answer-${item.answerId}`);
     try {
-      await deleteDoc(doc(db, "sessions", item.sessionId, "rounds", item.roundId, "answers", item.answerId));
+      await adminApiCall("deleteAnswer", {
+        sessionId: item.sessionId,
+        roundId: item.roundId,
+        answerId: item.answerId,
+      });
       setAnswers((prev) => prev.filter((a) => a.answerId !== item.answerId));
     } catch (e) {
       console.error("Delete answer failed:", e);
       alert("削除に失敗しました");
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -247,6 +323,10 @@ export default function AdminPage() {
               <StatCard label="総回答数" value={answers.length} color="#F4C422" />
               <StatCard label="終了部屋" value={rooms.length - activeRooms - waitingRooms} />
             </div>
+            <div className="flex gap-[10px]">
+              <StatCard label="BAN中" value={bannedIds.size} color="#E5402F" />
+              <div className="flex-1" />
+            </div>
 
             {/* Recent activity */}
             <p className="font-gothic font-extrabold text-[#1A1714] mt-2" style={{ fontSize: 14 }}>最近の部屋</p>
@@ -283,33 +363,90 @@ export default function AdminPage() {
             <p className="font-gothic text-sub mb-1" style={{ fontSize: 12 }}>{users.length}人のユーザー</p>
             {users.map((user) => {
               const icon = (user.avatarIcon as EngimonoName) || "fuku";
+              const isBanned = bannedIds.has(user.id);
+              const isMe = user.id === auth.currentUser?.uid;
               return (
                 <div
                   key={user.id}
-                  className="bg-white flex items-center gap-[12px]"
-                  style={{ borderRadius: 14, padding: "10px 14px", border: "1px solid rgba(0,0,0,.07)" }}
+                  className="bg-white"
+                  style={{
+                    borderRadius: 14, padding: "12px 14px",
+                    border: isBanned ? "1.5px solid #E5402F" : "1px solid rgba(0,0,0,.07)",
+                    opacity: isBanned ? 0.7 : 1,
+                  }}
                 >
-                  <div
-                    className="shrink-0 grid place-items-center overflow-hidden"
-                    style={{ width: 40, height: 40, borderRadius: "50%", background: "#F0EBE0" }}
-                  >
-                    {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <Engimono name={icon} width={22} height={24} />
-                    )}
+                  <div className="flex items-center gap-[12px]">
+                    <div
+                      className="shrink-0 grid place-items-center overflow-hidden"
+                      style={{ width: 40, height: 40, borderRadius: "50%", background: "#F0EBE0" }}
+                    >
+                      {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <Engimono name={icon} width={22} height={24} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-[6px]">
+                        <p className="font-gothic font-bold text-[#1A1714] truncate" style={{ fontSize: 13 }}>
+                          {user.nickname ?? "未設定"}
+                        </p>
+                        {isBanned && (
+                          <span
+                            className="font-gothic font-extrabold shrink-0"
+                            style={{ fontSize: 9, padding: "2px 6px", borderRadius: 999, background: "#E5402F", color: "#fff" }}
+                          >
+                            BAN
+                          </span>
+                        )}
+                        {isMe && (
+                          <span
+                            className="font-gothic font-extrabold shrink-0"
+                            style={{ fontSize: 9, padding: "2px 6px", borderRadius: 999, background: "#2BA35F", color: "#fff" }}
+                          >
+                            自分
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-gothic text-sub" style={{ fontSize: 11 }}>
+                        {userRoomCounts[user.id] ?? 0}部屋参加 ・ {formatDate(user.createdAt)}
+                      </p>
+                      <p className="font-gothic text-sub" style={{ fontSize: 10, marginTop: 1, color: "#B6AC97" }}>
+                        {user.id}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-gothic font-bold text-[#1A1714] truncate" style={{ fontSize: 13 }}>
-                      {user.nickname ?? "未設定"}
-                    </p>
-                    <p className="font-gothic text-sub" style={{ fontSize: 11 }}>
-                      {userRoomCounts[user.id] ?? 0}部屋参加 ・ {formatDate(user.createdAt)}
-                    </p>
-                  </div>
-                  <p className="font-gothic text-sub shrink-0" style={{ fontSize: 10 }}>
-                    {user.id.slice(0, 8)}...
-                  </p>
+                  {!isMe && (
+                    <div className="flex gap-[6px] mt-[10px] justify-end">
+                      {isBanned ? (
+                        <button
+                          onClick={() => unbanUser(user.id)}
+                          disabled={busy === `unban-${user.id}`}
+                          className="font-gothic font-bold active:scale-95 transition-transform disabled:opacity-50"
+                          style={{ fontSize: 11, padding: "5px 12px", borderRadius: 8, background: "#2BA35F", color: "#fff" }}
+                        >
+                          {busy === `unban-${user.id}` ? "…" : "BAN解除"}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => banUser(user.id, user.nickname ?? "不明")}
+                          disabled={busy === `ban-${user.id}`}
+                          className="font-gothic font-bold active:scale-95 transition-transform disabled:opacity-50"
+                          style={{ fontSize: 11, padding: "5px 12px", borderRadius: 8, background: "#F4C422", color: "#1A1714" }}
+                        >
+                          {busy === `ban-${user.id}` ? "…" : "BAN"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteUser(user.id, user.nickname ?? "不明")}
+                        disabled={busy === `delete-user-${user.id}`}
+                        className="font-gothic font-bold text-paper active:scale-95 transition-transform disabled:opacity-50"
+                        style={{ fontSize: 11, padding: "5px 12px", borderRadius: 8, background: "#E5402F" }}
+                      >
+                        {busy === `delete-user-${user.id}` ? "…" : "削除"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -326,20 +463,22 @@ export default function AdminPage() {
               {rooms.length > 0 && (
                 <button
                   onClick={deleteAllRooms}
-                  className="font-gothic font-bold text-paper active:scale-95 transition-transform"
+                  disabled={busy === "delete-all-rooms"}
+                  className="font-gothic font-bold text-paper active:scale-95 transition-transform disabled:opacity-50"
                   style={{ fontSize: 11, padding: "5px 12px", borderRadius: 8, background: "#E5402F" }}
                 >
-                  全削除
+                  {busy === "delete-all-rooms" ? "削除中…" : "全削除"}
                 </button>
               )}
             </div>
             {rooms.map((room) => {
               const st = STATUS_STYLE[room.status] ?? STATUS_STYLE.waiting;
+              const isBusy = busy === `delete-room-${room.id}`;
               return (
                 <div
                   key={room.id}
                   className="bg-white"
-                  style={{ borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(0,0,0,.07)" }}
+                  style={{ borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(0,0,0,.07)", opacity: isBusy ? 0.5 : 1 }}
                 >
                   <div className="flex items-center gap-[10px] mb-2">
                     <p className="font-gothic font-bold text-[#1A1714] truncate flex-1" style={{ fontSize: 13 }}>{room.name}</p>
@@ -377,10 +516,11 @@ export default function AdminPage() {
                     )}
                     <button
                       onClick={() => deleteRoom(room.id, room.name)}
-                      className="font-gothic font-bold text-paper active:scale-95 transition-transform ml-auto"
+                      disabled={isBusy}
+                      className="font-gothic font-bold text-paper active:scale-95 transition-transform ml-auto disabled:opacity-50"
                       style={{ fontSize: 11, padding: "5px 10px", borderRadius: 8, background: "#E5402F" }}
                     >
-                      削除
+                      {isBusy ? "削除中…" : "削除"}
                     </button>
                   </div>
                 </div>
@@ -395,32 +535,36 @@ export default function AdminPage() {
         {tab === "moderation" && (
           <div className="flex flex-col gap-[8px]">
             <p className="font-gothic text-sub mb-1" style={{ fontSize: 12 }}>{answers.length}件の回答</p>
-            {answers.map((item) => (
-              <div
-                key={item.answerId}
-                className="bg-white"
-                style={{ borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(0,0,0,.07)" }}
-              >
-                <p className="font-gothic text-sub truncate mb-1" style={{ fontSize: 11 }}>
-                  お題: {item.questionText}
-                </p>
-                <p className="font-gothic font-bold text-[#1A1714] mb-1" style={{ fontSize: 13 }}>
-                  {item.text}
-                </p>
-                <div className="flex items-center justify-between">
-                  <p className="font-gothic text-sub" style={{ fontSize: 11 }}>
-                    {getNickname(item.userId)} ・ {formatDate(item.submittedAt)}
+            {answers.map((item) => {
+              const isBusy = busy === `delete-answer-${item.answerId}`;
+              return (
+                <div
+                  key={item.answerId}
+                  className="bg-white"
+                  style={{ borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(0,0,0,.07)", opacity: isBusy ? 0.5 : 1 }}
+                >
+                  <p className="font-gothic text-sub truncate mb-1" style={{ fontSize: 11 }}>
+                    お題: {item.questionText}
                   </p>
-                  <button
-                    onClick={() => deleteAnswer(item)}
-                    className="font-gothic font-bold text-paper active:scale-95 transition-transform"
-                    style={{ fontSize: 11, padding: "4px 10px", borderRadius: 8, background: "#E5402F" }}
-                  >
-                    削除
-                  </button>
+                  <p className="font-gothic font-bold text-[#1A1714] mb-1" style={{ fontSize: 13 }}>
+                    {item.text}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-gothic text-sub" style={{ fontSize: 11 }}>
+                      {getNickname(item.userId)} ・ {formatDate(item.submittedAt)}
+                    </p>
+                    <button
+                      onClick={() => deleteAnswer(item)}
+                      disabled={isBusy}
+                      className="font-gothic font-bold text-paper active:scale-95 transition-transform disabled:opacity-50"
+                      style={{ fontSize: 11, padding: "4px 10px", borderRadius: 8, background: "#E5402F" }}
+                    >
+                      {isBusy ? "…" : "削除"}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {answers.length === 0 && (
               <p className="font-gothic text-sub text-center py-8" style={{ fontSize: 13 }}>回答はまだありません</p>
             )}
