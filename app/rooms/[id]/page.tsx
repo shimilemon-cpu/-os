@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { subscribeRoom, subscribeMembers, setMemberReady, startGame } from "@/lib/ogiri/rooms";
-import { createSession, createRound, getActiveSession } from "@/lib/ogiri/sessions";
+import { createSession, createRound, createAsyncRound, getActiveSession } from "@/lib/ogiri/sessions";
 import { validatePhoto, uploadRoomPhoto } from "@/lib/ogiri/photos";
 import type { RoomDoc, RoomMemberDoc, Genre, Difficulty } from "@/lib/types";
 import Engimono from "@/components/Engimono";
@@ -111,7 +111,29 @@ export default function WaitingRoomPage() {
     setStarting(true);
     setStartError("");
     try {
-      const sessionId = await createSession(roomId, 5);
+      const totalRounds = 5;
+
+      if (room.mode === "async") {
+        const sessionId = await createSession(roomId, totalRounds, "async");
+        const questions = await Promise.all(
+          Array.from({ length: totalRounds }, () => prefetchQuestion()),
+        );
+        await Promise.all(
+          questions.map((data, i) =>
+            createAsyncRound(sessionId, i + 1, {
+              text: data.question,
+              genre: data.genre as Genre,
+              difficulty: data.difficulty as Difficulty,
+            }),
+          ),
+        );
+        await startGame(roomId);
+        router.push(`/rooms/${roomId}/game?sid=${sessionId}`);
+        return;
+      }
+
+      // Realtime mode
+      const sessionId = await createSession(roomId, totalRounds, "realtime");
       if (isMochiyori && photoFile) {
         setUploading(true);
         const imageUrl = await uploadRoomPhoto(roomId, 1, photoFile);

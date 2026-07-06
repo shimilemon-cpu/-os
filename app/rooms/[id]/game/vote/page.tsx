@@ -6,6 +6,7 @@ import { auth } from "@/lib/firebase/client";
 import {
   subscribeAnswers, subscribeVotes, subscribeSession,
   subscribeRound, submitVote, transitionPhase,
+  advanceAsyncRoundToReviewing, getTimestampMs,
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, RoomDoc, Reaction } from "@/lib/types";
@@ -62,6 +63,35 @@ function VoteTimer({ deadline, totalSeconds, onExpire }: { deadline: RoundDoc["v
   );
 }
 
+function AsyncDeadlineBadge({ deadline }: { deadline: RoundDoc["voteDeadline"] | null }) {
+  const [remaining, setRemaining] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      const end = getTimestampMs(deadline as { toDate?: () => Date; seconds?: number } | null);
+      if (!end) { setRemaining(""); return; }
+      const diff = Math.max(0, end - Date.now());
+      if (diff === 0) { setRemaining("期限切れ"); return; }
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const mn = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      setRemaining(h > 0 ? `あと${h}時間${mn > 0 ? `${mn}分` : ""}` : `あと${mn}分`);
+    };
+    update();
+    const id = setInterval(update, 60_000);
+    return () => clearInterval(id);
+  }, [deadline]);
+
+  if (!remaining) return null;
+  return (
+    <span
+      className="font-gothic font-extrabold"
+      style={{ fontSize: 11, padding: "4px 10px", borderRadius: 999, background: "#EBE2CF", color: "#7A6F5C" }}
+    >
+      {remaining}
+    </span>
+  );
+}
+
 function VotePageContent() {
   const { id: roomId } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -79,22 +109,41 @@ function VotePageContent() {
   const advancingRef = useRef(false);
   const votingRef = useRef(false);
 
+  const isAsync = session?.mode === "async";
+
   useEffect(() => {
     const u1 = subscribeRoom(roomId, setRoom);
-    const u2 = subscribeSession(sessionId, (s) => {
-      setSession(s);
-      if (s.status === "reviewing") {
-        router.replace(`/rooms/${roomId}/game/result?sid=${sessionId}&round=${roundParam}`);
-      }
-      if (s.status === "finished") {
-        router.replace(`/rooms/${roomId}/summary?sid=${sessionId}`);
-      }
-    });
+    const u2 = subscribeSession(sessionId, setSession);
     const u3 = subscribeRound(sessionId, roundParam, setRound);
     const u4 = subscribeAnswers(sessionId, roundParam, setAnswers);
     const u5 = subscribeVotes(sessionId, roundParam, setVotes);
     return () => { u1(); u2(); u3(); u4(); u5(); };
-  }, [roomId, sessionId, roundParam, router]);
+  }, [roomId, sessionId, roundParam]);
+
+  // Navigation based on status changes
+  useEffect(() => {
+    if (!session) return;
+    if (session.mode === "async") {
+      if (session.status === "finished") {
+        router.replace(`/rooms/${roomId}/summary?sid=${sessionId}`);
+      }
+    } else {
+      if (session.status === "reviewing") {
+        router.replace(`/rooms/${roomId}/game/result?sid=${sessionId}&round=${roundParam}`);
+      }
+      if (session.status === "finished") {
+        router.replace(`/rooms/${roomId}/summary?sid=${sessionId}`);
+      }
+    }
+  }, [session, roomId, sessionId, roundParam, router]);
+
+  // Async: navigate based on round status
+  useEffect(() => {
+    if (!round || !isAsync) return;
+    if (round.status === "reviewing" || round.status === "done") {
+      router.replace(`/rooms/${roomId}/game/result?sid=${sessionId}&round=${roundParam}`);
+    }
+  }, [round, isAsync, roomId, sessionId, roundParam, router]);
 
   const voteDeadline = (() => {
     const raw = round?.voteDeadline;
@@ -106,8 +155,34 @@ function VotePageContent() {
   const advanceToResult = useCallback(async () => {
     if (!session || advancingRef.current) return;
     if (round?.status !== "voting") return;
-    // Allow any player to advance when the vote deadline has passed
-    const isDeadlinePast = (() => {
+
+    if (isAsync) {
+      advancingRef.current = true;
+      try {
+        await advanceAsyncRoundToReviewing(sessionId, roundParam);
+        const answerPayload = answers.map((a) => ({ id: a.id, text: a.text }));
+        const token = await auth.currentUser?.getIdToken();
+        fetch("/api/ogiri/review", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            sessionId, roundId: roundParam,
+            question: round?.question.text ?? "",
+            answers: answerPayload,
+            judges: room?.judges ?? ["王道", "辛口"],
+          }),
+        }).catch((e) => console.error("AI review request failed:", e));
+      } finally {
+        advancingRef.current = false;
+      }
+      return;
+    }
+
+    // Realtime logic
+    const isDeadlinePastNow = (() => {
       const dl = round.voteDeadline;
       if (!dl) return false;
       const tsObj = dl as { toDate?: () => Date; seconds?: number };
@@ -115,7 +190,7 @@ function VotePageContent() {
         : typeof tsObj.seconds === "number" ? tsObj.seconds * 1000 : 0;
       return end > 0 && Date.now() >= end;
     })();
-    if (!isHost && !isDeadlinePast) return;
+    if (!isHost && !isDeadlinePastNow) return;
     advancingRef.current = true;
     try {
       await transitionPhase(sessionId, roundParam,
@@ -140,7 +215,7 @@ function VotePageContent() {
     } finally {
       advancingRef.current = false;
     }
-  }, [session, isHost, round, sessionId, roundParam, answers]);
+  }, [session, isHost, round, sessionId, roundParam, answers, isAsync, room?.judges]);
 
   const handleVote = async (answerId: string, reaction: Reaction) => {
     if (votingRef.current) return;
@@ -148,14 +223,20 @@ function VotePageContent() {
     if (alreadyVoted) return;
     votingRef.current = true;
     try {
-    await submitVote(sessionId, roundParam, answerId, uid, reaction);
-    if (isHost && session && room) {
-      const totalExpected = (room.memberIds.length - 1) * answers.length;
-      const myVotes = votes.filter((v) => v.voterId === uid).length + 1;
-      if (myVotes >= answers.length - 1 && votes.length + 1 >= totalExpected) {
-        await advanceToResult();
+      await submitVote(sessionId, roundParam, answerId, uid, reaction);
+
+      if (isAsync && room) {
+        const newVoteCount = votes.length + 1;
+        if (newVoteCount >= room.memberIds.length) {
+          await advanceToResult();
+        }
+      } else if (isHost && session && room) {
+        const totalExpected = (room.memberIds.length - 1) * answers.length;
+        const myVotes = votes.filter((v) => v.voterId === uid).length + 1;
+        if (myVotes >= answers.length - 1 && votes.length + 1 >= totalExpected) {
+          await advanceToResult();
+        }
       }
-    }
     } finally {
       votingRef.current = false;
     }
@@ -179,9 +260,22 @@ function VotePageContent() {
     <div className="min-h-screen flex flex-col bg-paper">
       {/* AppBar */}
       <div className="px-[20px] pt-[10px] pb-[14px]">
+        {isAsync && (
+          <button
+            onClick={() => router.push(`/rooms/${roomId}/game?sid=${sessionId}`)}
+            className="font-gothic text-sub mb-1 flex items-center gap-1"
+            style={{ fontSize: 11 }}
+          >
+            ← お題一覧に戻る
+          </button>
+        )}
         <div className="flex items-center gap-2 mb-1">
           <p className="font-gothic font-extrabold text-red" style={{ fontSize: 11 }}>投票中</p>
-          <VoteTimer deadline={voteDeadline} totalSeconds={VOTE_SECONDS} onExpire={advanceToResult} />
+          {isAsync ? (
+            <AsyncDeadlineBadge deadline={voteDeadline} />
+          ) : (
+            <VoteTimer deadline={voteDeadline} totalSeconds={VOTE_SECONDS} onExpire={advanceToResult} />
+          )}
         </div>
         <p className="font-mincho font-bold text-[#1A1714]" style={{ fontSize: 17 }}>いちばん笑った回答に</p>
       </div>
@@ -255,14 +349,30 @@ function VotePageContent() {
         className="px-[20px] pb-[40px]"
         style={{ background: "linear-gradient(180deg,rgba(251,247,236,0),#FBF7EC 40%)" }}
       >
-        <button
-          onClick={advanceToResult}
-          disabled={!isHost}
-          className="w-full font-mincho font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-all"
-          style={{ fontSize: 18, padding: "16px 0", borderRadius: 18, background: "#1A1714" }}
-        >
-          投票を確定する
-        </button>
+        {isAsync ? (
+          myVotedId ? (
+            <button
+              onClick={() => router.push(`/rooms/${roomId}/game?sid=${sessionId}`)}
+              className="w-full font-gothic font-bold text-sub active:scale-[0.98] transition-transform"
+              style={{ fontSize: 14, padding: "16px 0", borderRadius: 18, border: "1px solid rgba(0,0,0,.1)" }}
+            >
+              ← お題一覧に戻る
+            </button>
+          ) : (
+            <p className="text-center font-gothic text-sub py-4" style={{ fontSize: 13 }}>
+              座布団を投げてください
+            </p>
+          )
+        ) : (
+          <button
+            onClick={advanceToResult}
+            disabled={!isHost}
+            className="w-full font-mincho font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-all"
+            style={{ fontSize: 18, padding: "16px 0", borderRadius: 18, background: "#1A1714" }}
+          >
+            投票を確定する
+          </button>
+        )}
       </div>
     </div>
   );
