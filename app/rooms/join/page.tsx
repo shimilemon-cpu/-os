@@ -24,8 +24,8 @@ export default function JoinRoomPage() {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("未ログイン");
-      const savedNickname = localStorage.getItem("ogiri_nickname");
-      const nickname = savedNickname || user.displayName || "ゲスト";
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      const nickname = (userSnap.exists() && userSnap.data()?.nickname) || user.displayName || "ゲスト";
       const roomId = await joinRoomByCode(trimmed, user.uid, nickname);
       const snap = await getDoc(doc(db, "users", user.uid));
       if (!snap.exists()) {

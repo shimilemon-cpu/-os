@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase/client";
+import { auth, db } from "@/lib/firebase/client";
+import { getDoc, doc } from "firebase/firestore";
 import { joinRoomByCode } from "@/lib/ogiri/rooms";
 import type { InviteCodeDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
@@ -46,8 +47,8 @@ export default function InvitePage() {
         router.push(`/auth/login?next=/invite/${code}`);
         return;
       }
-      const savedNickname = localStorage.getItem("ogiri_nickname");
-      const nickname = savedNickname || user.displayName || "ゲスト";
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      const nickname = (userSnap.exists() && userSnap.data()?.nickname) || user.displayName || "ゲスト";
       const roomId = await joinRoomByCode(code, user.uid, nickname);
       router.replace(`/rooms/${roomId}`);
     } catch (e) {
