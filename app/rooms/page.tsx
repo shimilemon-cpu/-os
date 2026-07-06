@@ -5,7 +5,7 @@ import RoomListClient from "./RoomListClient";
 
 export default function RoomsPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-paper pb-[78px]">
+    <div className="min-h-dvh flex flex-col bg-paper pb-[78px]">
       {/* Header */}
       <div style={{ padding: "4px 20px 16px" }}>
         <div className="flex items-center justify-between mb-4" style={{ paddingTop: 10 }}>

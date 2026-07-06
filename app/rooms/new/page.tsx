@@ -66,7 +66,7 @@ export default function NewRoomPage() {
   const sliderPct = ((timeLimit - 30) / (180 - 30)) * 100;
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper">
+    <div className="min-h-dvh flex flex-col bg-paper">
       {/* AppBar */}
       <div className="px-[20px] pt-[10px] pb-[14px] flex items-center gap-[10px]">
         <button

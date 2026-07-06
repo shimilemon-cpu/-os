@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { subscribeRoom, subscribeMembers, setMemberReady, startGame } from "@/lib/ogiri/rooms";
-import { createSession, createRound, createAsyncRound, getActiveSession } from "@/lib/ogiri/sessions";
+import { createSession, createRound, createAsyncRound } from "@/lib/ogiri/sessions";
 import { validatePhoto, uploadRoomPhoto } from "@/lib/ogiri/photos";
 import type { RoomDoc, RoomMemberDoc, Genre, Difficulty } from "@/lib/types";
 import Engimono from "@/components/Engimono";
@@ -70,10 +70,12 @@ export default function WaitingRoomPage() {
   useEffect(() => {
     const unsub1 = subscribeRoom(roomId, (r) => {
       setRoom(r);
-      if (r.status === "active") {
-        getActiveSession(roomId).then((session) => {
-          if (session) router.push(`/rooms/${roomId}/game?sid=${session.id}`);
-        });
+      if (r.activeSessionId) {
+        if (r.status === "active") {
+          router.replace(`/rooms/${roomId}/game?sid=${r.activeSessionId}`);
+        } else if (r.status === "finished") {
+          router.replace(`/rooms/${roomId}/summary?sid=${r.activeSessionId}`);
+        }
       }
     });
     const unsub2 = subscribeMembers(roomId, setMembers);
@@ -127,7 +129,7 @@ export default function WaitingRoomPage() {
             }),
           ),
         );
-        await startGame(roomId);
+        await startGame(roomId, sessionId);
         router.push(`/rooms/${roomId}/game?sid=${sessionId}`);
         return;
       }
@@ -153,7 +155,7 @@ export default function WaitingRoomPage() {
         }, room.answerSeconds ?? 90);
         prefetchRef.current = null;
       }
-      await startGame(roomId);
+      await startGame(roomId, sessionId);
       router.push(`/rooms/${roomId}/game?sid=${sessionId}`);
     } catch (e) {
       console.error(e);
@@ -180,14 +182,14 @@ export default function WaitingRoomPage() {
 
   if (!room) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper bg-asanoha pb-[100px]">
+    <div className="min-h-dvh flex flex-col bg-paper bg-asanoha pb-[100px]">
       {/* AppBar */}
       <div className="px-[20px] pt-[10px] pb-[10px] flex items-center gap-[12px]">
         <div className="flex-1">

@@ -13,7 +13,7 @@ const NICKNAME_KEY = "ogiri_nickname";
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     }>
@@ -105,7 +105,7 @@ function LoginInner() {
 
   if (submitting && !showGuest) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-paper gap-3">
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-paper gap-3">
         <div
           className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
           style={{ borderColor: "#2BA35F", borderTopColor: "transparent" }}
@@ -116,7 +116,7 @@ function LoginInner() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper bg-asanoha relative overflow-hidden">
+    <div className="min-h-dvh flex flex-col bg-paper bg-asanoha relative overflow-hidden">
       {/* 暖簾 */}
       <div className="pt-3 px-6">
         <Noren text="大喜利" />

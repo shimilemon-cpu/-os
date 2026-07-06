@@ -312,14 +312,14 @@ export default function AsyncGameHub({
 
   if (loading && rounds.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper pb-[100px]">
+    <div className="min-h-dvh flex flex-col bg-paper pb-[100px]">
       {/* Header */}
       <div className="px-[20px] pt-[10px] pb-[14px]">
         <div className="flex items-center gap-[8px] mb-1">

@@ -238,7 +238,7 @@ function GamePageContent() {
   // Loading state
   if (!session || !room) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     );
@@ -259,7 +259,7 @@ function GamePageContent() {
   // Waiting for round data
   if (!round) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     );
@@ -270,7 +270,7 @@ function GamePageContent() {
   const roundNumber = isAsync ? Number(activeRoundId) : session.currentRound;
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper">
+    <div className="min-h-dvh flex flex-col bg-paper">
       {/* AppBar */}
       <div className="px-[20px] pt-[10px] pb-[14px] flex items-center justify-between">
         <div className="flex-1">
@@ -397,7 +397,7 @@ function GamePageContent() {
 export default function GamePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     }>

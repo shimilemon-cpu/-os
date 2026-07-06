@@ -250,14 +250,14 @@ function VotePageContent() {
 
   if (!session || !round || answers.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper">
+    <div className="min-h-dvh flex flex-col bg-paper">
       {/* AppBar */}
       <div className="px-[20px] pt-[10px] pb-[14px]">
         {isAsync && (
@@ -381,7 +381,7 @@ function VotePageContent() {
 export default function VotePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     }>

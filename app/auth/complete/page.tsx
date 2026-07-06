@@ -43,7 +43,7 @@ function CompleteInner() {
   }, [params, router]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-paper gap-3">
+    <div className="min-h-dvh flex flex-col items-center justify-center bg-paper gap-3">
       <div
         className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
         style={{ borderColor: "#2BA35F", borderTopColor: "transparent" }}
@@ -59,7 +59,7 @@ export default function CompletePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-paper">
+        <div className="min-h-dvh flex items-center justify-center bg-paper">
           <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
             style={{ borderColor: "#2BA35F", borderTopColor: "transparent" }} />
         </div>

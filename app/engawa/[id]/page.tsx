@@ -46,7 +46,7 @@ export default function EngawaDetailPage() {
 
   if (!post) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
       </div>
     );
@@ -55,7 +55,7 @@ export default function EngawaDetailPage() {
   const color = GENRE_COLORS[post.question.genre] ?? "#B6AC97";
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper pb-[100px]">
+    <div className="min-h-dvh flex flex-col bg-paper pb-[100px]">
       {/* AppBar */}
       <div className="px-[20px] pt-[10px] pb-[14px] flex items-center gap-[12px]">
         <button

@@ -36,6 +36,20 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
+function roomHref(room: RoomDoc): string {
+  if (room.activeSessionId) {
+    if (room.status === "active") return `/rooms/${room.id}/game?sid=${room.activeSessionId}`;
+    if (room.status === "finished") return `/rooms/${room.id}/summary?sid=${room.activeSessionId}`;
+  }
+  return `/rooms/${room.id}`;
+}
+
+function roomSubtext(room: RoomDoc): string {
+  if (room.status === "waiting") return "まもなく開始・ホストが入室を待っています";
+  if (room.status === "active") return "ゲーム進行中・タップして合流";
+  return "終了・結果を確認できます";
+}
+
 function RoomCard({ room }: { room: RoomDoc }) {
   const idx = Math.abs(room.id.charCodeAt(0)) % CHARM_NAMES.length;
   const charm = CHARM_NAMES[idx];
@@ -43,7 +57,7 @@ function RoomCard({ room }: { room: RoomDoc }) {
 
   return (
     <Link
-      href={`/rooms/${room.id}`}
+      href={roomHref(room)}
       className="bg-white flex gap-[14px] items-center active:scale-[0.98] transition-transform"
       style={{ borderRadius: 18, border: "1px solid rgba(0,0,0,.07)", padding: "16px", boxShadow: "0 2px 8px rgba(40,30,10,.04)" }}
     >
@@ -56,7 +70,7 @@ function RoomCard({ room }: { room: RoomDoc }) {
           <StatusPill status={room.status} />
         </div>
         <p className="font-gothic text-[#52493A] line-clamp-1" style={{ fontSize: 12, marginTop: 2 }}>
-          {isWaiting ? "まもなく開始・ホストが入室を待っています" : "ゲーム進行中"}
+          {roomSubtext(room)}
         </p>
         <p className="font-gothic text-sub2" style={{ fontSize: 11, marginTop: 3 }}>
           {room.memberIds.length}人参加{isWaiting ? `・あと${(room.capacity ?? 5) - room.memberIds.length}人` : ""}
@@ -66,11 +80,11 @@ function RoomCard({ room }: { room: RoomDoc }) {
         className="font-gothic font-extrabold shrink-0"
         style={{
           fontSize: 12, padding: "10px 18px", borderRadius: 999,
-          background: isWaiting ? "#2BA35F" : "#1A1714",
+          background: isWaiting ? "#2BA35F" : room.status === "active" ? "#E5402F" : "#1A1714",
           color: "#FBF7EC",
         }}
       >
-        {isWaiting ? "参加" : "入室"}
+        {isWaiting ? "参加" : room.status === "active" ? "合流" : "結果"}
       </span>
     </Link>
   );

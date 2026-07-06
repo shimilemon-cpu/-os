@@ -3,7 +3,7 @@ import MyPageClient from "./MyPageClient";
 
 export default function MyPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-paper pb-[78px]">
+    <div className="min-h-dvh flex flex-col bg-paper pb-[78px]">
       {/* Header */}
       <div style={{ padding: "4px 20px 24px" }}>
         <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>

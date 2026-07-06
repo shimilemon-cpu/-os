@@ -147,6 +147,17 @@ export default function AdminPage() {
     }
   };
 
+  const deleteAllRooms = async () => {
+    if (!confirm(`全${rooms.length}件のルームを削除しますか？この操作は取り消せません。`)) return;
+    try {
+      await Promise.all(rooms.map((r) => deleteDoc(doc(db, "rooms", r.id))));
+      setRooms([]);
+    } catch (e) {
+      console.error("Delete all rooms failed:", e);
+      alert("一部の削除に失敗しました");
+    }
+  };
+
   const changeRoomStatus = async (roomId: string, newStatus: string) => {
     try {
       await updateDoc(doc(db, "rooms", roomId), { status: newStatus });
@@ -175,14 +186,14 @@ export default function AdminPage() {
 
   if (!authorized || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#E5402F", borderTopColor: "transparent" }} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper pb-[100px]">
+    <div className="min-h-dvh flex flex-col bg-paper pb-[100px]">
       {/* Header */}
       <div className="px-[20px] pt-[14px] pb-[10px] flex items-center justify-between">
         <div>
@@ -307,7 +318,18 @@ export default function AdminPage() {
 
         {tab === "rooms" && (
           <div className="flex flex-col gap-[8px]">
-            <p className="font-gothic text-sub mb-1" style={{ fontSize: 12 }}>{rooms.length}部屋</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="font-gothic text-sub" style={{ fontSize: 12 }}>{rooms.length}部屋</p>
+              {rooms.length > 0 && (
+                <button
+                  onClick={deleteAllRooms}
+                  className="font-gothic font-bold text-paper active:scale-95 transition-transform"
+                  style={{ fontSize: 11, padding: "5px 12px", borderRadius: 8, background: "#E5402F" }}
+                >
+                  全削除
+                </button>
+              )}
+            </div>
             {rooms.map((room) => {
               const st = STATUS_STYLE[room.status] ?? STATUS_STYLE.waiting;
               return (
