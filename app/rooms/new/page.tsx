@@ -5,11 +5,24 @@ import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase/client";
 import { getDoc, doc } from "firebase/firestore";
 import { createRoom, generateInviteCode, generateRoomRef } from "@/lib/ogiri/rooms";
+import type { GameMode } from "@/lib/types";
 import Icon from "@/components/Icon";
 import Engimono from "@/components/Engimono";
 
 const GENRES = ["定番", "あるある", "写真で一言", "ブラック"] as const;
 type Genre = typeof GENRES[number];
+
+const GAME_MODES: { value: GameMode; label: string }[] = [
+  { value: "classic", label: "定番" },
+  { value: "ai_hunt", label: "AIハンター" },
+  { value: "human_hunt", label: "人間ハンター" },
+];
+
+const GAME_MODE_DESC: Record<GameMode, string> = {
+  classic: "みんなでお題に回答して座布団を競う、いつもの大喜利。",
+  ai_hunt: "全員の回答にAIの回答を1つ紛れ込ませる。どれがAIか当てられるか？",
+  human_hunt: "毎ラウンド1人だけが回答者に。AIの偽回答3つに紛れた本物を当てろ！",
+};
 
 const HIRAGANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわ";
 
@@ -38,6 +51,8 @@ export default function NewRoomPage() {
   const [error, setError] = useState("");
   const [roomMode, setRoomMode] = useState<0 | 1>(0); // 0=realtime, 1=async
   const [aikotoba, setAikotoba] = useState(generateHiraganaCode);
+  const [gameMode, setGameMode] = useState<GameMode>("classic");
+  const [roundMultiplier, setRoundMultiplier] = useState(1);
 
   const [creating, setCreating] = useState(false);
 
@@ -52,12 +67,16 @@ export default function NewRoomPage() {
     const roomRef = generateRoomRef();
     const roomId = roomRef.id;
     const topicModes = ["omakase", "custom", "mochiyori"] as const;
-    const mode = roomMode === 0 ? "realtime" : "async";
+    const mode = gameMode === "classic" && roomMode === 1 ? "async" : "realtime";
 
     try {
       const userSnap = await getDoc(doc(db, "users", user.uid));
       const nickname = userSnap.exists() ? (userSnap.data()?.nickname || user.displayName || "ゲスト") : (user.displayName ?? "ゲスト");
-      await createRoom(user.uid, nickname, name.trim(), mode, ["王道", "辛口"], roomRef, inviteCode, topicModes[topicMode], capacity, timeLimit);
+      await createRoom(
+        user.uid, nickname, name.trim(), mode, ["王道", "辛口"], roomRef, inviteCode,
+        topicModes[topicMode], capacity, timeLimit,
+        gameMode, gameMode === "human_hunt" ? roundMultiplier : undefined,
+      );
       router.push(`/rooms/${roomId}/invite?code=${inviteCode}`);
     } catch (e) {
       console.error("createRoom failed:", e);
@@ -105,41 +124,101 @@ export default function NewRoomPage() {
           </div>
         </div>
 
+        {/* あそびかた */}
+        <div>
+          <label className="block font-gothic font-extrabold text-[#1A1714] mb-[8px]" style={{ fontSize: 14 }}>あそびかた</label>
+          <div className="flex gap-[4px] p-[4px]" style={{ background: "#EBE2CF", borderRadius: 14 }}>
+            {GAME_MODES.map((gm) => (
+              <button
+                key={gm.value}
+                onClick={() => {
+                  setGameMode(gm.value);
+                  if (gm.value !== "classic" && topicMode === 2) setTopicMode(0);
+                }}
+                className="flex-1 text-center font-gothic"
+                style={{
+                  fontSize: 12.5, padding: "10px 0", borderRadius: 11,
+                  background: gameMode === gm.value ? "#1A1714" : "transparent",
+                  color: gameMode === gm.value ? "#FBF7EC" : "#7A6F5C",
+                  fontWeight: gameMode === gm.value ? 700 : 600,
+                }}
+              >
+                {gm.label}
+              </button>
+            ))}
+          </div>
+          <p className="font-gothic text-sub mt-2" style={{ fontSize: 11.5, lineHeight: 1.6 }}>
+            {GAME_MODE_DESC[gameMode]}
+          </p>
+        </div>
+
+        {/* 周回数（人間ハンターのみ） */}
+        {gameMode === "human_hunt" && (
+          <div style={{ background: "linear-gradient(100deg,#FFFDF5,#FFF9E8)", border: "1.5px dashed #E0A93B", borderRadius: 18, padding: 16 }}>
+            <p className="font-gothic font-extrabold text-[#7A6F5C] mb-[10px]" style={{ fontSize: 12 }}>周回数（人数×◯周）</p>
+            <div className="flex gap-[6px]">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setRoundMultiplier(n)}
+                  className="flex-1 text-center font-gothic font-bold"
+                  style={{
+                    fontSize: 13, padding: "8px 0", borderRadius: 10,
+                    background: roundMultiplier === n ? "#E5402F" : "#ffffff",
+                    color: roundMultiplier === n ? "#fff" : "#52493A",
+                    border: roundMultiplier === n ? "none" : "1px solid rgba(0,0,0,.07)",
+                  }}
+                >
+                  {n}周
+                </button>
+              ))}
+            </div>
+            <p className="font-gothic text-sub mt-2" style={{ fontSize: 10.5 }}>
+              実際の参加人数×周回数がラウンド数になります（全員に均等に回答者が回ります）
+            </p>
+          </div>
+        )}
+
         {/* お題のしくみ */}
         <div>
           <label className="block font-gothic font-extrabold text-[#1A1714] mb-[8px]" style={{ fontSize: 14 }}>お題のしくみ</label>
           <div className="flex gap-[4px] p-[4px]" style={{ background: "#EBE2CF", borderRadius: 14 }}>
-            {["おまかせ", "自分でつくる", "持ち寄り"].map((label, i) => (
-              <button
-                key={i}
-                onClick={() => setTopicMode(i)}
-                className="flex-1 text-center font-gothic"
-                style={{
-                  fontSize: 13, padding: "10px 0", borderRadius: 11,
-                  background: topicMode === i ? "#1A1714" : "transparent",
-                  color: topicMode === i ? "#FBF7EC" : "#7A6F5C",
-                  fontWeight: topicMode === i ? 700 : 600,
-                }}
-              >
-                {label}
-              </button>
-            ))}
+            {["おまかせ", "自分でつくる", "持ち寄り"].map((label, i) => {
+              const disabled = gameMode !== "classic" && i === 2;
+              return (
+                <button
+                  key={i}
+                  onClick={() => !disabled && setTopicMode(i)}
+                  disabled={disabled}
+                  className="flex-1 text-center font-gothic disabled:opacity-35"
+                  style={{
+                    fontSize: 13, padding: "10px 0", borderRadius: 11,
+                    background: topicMode === i && !disabled ? "#1A1714" : "transparent",
+                    color: topicMode === i && !disabled ? "#FBF7EC" : "#7A6F5C",
+                    fontWeight: topicMode === i ? 700 : 600,
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* モード */}
         <div>
           <label className="block font-gothic font-extrabold text-[#1A1714] mb-[8px]" style={{ fontSize: 14 }}>モード</label>
-          <div className="flex gap-[4px] p-[4px]" style={{ background: "#EBE2CF", borderRadius: 14 }}>
+          <div className="flex gap-[4px] p-[4px]" style={{ background: "#EBE2CF", borderRadius: 14, opacity: gameMode === "classic" ? 1 : 0.4 }}>
             {["リアルタイム", "非同期"].map((label, i) => (
               <button
                 key={i}
-                onClick={() => setRoomMode(i as 0 | 1)}
+                onClick={() => gameMode === "classic" && setRoomMode(i as 0 | 1)}
+                disabled={gameMode !== "classic"}
                 className="flex-1 text-center font-gothic"
                 style={{
                   fontSize: 13, padding: "10px 0", borderRadius: 11,
-                  background: roomMode === i ? "#1A1714" : "transparent",
-                  color: roomMode === i ? "#FBF7EC" : "#7A6F5C",
+                  background: (gameMode === "classic" ? roomMode : 0) === i ? "#1A1714" : "transparent",
+                  color: (gameMode === "classic" ? roomMode : 0) === i ? "#FBF7EC" : "#7A6F5C",
                   fontWeight: roomMode === i ? 700 : 600,
                 }}
               >
@@ -147,6 +226,11 @@ export default function NewRoomPage() {
               </button>
             ))}
           </div>
+          {gameMode !== "classic" && (
+            <p className="font-gothic text-sub mt-2" style={{ fontSize: 11 }}>
+              このあそびかたはまずリアルタイムモードのみ対応しています
+            </p>
+          )}
         </div>
 
         {/* ジャンル */}

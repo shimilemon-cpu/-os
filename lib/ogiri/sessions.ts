@@ -4,12 +4,13 @@ import {
   writeBatch, deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, StampDoc, StampType, Reaction } from "@/lib/types";
+import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, StampDoc, StampType, Reaction, GuessDoc } from "@/lib/types";
 
 export async function createSession(
   roomId: string,
   totalRounds = 5,
   mode: "realtime" | "async" = "realtime",
+  answererOrder?: string[],
 ): Promise<string> {
   const ref = await addDoc(collection(db, "sessions"), {
     roomId,
@@ -19,6 +20,7 @@ export async function createSession(
     mode,
     answerDeadline: null,
     voteDeadline: null,
+    ...(answererOrder ? { answererOrder } : {}),
     createdAt: Timestamp.now(),
   } satisfies Omit<SessionDoc, "id">);
   return ref.id;
@@ -52,7 +54,8 @@ export async function createRound(
   sessionId: string,
   round: number,
   question: RoundDoc["question"],
-  answerSeconds: number
+  answerSeconds: number,
+  extra?: Partial<Pick<RoundDoc, "answererId">>,
 ): Promise<void> {
   const deadline = Timestamp.fromDate(new Date(Date.now() + answerSeconds * 1000));
   await setDoc(doc(db, "sessions", sessionId, "rounds", String(round)), {
@@ -62,6 +65,7 @@ export async function createRound(
     startedAt: Timestamp.now(),
     answerDeadline: deadline,
     voteDeadline: null,
+    ...extra,
   } satisfies Omit<RoundDoc, "id">);
 }
 
@@ -137,6 +141,45 @@ export function subscribeVotes(sessionId: string, roundId: string, cb: (v: VoteD
     (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as VoteDoc))),
     (err) => console.error("subscribeVotes error:", err)
   );
+}
+
+// ─── AI/人間当てクイズ ─────────────────────────────────────────
+
+export async function submitGuess(
+  sessionId: string,
+  roundId: string,
+  guessedAnswerId: string,
+  voterId: string,
+): Promise<void> {
+  const guessRef = doc(collection(db, "sessions", sessionId, "rounds", roundId, "guesses"));
+  await setDoc(guessRef, {
+    guessedAnswerId,
+    voterId,
+    createdAt: Timestamp.now(),
+  } satisfies Omit<GuessDoc, "id">);
+}
+
+export function subscribeGuesses(sessionId: string, roundId: string, cb: (g: GuessDoc[]) => void) {
+  if (!sessionId || !roundId) return () => {};
+  return onSnapshot(
+    collection(db, "sessions", sessionId, "rounds", roundId, "guesses"),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as GuessDoc))),
+    (err) => console.error("subscribeGuesses error:", err)
+  );
+}
+
+// 正解の推測者を集計（重複投稿があってもvoterIdは重複排除する）
+export function tallyGuesses(
+  guesses: GuessDoc[],
+  correctAnswerId: string | null,
+): { correctVoterIds: string[]; correctCount: number } {
+  if (!correctAnswerId) return { correctVoterIds: [], correctCount: 0 };
+  const correctVoterIds = Array.from(
+    new Set(
+      guesses.filter((g) => g.guessedAnswerId === correctAnswerId).map((g) => g.voterId)
+    )
+  );
+  return { correctVoterIds, correctCount: correctVoterIds.length };
 }
 
 export function subscribeAiReviews(

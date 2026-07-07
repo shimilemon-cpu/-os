@@ -9,8 +9,8 @@ import {
   transitionPhase, advanceAsyncRoundToVoting, getTimestampMs,
   getUserAnsweredRounds,
 } from "@/lib/ogiri/sessions";
-import { subscribeRoom } from "@/lib/ogiri/rooms";
-import type { SessionDoc, RoundDoc, RoomDoc } from "@/lib/types";
+import { subscribeRoom, subscribeMembers } from "@/lib/ogiri/rooms";
+import type { SessionDoc, RoundDoc, RoomDoc, RoomMemberDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 import OdaiSheet from "@/components/OdaiSheet";
 import AsyncGameHub from "./AsyncGameHub";
@@ -114,6 +114,7 @@ function GamePageContent() {
   const [session, setSession] = useState<SessionDoc | null>(null);
   const [round, setRound] = useState<RoundDoc | null>(null);
   const [room, setRoom] = useState<RoomDoc | null>(null);
+  const [members, setMembers] = useState<RoomMemberDoc[]>([]);
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -122,9 +123,12 @@ function GamePageContent() {
   const advancingRef = useRef(false);
 
   const isAsync = session?.mode === "async";
+  const gameMode = room?.gameMode ?? "classic";
+  const isAnswerer = gameMode !== "human_hunt" || uid === round?.answererId;
 
   useEffect(() => {
     const u1 = subscribeRoom(roomId, setRoom);
+    const u1b = subscribeMembers(roomId, setMembers);
     const u2 = subscribeSession(sessionId, (s) => {
       setSession(s);
       if (s.mode === "async") {
@@ -141,7 +145,7 @@ function GamePageContent() {
         router.replace(`/rooms/${roomId}/summary?sid=${sessionId}`);
       }
     });
-    return () => { u1(); u2(); };
+    return () => { u1(); u1b(); u2(); };
   }, [roomId, sessionId, router]);
 
   const activeRoundId = isAsync ? roundParam : session ? String(session.currentRound) : null;
@@ -211,20 +215,23 @@ function GamePageContent() {
   }, [session, isHost, round, sessionId, isAsync, activeRoundId]);
 
   const handleSubmit = async () => {
+    if (!isAnswerer) return;
     if (!answer.trim() || submitting || submitted) return;
     setSubmitting(true);
     try {
       await submitAnswer(sessionId, activeRoundId!, uid, answer.trim());
       setSubmitted(true);
 
+      const requiredAnswers = gameMode === "human_hunt" ? 1 : (room?.memberIds.length ?? 0);
+
       if (isAsync && room) {
         const newCount = (round?.answerCount ?? 0) + 1;
-        if (newCount >= room.memberIds.length) {
+        if (newCount >= requiredAnswers) {
           await advanceAsyncRoundToVoting(sessionId, activeRoundId!);
         }
       } else if (isHost && session && room) {
         const newCount = (round?.answerCount ?? 0) + 1;
-        if (newCount >= room.memberIds.length) {
+        if (newCount >= requiredAnswers) {
           await advanceToVoting();
         }
       }
@@ -265,9 +272,10 @@ function GamePageContent() {
     );
   }
 
-  const total = room?.memberIds?.length ?? 0;
+  const total = gameMode === "human_hunt" ? 1 : (room?.memberIds?.length ?? 0);
   const done = round.answerCount ?? 0;
   const roundNumber = isAsync ? Number(activeRoundId) : session.currentRound;
+  const answererNickname = members.find((m) => m.userId === round.answererId)?.nickname ?? "回答者";
 
   return (
     <div className="min-h-dvh flex flex-col bg-paper">
@@ -330,7 +338,16 @@ function GamePageContent() {
 
       {/* 回答入力エリア */}
       <div className="flex-1 px-[20px] pb-[40px] flex flex-col">
-        {submitted ? (
+        {!isAnswerer ? (
+          <div className="bg-white text-center animate-rise" style={{ borderRadius: 18, padding: 24, border: "1.5px dashed #E0A93B" }}>
+            <p className="font-mincho font-extrabold text-[#1A1714] mb-2" style={{ fontSize: 16 }}>
+              {answererNickname}さんが回答中です…
+            </p>
+            <p className="font-gothic text-sub" style={{ fontSize: 12 }}>
+              回答が出そろったら「どれが人間か」当ててもらいます
+            </p>
+          </div>
+        ) : submitted ? (
           <div className="space-y-3 animate-rise">
             <div className="bg-white text-center" style={{ borderRadius: 18, padding: 20, border: "2px solid #2BA35F" }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2BA35F" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2">

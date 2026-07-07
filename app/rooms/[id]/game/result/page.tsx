@@ -7,10 +7,12 @@ import {
   subscribeSession, subscribeRound, subscribeAnswers,
   subscribeVotes, subscribeAiReviews, subscribeStamps, toggleStamp, tallyVotes,
   transitionPhase, createRound, updateSession, updateRound,
+  subscribeGuesses, tallyGuesses,
 } from "@/lib/ogiri/sessions";
-import { subscribeRoom, finishGame } from "@/lib/ogiri/rooms";
+import { generateAiAnswers } from "@/lib/ogiri/aiAnswers";
+import { subscribeRoom, subscribeMembers, finishGame } from "@/lib/ogiri/rooms";
 import { publishToEngawa } from "@/lib/ogiri/engawa";
-import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, StampDoc, StampType, RoomDoc, Genre, Difficulty } from "@/lib/types";
+import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, AiReviewDoc, StampDoc, StampType, RoomDoc, RoomMemberDoc, GuessDoc, Genre, Difficulty } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 import Icon from "@/components/Icon";
 import OdaiSheet from "@/components/OdaiSheet";
@@ -105,8 +107,10 @@ function ResultPageContent() {
   const [session, setSession] = useState<SessionDoc | null>(null);
   const [round, setRound] = useState<RoundDoc | null>(null);
   const [room, setRoom] = useState<RoomDoc | null>(null);
+  const [members, setMembers] = useState<RoomMemberDoc[]>([]);
   const [answers, setAnswers] = useState<AnswerDoc[]>([]);
   const [votes, setVotes] = useState<VoteDoc[]>([]);
+  const [guesses, setGuesses] = useState<GuessDoc[]>([]);
   const [aiReviews, setAiReviews] = useState<AiReviewDoc[]>([]);
   const [stamps, setStamps] = useState<StampDoc[]>([]);
   const uid = auth.currentUser?.uid ?? "";
@@ -125,6 +129,7 @@ function ResultPageContent() {
 
   useEffect(() => {
     const u1 = subscribeRoom(roomId, setRoom);
+    const u1b = subscribeMembers(roomId, setMembers);
     const u2 = subscribeSession(sessionId, (s) => {
       setSession(s);
       if (s.mode !== "async") {
@@ -141,7 +146,8 @@ function ResultPageContent() {
     const u5 = subscribeVotes(sessionId, roundParam, setVotes);
     const u6 = subscribeAiReviews(sessionId, roundParam, setAiReviews);
     const u7 = subscribeStamps(sessionId, roundParam, setStamps);
-    return () => { u1(); u2(); u3(); u4(); u5(); u6(); u7(); };
+    const u8 = subscribeGuesses(sessionId, roundParam, setGuesses);
+    return () => { u1(); u1b(); u2(); u3(); u4(); u5(); u6(); u7(); u8(); };
   }, [roomId, sessionId, roundParam, router]);
 
   useEffect(() => {
@@ -181,12 +187,38 @@ function ResultPageContent() {
   };
 
   const goNext = useCallback(async () => {
-    if (!session || !isHost || advancingRef.current) return;
+    if (!session || !room || !isHost || advancingRef.current) return;
     const nextRound = session.currentRound + 1;
     if (nextRound > session.totalRounds) {
       setShowInterstitial(true);
       return;
     }
+    const gameMode = room.gameMode ?? "classic";
+
+    if (gameMode === "ai_hunt" || gameMode === "human_hunt") {
+      advancingRef.current = true;
+      try {
+        const data = await (prefetchRef.current ?? prefetchQuestion());
+        prefetchRef.current = null;
+        const extra = gameMode === "human_hunt"
+          ? { answererId: (session.answererOrder ?? room.memberIds)[(nextRound - 1) % (session.answererOrder ?? room.memberIds).length] }
+          : undefined;
+        await createRound(sessionId, nextRound, {
+          text: data.question,
+          genre: data.genre as Genre,
+          difficulty: data.difficulty as Difficulty,
+        }, room.answerSeconds ?? 90, extra);
+        await generateAiAnswers(sessionId, String(nextRound), data.question, gameMode === "ai_hunt" ? 1 : 3);
+        await transitionPhase(sessionId, roundParam,
+          { status: "done" },
+          { currentRound: nextRound, status: "answering" },
+        );
+      } finally {
+        advancingRef.current = false;
+      }
+      return;
+    }
+
     const isMochiyori = room?.topicMode === "mochiyori";
     if (isMochiyori && !nextPhotoFile) {
       setShowPhotoUpload(true);
@@ -225,10 +257,26 @@ function ResultPageContent() {
       advancingRef.current = false;
       setUploadingNext(false);
     }
-  }, [session, isHost, sessionId, roundParam, room?.topicMode, roomId, nextPhotoFile, nextPhotoCaption]);
+  }, [session, room, isHost, sessionId, roundParam, roomId, nextPhotoFile, nextPhotoCaption]);
 
   const tally = tallyVotes(votes);
   const isAsync = session?.mode === "async";
+  const gameMode = room?.gameMode ?? "classic";
+  const nicknameOf = (userId: string) => members.find((m) => m.userId === userId)?.nickname ?? "?";
+
+  const correctAnswerId = gameMode === "ai_hunt"
+    ? answers.find((a) => a.userId === "ai")?.id ?? null
+    : gameMode === "human_hunt"
+    ? answers.find((a) => a.userId === round?.answererId)?.id ?? null
+    : null;
+  const { correctVoterIds, correctCount } = tallyGuesses(guesses, correctAnswerId);
+  const revealAnswer = correctAnswerId ? answers.find((a) => a.id === correctAnswerId) ?? null : null;
+  const answererName = round?.answererId ? nicknameOf(round.answererId) : "";
+  const expectedGuessers = gameMode === "human_hunt"
+    ? Math.max(0, (room?.memberIds.length ?? 1) - 1)
+    : (room?.memberIds.length ?? 0);
+  const answererBonus = Math.max(0, expectedGuessers - correctCount);
+  const noAnswererData = gameMode === "human_hunt" && !revealAnswer;
 
   const aiScoreMap: Record<string, number> = {};
   if (isAsync && aiReviews.length > 0) {
@@ -349,6 +397,8 @@ function ResultPageContent() {
         </span>
       </div>
 
+      {gameMode === "classic" && (
+      <>
       {/* 横綱カード */}
       {mvp && (
         <div
@@ -473,6 +523,60 @@ function ResultPageContent() {
           </div>
         )}
       </div>
+      </>
+      )}
+
+      {/* AI/人間当てクイズ 結果発表 */}
+      {gameMode !== "classic" && (
+        <div className="flex-1 px-[20px] pb-[12px] flex flex-col gap-[12px]">
+          {noAnswererData ? (
+            <div className="text-center py-8" style={{ borderRadius: 18, border: "1.5px dashed rgba(0,0,0,.12)", background: "rgba(255,255,255,.5)" }}>
+              <p className="font-gothic font-bold text-sub" style={{ fontSize: 14 }}>回答者が未回答だったため、このラウンドはノーカウントです</p>
+            </div>
+          ) : revealAnswer ? (
+            <div
+              className="relative overflow-hidden text-center animate-pop-in"
+              style={{ borderRadius: 24, padding: "22px 20px 24px", background: "linear-gradient(150deg,#5BA9D6,#3E7FB0)" }}
+            >
+              <div className="relative">
+                <p className="font-mincho font-extrabold text-paper" style={{ fontSize: 14, letterSpacing: "0.2em", color: "#E5F1FA" }}>
+                  {gameMode === "ai_hunt" ? "正解発表：AIの回答はコレでした" : `正解発表：回答者は ${answererName} さんでした`}
+                </p>
+                <p className="font-mincho font-extrabold text-paper mt-[10px]" style={{ fontSize: 20, lineHeight: 1.5 }}>「{revealAnswer.text}」</p>
+                <div
+                  className="inline-flex items-center gap-[7px] font-gothic font-extrabold text-paper mt-3"
+                  style={{ fontSize: 13, padding: "7px 16px", borderRadius: 999, background: "rgba(0,0,0,.22)" }}
+                >
+                  {correctCount}/{expectedGuessers}人が見破りました
+                </div>
+                {gameMode === "human_hunt" && (
+                  <p className="font-gothic font-bold text-paper mt-[10px]" style={{ fontSize: 13 }}>
+                    {answererName}さんに見破られなかったボーナス +{answererBonus}
+                  </p>
+                )}
+                <StampBar answerId={revealAnswer.id} stamps={stamps} uid={uid} sessionId={sessionId} roundId={roundParam} />
+              </div>
+            </div>
+          ) : null}
+
+          {correctVoterIds.length > 0 && (
+            <div className="bg-white" style={{ borderRadius: 16, padding: 14, border: "1px solid rgba(0,0,0,.07)" }}>
+              <p className="font-gothic font-extrabold text-sub mb-[8px]" style={{ fontSize: 12 }}>正解した人</p>
+              <div className="flex flex-wrap gap-[6px]">
+                {correctVoterIds.map((vid) => (
+                  <span
+                    key={vid}
+                    className="font-gothic font-extrabold"
+                    style={{ fontSize: 12, padding: "5px 12px", borderRadius: 999, background: "#E6F5EC", color: "#2BA35F" }}
+                  >
+                    {nicknameOf(vid)}{vid === uid ? "（あなた）" : ""}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Footer */}
       <div className="flex gap-[10px] px-[20px] pb-[40px]">

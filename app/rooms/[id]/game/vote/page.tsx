@@ -7,9 +7,10 @@ import {
   subscribeAnswers, subscribeVotes, subscribeSession,
   subscribeRound, submitVote, transitionPhase,
   advanceAsyncRoundToReviewing, getTimestampMs,
+  subscribeGuesses, submitGuess,
 } from "@/lib/ogiri/sessions";
-import { subscribeRoom } from "@/lib/ogiri/rooms";
-import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, RoomDoc, Reaction } from "@/lib/types";
+import { subscribeRoom, subscribeMembers } from "@/lib/ogiri/rooms";
+import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, RoomDoc, Reaction, GuessDoc, RoomMemberDoc } from "@/lib/types";
 
 const VOTE_SECONDS = 45;
 
@@ -102,22 +103,29 @@ function VotePageContent() {
   const [session, setSession] = useState<SessionDoc | null>(null);
   const [round, setRound] = useState<RoundDoc | null>(null);
   const [room, setRoom] = useState<RoomDoc | null>(null);
+  const [members, setMembers] = useState<RoomMemberDoc[]>([]);
   const [answers, setAnswers] = useState<AnswerDoc[]>([]);
   const [votes, setVotes] = useState<VoteDoc[]>([]);
+  const [guesses, setGuesses] = useState<GuessDoc[]>([]);
   const uid = auth.currentUser?.uid ?? "";
   const isHost = room?.hostId === uid;
   const advancingRef = useRef(false);
   const votingRef = useRef(false);
 
   const isAsync = session?.mode === "async";
+  const gameMode = room?.gameMode ?? "classic";
+  const isQuizMode = gameMode === "ai_hunt" || gameMode === "human_hunt";
+  const isAnswererWaiting = gameMode === "human_hunt" && uid === round?.answererId;
 
   useEffect(() => {
     const u1 = subscribeRoom(roomId, setRoom);
+    const u1b = subscribeMembers(roomId, setMembers);
     const u2 = subscribeSession(sessionId, setSession);
     const u3 = subscribeRound(sessionId, roundParam, setRound);
     const u4 = subscribeAnswers(sessionId, roundParam, setAnswers);
     const u5 = subscribeVotes(sessionId, roundParam, setVotes);
-    return () => { u1(); u2(); u3(); u4(); u5(); };
+    const u6 = subscribeGuesses(sessionId, roundParam, setGuesses);
+    return () => { u1(); u1b(); u2(); u3(); u4(); u5(); u6(); };
   }, [roomId, sessionId, roundParam]);
 
   // Navigation based on status changes
@@ -160,21 +168,23 @@ function VotePageContent() {
       advancingRef.current = true;
       try {
         await advanceAsyncRoundToReviewing(sessionId, roundParam);
-        const answerPayload = answers.map((a) => ({ id: a.id, text: a.text }));
-        const token = await auth.currentUser?.getIdToken();
-        fetch("/api/ogiri/review", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            sessionId, roundId: roundParam,
-            question: round?.question.text ?? "",
-            answers: answerPayload,
-            judges: room?.judges ?? ["王道", "辛口"],
-          }),
-        }).catch((e) => console.error("AI review request failed:", e));
+        if (gameMode === "classic") {
+          const answerPayload = answers.map((a) => ({ id: a.id, text: a.text }));
+          const token = await auth.currentUser?.getIdToken();
+          fetch("/api/ogiri/review", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({
+              sessionId, roundId: roundParam,
+              question: round?.question.text ?? "",
+              answers: answerPayload,
+              judges: room?.judges ?? ["王道", "辛口"],
+            }),
+          }).catch((e) => console.error("AI review request failed:", e));
+        }
       } finally {
         advancingRef.current = false;
       }
@@ -197,25 +207,27 @@ function VotePageContent() {
         { status: "reviewing" },
         { status: "reviewing" },
       );
-      const answerPayload = answers.map((a) => ({ id: a.id, text: a.text }));
-      const token = await auth.currentUser?.getIdToken();
-      fetch("/api/ogiri/review", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          sessionId, roundId: roundParam,
-          question: round?.question.text ?? "",
-          answers: answerPayload,
-          judges: room?.judges ?? ["王道", "辛口"],
-        }),
-      }).catch((e) => console.error("AI review request failed:", e));
+      if (gameMode === "classic") {
+        const answerPayload = answers.map((a) => ({ id: a.id, text: a.text }));
+        const token = await auth.currentUser?.getIdToken();
+        fetch("/api/ogiri/review", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            sessionId, roundId: roundParam,
+            question: round?.question.text ?? "",
+            answers: answerPayload,
+            judges: room?.judges ?? ["王道", "辛口"],
+          }),
+        }).catch((e) => console.error("AI review request failed:", e));
+      }
     } finally {
       advancingRef.current = false;
     }
-  }, [session, isHost, round, sessionId, roundParam, answers, isAsync, room?.judges]);
+  }, [session, isHost, round, sessionId, roundParam, answers, isAsync, room?.judges, gameMode]);
 
   const handleVote = async (answerId: string, reaction: Reaction) => {
     if (votingRef.current) return;
@@ -242,16 +254,50 @@ function VotePageContent() {
     }
   };
 
+  const handleGuess = async (answerId: string) => {
+    if (votingRef.current || !room) return;
+    const alreadyGuessed = guesses.some((g) => g.voterId === uid);
+    if (alreadyGuessed) return;
+    votingRef.current = true;
+    try {
+      await submitGuess(sessionId, roundParam, answerId, uid);
+      if (isHost && session) {
+        const expectedGuessers = gameMode === "human_hunt"
+          ? room.memberIds.length - 1
+          : room.memberIds.length;
+        if (guesses.length + 1 >= expectedGuessers) {
+          await advanceToResult();
+        }
+      }
+    } finally {
+      votingRef.current = false;
+    }
+  };
+
   const myVotesMap: Record<string, Reaction> = {};
   for (const v of votes) {
     if (v.voterId === uid) myVotesMap[v.answerId] = v.reaction;
   }
   const myVotedId = Object.keys(myVotesMap)[0] ?? null;
+  const myGuessedId = guesses.find((g) => g.voterId === uid)?.guessedAnswerId ?? null;
 
   if (!session || !round || answers.length === 0) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-paper">
         <div className="w-8 h-8 rounded-full border-2 border-red border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (isAnswererWaiting) {
+    return (
+      <div className="min-h-dvh flex flex-col items-center justify-center gap-3 bg-paper px-[20px] text-center">
+        <p className="font-mincho font-extrabold text-[#1A1714]" style={{ fontSize: 18 }}>
+          みんなが「どれが人間か」推理中です…
+        </p>
+        <p className="font-gothic text-sub" style={{ fontSize: 13 }}>
+          あなたの回答は見破られる？結果をお楽しみに
+        </p>
       </div>
     );
   }
@@ -270,14 +316,18 @@ function VotePageContent() {
           </button>
         )}
         <div className="flex items-center gap-2 mb-1">
-          <p className="font-gothic font-extrabold text-red" style={{ fontSize: 11 }}>投票中</p>
+          <p className="font-gothic font-extrabold text-red" style={{ fontSize: 11 }}>
+            {gameMode === "ai_hunt" ? "AI推理中" : gameMode === "human_hunt" ? "人間推理中" : "投票中"}
+          </p>
           {isAsync ? (
             <AsyncDeadlineBadge deadline={voteDeadline} />
           ) : (
             <VoteTimer deadline={voteDeadline} totalSeconds={VOTE_SECONDS} onExpire={advanceToResult} />
           )}
         </div>
-        <p className="font-mincho font-bold text-[#1A1714]" style={{ fontSize: 17 }}>いちばん笑った回答に</p>
+        <p className="font-mincho font-bold text-[#1A1714]" style={{ fontSize: 17 }}>
+          {gameMode === "ai_hunt" ? "どれがAIだと思う？" : gameMode === "human_hunt" ? "どれが人間だと思う？" : "いちばん笑った回答に"}
+        </p>
       </div>
 
       {/* お題カード（小） */}
@@ -298,15 +348,60 @@ function VotePageContent() {
           </p>
         </div>
         <p className="font-gothic text-[#52493A]" style={{ fontSize: 13 }}>
-          いちばん笑った回答に <span className="font-extrabold" style={{ color: "#E5402F", textDecoration: "underline", textDecorationColor: "rgba(229,64,47,.3)" }}>座布団</span> を１枚。
+          {gameMode === "ai_hunt" ? (
+            <>自分以外の回答から<span className="font-extrabold" style={{ color: "#E5402F" }}>AIだと思うもの</span>を1つ選んでください。</>
+          ) : gameMode === "human_hunt" ? (
+            <>4つの回答から<span className="font-extrabold" style={{ color: "#E5402F" }}>
+              {members.find((m) => m.userId === round.answererId)?.nickname ?? "回答者"}さんの本物の回答
+            </span>を1つ選んでください。</>
+          ) : (
+            <>いちばん笑った回答に <span className="font-extrabold" style={{ color: "#E5402F", textDecoration: "underline", textDecorationColor: "rgba(229,64,47,.3)" }}>座布団</span> を１枚。</>
+          )}
         </p>
       </div>
 
       {/* 回答リスト */}
       <div className="flex-1 px-[20px] pb-[14px] flex flex-col gap-[11px] overflow-y-auto">
         {answers.map((a, i) => {
-          const isSelected = myVotesMap[a.id] != null;
           const isOwn = a.userId === uid;
+          if (isQuizMode) {
+            if (isOwn) return null; // 自分の回答は選択肢から除外
+            const isGuessed = myGuessedId === a.id;
+            return (
+              <div
+                key={a.id}
+                className="bg-white"
+                style={{
+                  borderRadius: 18, padding: "15px 16px",
+                  border: isGuessed ? "2px solid #E5402F" : "1px solid rgba(0,0,0,.07)",
+                }}
+              >
+                <p className="font-gothic font-semibold text-[#1A1714]" style={{ fontSize: 17, lineHeight: 1.5, marginBottom: 14 }}>{a.text}</p>
+                <div className="flex items-center justify-between">
+                  <span className="font-gothic text-sub" style={{ fontSize: 11 }}>回答 {String.fromCharCode(65 + i)}</span>
+                  {isGuessed ? (
+                    <span
+                      className="inline-flex items-center gap-[6px] font-gothic font-extrabold text-paper"
+                      style={{ fontSize: 12, padding: "8px 18px", borderRadius: 999, background: "#E5402F" }}
+                    >
+                      これに決定
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleGuess(a.id)}
+                      disabled={myGuessedId != null}
+                      className="inline-flex items-center gap-[6px] font-gothic font-extrabold disabled:opacity-40 active:scale-95 transition-all"
+                      style={{ fontSize: 12, padding: "8px 18px", borderRadius: 999, color: "#E5402F", background: "rgba(229,64,47,.08)", border: "1px solid rgba(229,64,47,.15)" }}
+                    >
+                      これだと思う
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          const isSelected = myVotesMap[a.id] != null;
           return (
             <div
               key={a.id}
@@ -370,7 +465,7 @@ function VotePageContent() {
             className="w-full font-mincho font-extrabold text-paper disabled:opacity-40 active:scale-[0.98] transition-all"
             style={{ fontSize: 18, padding: "16px 0", borderRadius: 18, background: "#1A1714" }}
           >
-            投票を確定する
+            {isQuizMode ? "推理を締め切る" : "投票を確定する"}
           </button>
         )}
       </div>

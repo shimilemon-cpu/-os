@@ -5,7 +5,7 @@ import {
   DocumentReference, writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import type { RoomDoc, RoomMemberDoc, InviteCodeDoc, TopicMode } from "@/lib/types";
+import type { RoomDoc, RoomMemberDoc, InviteCodeDoc, TopicMode, GameMode } from "@/lib/types";
 
 export function generateInviteCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -27,6 +27,8 @@ export async function createRoom(
   topicMode: TopicMode = "omakase",
   capacity: number = 5,
   answerSeconds: number = 90,
+  gameMode: GameMode = "classic",
+  roundMultiplier?: number,
 ): Promise<string> {
   const code = inviteCode ?? generateInviteCode();
   const ref = roomRef ?? generateRoomRef();
@@ -42,6 +44,8 @@ export async function createRoom(
     answerSeconds,
     memberIds: [hostId],
     judges,
+    gameMode,
+    ...(roundMultiplier ? { roundMultiplier } : {}),
     createdAt: Timestamp.now(),
   });
 

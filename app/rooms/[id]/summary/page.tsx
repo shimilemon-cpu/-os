@@ -7,8 +7,8 @@ import { auth } from "@/lib/firebase/client";
 import { getDocs, getDoc, doc, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { subscribeRoom, resetRoom } from "@/lib/ogiri/rooms";
-import { tallyVotes } from "@/lib/ogiri/sessions";
-import type { RoomDoc, AnswerDoc, VoteDoc, AiReviewDoc, AiAnalysisResult } from "@/lib/types";
+import { tallyVotes, tallyGuesses } from "@/lib/ogiri/sessions";
+import type { RoomDoc, AnswerDoc, VoteDoc, AiReviewDoc, AiAnalysisResult, GameMode, GuessDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
 
 const RANK_LABELS = ["横綱", "大関", "関脇", "小結", "前頭"];
@@ -32,6 +32,7 @@ function SummaryPageContent() {
   const [playerScores, setPlayerScores] = useState<{ userId: string; nickname: string; total: number }[]>([]);
   const [analyses, setAnalyses] = useState<AiAnalysisResult[]>([]);
   const [isAsync, setIsAsync] = useState(false);
+  const [gameMode, setGameMode] = useState<GameMode>("classic");
   const [loading, setLoading] = useState(true);
   const uid = auth.currentUser?.uid ?? "";
 
@@ -49,13 +50,16 @@ function SummaryPageContent() {
     if (!sessionId) return;
     const load = async () => {
       try {
-        const [roundsSnap, membersSnap, sessionSnap] = await Promise.all([
+        const [roundsSnap, membersSnap, sessionSnap, roomSnap] = await Promise.all([
           getDocs(collection(db, "sessions", sessionId, "rounds")),
           getDocs(collection(db, "rooms", roomId, "members")),
           getDoc(doc(db, "sessions", sessionId)),
+          getDoc(doc(db, "rooms", roomId)),
         ]);
         const asyncMode = sessionSnap.data()?.mode === "async";
         setIsAsync(asyncMode);
+        const gm = ((roomSnap.data()?.gameMode as GameMode | undefined) ?? "classic");
+        setGameMode(gm);
 
         const summaries: RoundSummary[] = [];
         const scoreMap: Record<string, number> = {};
@@ -71,17 +75,59 @@ function SummaryPageContent() {
             const aiReviewsSnap = asyncMode
               ? await getDocs(collection(db, "sessions", sessionId, "rounds", roundDoc.id, "aiReviews"))
               : null;
-            return { roundDoc, answersSnap, votesSnap, aiReviewsSnap };
+            const guessesSnap = (gm === "ai_hunt" || gm === "human_hunt")
+              ? await getDocs(collection(db, "sessions", sessionId, "rounds", roundDoc.id, "guesses"))
+              : null;
+            return { roundDoc, answersSnap, votesSnap, aiReviewsSnap, guessesSnap };
           })
         );
 
-        for (const { roundDoc, answersSnap, votesSnap, aiReviewsSnap } of roundResults) {
+        for (const { roundDoc, answersSnap, votesSnap, aiReviewsSnap, guessesSnap } of roundResults) {
           const roundData = roundDoc.data();
           const answers = answersSnap.docs.map((d) => ({ id: d.id, ...d.data() } as AnswerDoc));
           const votes = votesSnap.docs.map((d) => d.data() as VoteDoc);
           const tally = tallyVotes(votes);
 
-          if (asyncMode && aiReviewsSnap) {
+          if (gm === "ai_hunt" && guessesSnap) {
+            const guesses = guessesSnap.docs.map((d) => d.data() as GuessDoc);
+            const aiAnswer = answers.find((a) => a.userId === "ai");
+            const { correctVoterIds } = tallyGuesses(guesses, aiAnswer?.id ?? null);
+            for (const voterId of correctVoterIds) {
+              scoreMap[voterId] = (scoreMap[voterId] ?? 0) + 1;
+            }
+            for (const a of answers) {
+              if (a.userId.startsWith("ai")) continue;
+              if (!answersByUser[a.userId]) answersByUser[a.userId] = [];
+              answersByUser[a.userId].push(a.text);
+            }
+            summaries.push({
+              round: Number(roundDoc.id),
+              question: roundData.question?.text ?? "",
+              mvp: aiAnswer ? { text: aiAnswer.text, userId: "ai", total: correctVoterIds.length } : null,
+            });
+          } else if (gm === "human_hunt" && guessesSnap) {
+            const guesses = guessesSnap.docs.map((d) => d.data() as GuessDoc);
+            const answererId = roundData.answererId as string | undefined;
+            const realAnswer = answererId ? answers.find((a) => a.userId === answererId) : undefined;
+            const { correctVoterIds, correctCount } = tallyGuesses(guesses, realAnswer?.id ?? null);
+            for (const voterId of correctVoterIds) {
+              scoreMap[voterId] = (scoreMap[voterId] ?? 0) + 1;
+            }
+            if (answererId && realAnswer) {
+              const totalGuessers = Math.max(0, membersSnap.docs.length - 1);
+              scoreMap[answererId] = (scoreMap[answererId] ?? 0) + Math.max(0, totalGuessers - correctCount);
+            }
+            for (const a of answers) {
+              if (a.userId.startsWith("ai")) continue;
+              if (!answersByUser[a.userId]) answersByUser[a.userId] = [];
+              answersByUser[a.userId].push(a.text);
+            }
+            summaries.push({
+              round: Number(roundDoc.id),
+              question: roundData.question?.text ?? "",
+              mvp: realAnswer ? { text: realAnswer.text, userId: answererId!, total: correctCount } : null,
+            });
+          } else if (asyncMode && aiReviewsSnap) {
             const aiReviews = aiReviewsSnap.docs.map((d) => d.data() as AiReviewDoc);
             const aiScores: Record<string, number[]> = {};
             for (const r of aiReviews) {
@@ -207,7 +253,9 @@ function SummaryPageContent() {
               className="inline-flex items-center gap-[7px] font-gothic font-extrabold text-paper mt-3"
               style={{ fontSize: 14, padding: "7px 16px", borderRadius: 999, background: "rgba(0,0,0,.22)" }}
             >
-              {isAsync ? (
+              {gameMode === "ai_hunt" || gameMode === "human_hunt" ? (
+                <><span style={{ fontSize: 16 }}>🔍</span> 正解 {champion.total}回</>
+              ) : isAsync ? (
                 <><span style={{ fontSize: 16 }}>🎯</span> AI審査 {champion.total}点</>
               ) : (
                 <><svg width="16" height="14" viewBox="0 0 30 24"><path d="M5 6h20l3 6-3 6H5L2 12z" fill="#F4C422"/></svg>
@@ -246,7 +294,7 @@ function SummaryPageContent() {
                     {isMe ? `${p.nickname}（あなた）` : p.nickname}
                   </p>
                   <span className="font-gothic font-extrabold shrink-0" style={{ fontSize: 14, color: "#E5402F" }}>
-                    {isAsync ? `${p.total}点` : `${p.total}枚`}
+                    {gameMode === "ai_hunt" || gameMode === "human_hunt" ? `${p.total}回` : isAsync ? `${p.total}点` : `${p.total}枚`}
                   </span>
                 </div>
               );
@@ -307,7 +355,9 @@ function SummaryPageContent() {
                 </div>
                 {s.mvp ? (
                   <div className="flex items-center gap-[8px]">
-                    {isAsync ? (
+                    {gameMode === "ai_hunt" || gameMode === "human_hunt" ? (
+                      <span style={{ fontSize: 13 }} className="shrink-0">🔍</span>
+                    ) : isAsync ? (
                       <span style={{ fontSize: 13 }} className="shrink-0">🎯</span>
                     ) : (
                       <svg width="13" height="11" viewBox="0 0 30 24" className="shrink-0">
@@ -316,7 +366,7 @@ function SummaryPageContent() {
                     )}
                     <p className="font-gothic font-extrabold text-[#1A1714] flex-1" style={{ fontSize: 14 }}>{s.mvp.text}</p>
                     <span className="font-gothic text-sub shrink-0" style={{ fontSize: 11 }}>
-                      {isAsync ? `${s.mvp.total}点` : `${s.mvp.total}枚`}
+                      {gameMode === "ai_hunt" || gameMode === "human_hunt" ? `${s.mvp.total}回正解` : isAsync ? `${s.mvp.total}点` : `${s.mvp.total}枚`}
                     </span>
                   </div>
                 ) : (
@@ -331,7 +381,9 @@ function SummaryPageContent() {
         <div className="flex flex-col gap-[10px] mt-2">
           <button
             onClick={() => {
-              const scoreText = isAsync ? `${champion?.total ?? 0}点` : `${champion?.total ?? 0}枚`;
+              const scoreText = gameMode === "ai_hunt" || gameMode === "human_hunt"
+                ? `${champion?.total ?? 0}回正解`
+                : isAsync ? `${champion?.total ?? 0}点` : `${champion?.total ?? 0}枚`;
               const text = `大喜利Pocket「${room?.name ?? ""}」\n🏆 ${scoreText}で千秋楽！\n#大喜利Pocket`;
               if (navigator.share) navigator.share({ text });
               else navigator.clipboard.writeText(text);
