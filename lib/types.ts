@@ -79,6 +79,7 @@ export interface RoundDoc {
   };
   status: RoundStatus;
   answerCount: number;
+  voteCount?: number; // 非同期モードの投票完了検知用。undefined → 0
   startedAt: Timestamp | null;
   answerDeadline: Timestamp | null;
   voteDeadline: Timestamp | null;

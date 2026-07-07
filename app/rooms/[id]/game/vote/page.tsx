@@ -10,6 +10,7 @@ import {
   subscribeGuesses, submitGuess,
 } from "@/lib/ogiri/sessions";
 import { subscribeRoom, subscribeMembers } from "@/lib/ogiri/rooms";
+import { triggerAiReview } from "@/lib/ogiri/aiReview";
 import type { SessionDoc, RoundDoc, AnswerDoc, VoteDoc, RoomDoc, Reaction, GuessDoc, RoomMemberDoc } from "@/lib/types";
 
 const VOTE_SECONDS = 45;
@@ -170,20 +171,7 @@ function VotePageContent() {
         await advanceAsyncRoundToReviewing(sessionId, roundParam);
         if (gameMode === "classic") {
           const answerPayload = answers.map((a) => ({ id: a.id, text: a.text }));
-          const token = await auth.currentUser?.getIdToken();
-          fetch("/api/ogiri/review", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({
-              sessionId, roundId: roundParam,
-              question: round?.question.text ?? "",
-              answers: answerPayload,
-              judges: room?.judges ?? ["王道", "辛口"],
-            }),
-          }).catch((e) => console.error("AI review request failed:", e));
+          await triggerAiReview(sessionId, roundParam, round?.question.text ?? "", answerPayload, room?.judges);
         }
       } finally {
         advancingRef.current = false;
@@ -209,20 +197,7 @@ function VotePageContent() {
       );
       if (gameMode === "classic") {
         const answerPayload = answers.map((a) => ({ id: a.id, text: a.text }));
-        const token = await auth.currentUser?.getIdToken();
-        fetch("/api/ogiri/review", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            sessionId, roundId: roundParam,
-            question: round?.question.text ?? "",
-            answers: answerPayload,
-            judges: room?.judges ?? ["王道", "辛口"],
-          }),
-        }).catch((e) => console.error("AI review request failed:", e));
+        await triggerAiReview(sessionId, roundParam, round?.question.text ?? "", answerPayload, room?.judges);
       }
     } finally {
       advancingRef.current = false;

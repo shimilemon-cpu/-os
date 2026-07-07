@@ -126,12 +126,16 @@ export async function submitVote(
   reaction: Reaction
 ): Promise<void> {
   const voteRef = doc(collection(db, "sessions", sessionId, "rounds", roundId, "votes"));
-  await setDoc(voteRef, {
+  const roundRef = doc(db, "sessions", sessionId, "rounds", roundId);
+  const batch = writeBatch(db);
+  batch.set(voteRef, {
     answerId,
     voterId,
     reaction,
     createdAt: Timestamp.now(),
   } satisfies Omit<VoteDoc, "id">);
+  batch.update(roundRef, { voteCount: increment(1) });
+  await batch.commit();
 }
 
 export function subscribeVotes(sessionId: string, roundId: string, cb: (v: VoteDoc[]) => void) {
