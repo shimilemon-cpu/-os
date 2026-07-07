@@ -15,6 +15,7 @@ import {
   getTimestampMs,
   isDeadlinePast,
 } from "@/lib/ogiri/sessions";
+import { triggerAiReview } from "@/lib/ogiri/aiReview";
 import { finishGame } from "@/lib/ogiri/rooms";
 import type { SessionDoc, RoundDoc, RoomDoc } from "@/lib/types";
 import Engimono from "@/components/Engimono";
@@ -259,33 +260,43 @@ export default function AsyncGameHub({
     });
   }, [sessionId, uid, session.totalRounds, rounds]);
 
-  // Check deadlines and auto-advance rounds
+  // Check deadlines/completion and auto-advance rounds — runs on every
+  // rounds update, so any client with the hub open catches transitions
+  // even if the person who cast the last answer/vote closed their app
+  // before the transition finished.
   const checkDeadlines = useCallback(async () => {
     if (checkedRef.current) return;
     checkedRef.current = true;
     try {
+      const memberCount = room.memberIds.length;
       for (const r of rounds) {
         if (
           r.status === "answering" &&
-          isDeadlinePast(
-            r.answerDeadline as { toDate?: () => Date; seconds?: number },
-          )
+          (r.answerCount >= memberCount ||
+            isDeadlinePast(r.answerDeadline as { toDate?: () => Date; seconds?: number }))
         ) {
           await advanceAsyncRoundToVoting(sessionId, r.id);
         }
         if (
           r.status === "voting" &&
-          isDeadlinePast(
-            r.voteDeadline as { toDate?: () => Date; seconds?: number },
-          )
+          ((r.voteCount ?? 0) >= memberCount ||
+            isDeadlinePast(r.voteDeadline as { toDate?: () => Date; seconds?: number }))
         ) {
           await advanceAsyncRoundToReviewing(sessionId, r.id);
+          const answersSnap = await getDocs(
+            collection(db, "sessions", sessionId, "rounds", r.id, "answers"),
+          );
+          const answerList = answersSnap.docs.map((d) => ({
+            id: d.id,
+            text: (d.data() as { text: string }).text,
+          }));
+          await triggerAiReview(sessionId, r.id, r.question.text, answerList, room.judges);
         }
       }
     } finally {
       checkedRef.current = false;
     }
-  }, [rounds, sessionId]);
+  }, [rounds, sessionId, room.memberIds.length, room.judges]);
 
   useEffect(() => {
     if (rounds.length === 0) return;
@@ -321,22 +332,7 @@ export default function AsyncGameHub({
         text: (d.data() as { text: string }).text,
       }));
 
-      if (answerList.length > 0) {
-        const token = await auth.currentUser?.getIdToken();
-        fetch("/api/ogiri/review", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            sessionId,
-            roundId: round.id,
-            question: round.question.text,
-            answers: answerList,
-          }),
-        }).catch(console.error);
-      }
+      await triggerAiReview(sessionId, round.id, round.question.text, answerList, room.judges);
 
       router.push(
         `/rooms/${roomId}/game/result?sid=${sessionId}&round=${round.id}`,
@@ -346,7 +342,7 @@ export default function AsyncGameHub({
     } finally {
       setClosingRound(null);
     }
-  }, [closingRound, sessionId, roomId, router]);
+  }, [closingRound, sessionId, roomId, router, room.judges]);
 
   const handleTap = (round: RoundDoc, action: RoundAction) => {
     if (action === "answer") {
