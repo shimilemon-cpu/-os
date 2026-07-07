@@ -6,6 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { subscribeRoom, subscribeMembers, setMemberReady, startGame } from "@/lib/ogiri/rooms";
 import { createSession, createRound, createAsyncRound } from "@/lib/ogiri/sessions";
+import { generateAiAnswers } from "@/lib/ogiri/aiAnswers";
 import { validatePhoto, uploadRoomPhoto } from "@/lib/ogiri/photos";
 import type { RoomDoc, RoomMemberDoc, Genre, Difficulty } from "@/lib/types";
 import Engimono from "@/components/Engimono";
@@ -113,6 +114,41 @@ export default function WaitingRoomPage() {
     setStarting(true);
     setStartError("");
     try {
+      const gameMode = room.gameMode ?? "classic";
+
+      if (gameMode === "ai_hunt") {
+        const totalRounds = 5;
+        const sessionId = await createSession(roomId, totalRounds, "realtime");
+        const data = await (prefetchRef.current ?? prefetchQuestion());
+        prefetchRef.current = null;
+        await createRound(sessionId, 1, {
+          text: data.question,
+          genre: data.genre as Genre,
+          difficulty: data.difficulty as Difficulty,
+        }, room.answerSeconds ?? 90);
+        await generateAiAnswers(sessionId, "1", data.question, 1);
+        await startGame(roomId, sessionId);
+        router.push(`/rooms/${roomId}/game?sid=${sessionId}`);
+        return;
+      }
+
+      if (gameMode === "human_hunt") {
+        const answererOrder = [...room.memberIds];
+        const totalRounds = answererOrder.length * (room.roundMultiplier ?? 1);
+        const sessionId = await createSession(roomId, totalRounds, "realtime", answererOrder);
+        const data = await (prefetchRef.current ?? prefetchQuestion());
+        prefetchRef.current = null;
+        await createRound(sessionId, 1, {
+          text: data.question,
+          genre: data.genre as Genre,
+          difficulty: data.difficulty as Difficulty,
+        }, room.answerSeconds ?? 90, { answererId: answererOrder[0] });
+        await generateAiAnswers(sessionId, "1", data.question, 3);
+        await startGame(roomId, sessionId);
+        router.push(`/rooms/${roomId}/game?sid=${sessionId}`);
+        return;
+      }
+
       const totalRounds = 5;
 
       if (room.mode === "async") {

@@ -90,6 +90,20 @@ service cloud.firestore {
           allow read: if isSignedIn();
           allow write: if isAdmin();
         }
+
+        // AI/人間当てクイズの投票
+        match /guesses/{guessId} {
+          allow read: if isSignedIn();
+          allow create: if isSignedIn() && request.resource.data.voterId == request.auth.uid;
+          allow delete: if isSignedIn() && (resource.data.voterId == request.auth.uid || isAdmin());
+        }
+
+        // 感想スタンプ
+        match /stamps/{stampId} {
+          allow read: if isSignedIn();
+          allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+          allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+        }
       }
     }
   }

@@ -14,6 +14,7 @@ export type RoomMode = "realtime" | "async";
 export type RoomStatus = "waiting" | "active" | "finished";
 
 export type TopicMode = "omakase" | "custom" | "mochiyori";
+export type GameMode = "classic" | "ai_hunt" | "human_hunt";
 
 export interface RoomDoc {
   id: string;
@@ -28,6 +29,8 @@ export interface RoomDoc {
   judges?: AiPersona[];     // undefined → ["王道", "辛口"]
   answerSeconds?: number;   // default 90
   activeSessionId?: string;
+  gameMode?: GameMode;       // undefined → "classic"
+  roundMultiplier?: number;  // human_hunt専用。1〜5、undefined → 1
   createdAt: Timestamp | null;
 }
 
@@ -57,6 +60,7 @@ export interface SessionDoc {
   mode?: RoomMode;
   answerDeadline: Timestamp | null;
   voteDeadline: Timestamp | null;
+  answererOrder?: string[]; // human_hunt専用。開始時の参加者順スナップショット
   createdAt: Timestamp | null;
 }
 
@@ -78,6 +82,7 @@ export interface RoundDoc {
   startedAt: Timestamp | null;
   answerDeadline: Timestamp | null;
   voteDeadline: Timestamp | null;
+  answererId?: string; // human_hunt専用。このラウンドの回答者uid
 }
 
 // ─── 回答 ──────────────────────────────────────────────────
@@ -97,6 +102,14 @@ export interface VoteDoc {
   answerId: string;
   voterId: string;
   reaction: Reaction;
+  createdAt: Timestamp | null;
+}
+
+// ─── AI/人間当てクイズ ─────────────────────────────────────────
+export interface GuessDoc {
+  id: string;
+  voterId: string;
+  guessedAnswerId: string;
   createdAt: Timestamp | null;
 }
 
